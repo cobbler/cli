@@ -8,9 +8,12 @@ require (
 )
 
 require (
+	github.com/cobbler/cobblerclient v0.4.2 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/kolo/xmlrpc v0.0.0-20190909154602-56d5ec7c422e // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect

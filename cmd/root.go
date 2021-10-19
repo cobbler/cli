@@ -18,6 +18,8 @@ package cmd
 
 import (
 	"fmt"
+	cobbler "github.com/cobbler/cobblerclient"
+	"net/http"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -26,21 +28,33 @@ import (
 )
 
 var cfgFile string
+var conf cobbler.ClientConfig
+var httpClient = &http.Client{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "cobbler",
 	Short: "Cobbler CLI client",
 	Long:  "An independent CLI to manage a Cobbler server.",
-
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	// basic connection to the server
+	conf.URL = "http://127.0.0.1/cobbler_api"
+	conf.Username = "cobbler"
+	conf.Password = "cobbler"
+	client := cobbler.NewClient(httpClient, conf)
+	login, _ := client.Login()
+
+	// TODO: Remove debug messages
+	if login {
+		fmt.Println("login successful!")
+	} else {
+		fmt.Println("login not successful!")
+	}
 	cobra.CheckErr(rootCmd.Execute())
 }
 
@@ -55,7 +69,7 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -68,7 +82,7 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".cli" (without extension).
+		// Search config in home directory with name ".cobbler" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".cobbler")
