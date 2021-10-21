@@ -11,7 +11,7 @@ import (
 // profileCmd represents the profile command
 var profileCmd = &cobra.Command{
 	Use:   "profile",
-	Short: "profile management",
+	Short: "Profile management",
 	Long: `Let you manage profiles.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-profile for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {

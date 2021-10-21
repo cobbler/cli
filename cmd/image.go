@@ -11,7 +11,7 @@ import (
 // imageCmd represents the image command
 var imageCmd = &cobra.Command{
 	Use:   "image",
-	Short: "image management",
+	Short: "Image management",
 	Long: `Let you manage images.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-image for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {

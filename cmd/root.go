@@ -26,7 +26,9 @@ var rootCmd = &cobra.Command{
 	Use:   "cobbler",
 	Short: "Cobbler CLI client",
 	Long:  "An independent CLI to manage a Cobbler server.",
-	Run:   func(cmd *cobra.Command, args []string) {},
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

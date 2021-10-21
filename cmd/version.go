@@ -11,7 +11,7 @@ import (
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show the Cobbler version",
+	Short: "Print the Cobbler version",
 	Long:  `Shows the Cobbler server version.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient

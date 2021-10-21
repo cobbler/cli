@@ -11,7 +11,7 @@ import (
 // menuCmd represents the menu command
 var menuCmd = &cobra.Command{
 	Use:   "menu",
-	Short: "menu management",
+	Short: "Menu management",
 	Long: `Let you manage menus.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-menu for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {

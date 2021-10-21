@@ -11,7 +11,7 @@ import (
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List configurations",
+	Short: "List configuration",
 	Long: `Lists all configuration which Cobbler can obtain from the saved data. There are also report subcommands for
 most of the other Cobbler commands (currently: distro, profile, system, repo, image, mgmtclass, package, file, menu).
 Identical to 'cobbler report'`,

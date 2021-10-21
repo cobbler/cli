@@ -11,7 +11,7 @@ import (
 // systemCmd represents the system command
 var systemCmd = &cobra.Command{
 	Use:   "system",
-	Short: "system management",
+	Short: "System management",
 	Long: `Let you manage systems.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-system for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {

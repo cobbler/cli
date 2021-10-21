@@ -11,7 +11,7 @@ import (
 // packageCmd represents the package command
 var packageCmd = &cobra.Command{
 	Use:   "package",
-	Short: "package management",
+	Short: "Package management",
 	Long: `Let you manage packages.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-package for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {

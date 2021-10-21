@@ -11,7 +11,7 @@ import (
 // settingCmd represents the setting command
 var settingCmd = &cobra.Command{
 	Use:   "setting",
-	Short: "settings management",
+	Short: "Settings management",
 	Long:  `Let you manage settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
