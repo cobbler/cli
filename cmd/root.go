@@ -17,6 +17,7 @@ import (
 )
 
 var cfgFile string
+var Client cobbler.Client
 var conf cobbler.ClientConfig
 var httpClient = &http.Client{}
 
@@ -31,34 +32,14 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	// basic connection to the server
-	conf.URL = "http://127.0.0.1/cobbler_api"
-	conf.Username = "cobbler"
-	conf.Password = "cobbler"
-	client := cobbler.NewClient(httpClient, conf)
-	login, _ := client.Login()
-
-	// TODO: Remove debug messages
-	if login {
-		fmt.Println("login successful!")
-	} else {
-		fmt.Println("login not successful!")
-	}
 	cobra.CheckErr(rootCmd.Execute())
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
+	// global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobbler.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -81,6 +62,25 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
+		// TODO: Do we need the output what configl file is used?
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+	generateCobblerClient()
+}
+
+// basic connection to the Cobbler server
+func generateCobblerClient() {
+
+	// the configuration is done in .cobbler.yaml
+	conf.URL = viper.GetString("server_url")
+	conf.Username = viper.GetString("server_username")
+	conf.Password = viper.GetString("server_password")
+
+	Client = cobbler.NewClient(httpClient, conf)
+	login, _ := Client.Login()
+
+	// TODO: Remove debug messages
+	if !login {
+		fmt.Println("Login not successful!")
 	}
 }
