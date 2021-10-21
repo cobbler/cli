@@ -11,7 +11,7 @@ import (
 // signatureCmd represents the signature command
 var signatureCmd = &cobra.Command{
 	Use:   "signature",
-	Short: "Signature handling",
+	Short: "Signature management",
 	Long:  `Reloads, reports or updates the signatures of the distinct operating system versions.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient

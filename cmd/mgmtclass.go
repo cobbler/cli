@@ -11,7 +11,7 @@ import (
 // mgmtclassCmd represents the mgmtclass command
 var mgmtclassCmd = &cobra.Command{
 	Use:   "mgmtclass",
-	Short: "mgmtclass management",
+	Short: "Mgmtclass management",
 	Long: `Let you manage mgmtclasses.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-mgmtclass for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {

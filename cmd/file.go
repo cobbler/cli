@@ -11,7 +11,7 @@ import (
 // fileCmd represents the file command
 var fileCmd = &cobra.Command{
 	Use:   "file",
-	Short: "file management",
+	Short: "File management",
 	Long: `Let you manage files.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-file for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
