@@ -1,0 +1,11 @@
+# Cobbler CLI configuration file
+# copy to $HOME/.cobbler.yaml
+
+# Cobbler server URL
+server_url: "http://127.0.0.1/cobbler_api"
+
+# Cobbler Server username
+server_username: "cobbler"
+
+# Cobbler server password
+server_password: "cobbler"
