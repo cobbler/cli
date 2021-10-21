@@ -1,24 +1,15 @@
-/*
-Copyright © 2021 Dominik Gedon <dgedon@suse.de>
+// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-FileCopyrightText: 2021 Dominik Gedon <dgedon@suse.de>
+// SPDX-FileCopyrightText: Copyright SUSE LLC
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
 package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+
+	cobbler "github.com/cobbler/cobblerclient"
 
 	"github.com/spf13/cobra"
 
@@ -26,16 +17,16 @@ import (
 )
 
 var cfgFile string
+var Client cobbler.Client
+var conf cobbler.ClientConfig
+var httpClient = &http.Client{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "cobbler",
 	Short: "Cobbler CLI client",
 	Long:  "An independent CLI to manage a Cobbler server.",
-
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {},
+	Run:   func(cmd *cobra.Command, args []string) {},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -47,15 +38,8 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
+	// global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobbler.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -68,7 +52,7 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".cli" (without extension).
+		// Search config in home directory with name ".cobbler" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".cobbler")
@@ -78,6 +62,25 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
+		// TODO: Do we need the output what configl file is used?
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+	generateCobblerClient()
+}
+
+// basic connection to the Cobbler server
+func generateCobblerClient() {
+
+	// the configuration is done in .cobbler.yaml
+	conf.URL = viper.GetString("server_url")
+	conf.Username = viper.GetString("server_username")
+	conf.Password = viper.GetString("server_password")
+
+	Client = cobbler.NewClient(httpClient, conf)
+	login, _ := Client.Login()
+
+	// TODO: Remove debug messages
+	if !login {
+		fmt.Println("Login not successful!")
 	}
 }
