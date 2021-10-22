@@ -5,8 +5,15 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
+	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 )
+
+var profile *cobbler.Profile
+var profiles []*cobbler.Distro
 
 // profileCmd represents the profile command
 var profileCmd = &cobra.Command{
@@ -15,7 +22,7 @@ var profileCmd = &cobra.Command{
 	Long: `Let you manage profiles.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-profile for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -24,7 +31,48 @@ var profileAddCmd = &cobra.Command{
 	Short: "add profile",
 	Long:  `Adds a profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		var newProfile cobbler.Profile
+		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
+		newProfile.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
+		newProfile.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		newProfile.BootFiles, _ = cmd.Flags().GetString("bootfiles")
+		newProfile.Comment, _ = cmd.Flags().GetString("comment")
+		newProfile.DHCPTag, _ = cmd.Flags().GetString("dhcp-tag")
+		newProfile.Distro, _ = cmd.Flags().GetString("distro")
+		newProfile.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
+		newProfile.EnableMenu, _ = cmd.Flags().GetBool("enable-menu")
+		newProfile.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		newProfile.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		newProfile.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		newProfile.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		newProfile.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
+		newProfile.Name, _ = cmd.Flags().GetString("name")
+		newProfile.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
+		newProfile.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
+		newProfile.NextServer, _ = cmd.Flags().GetString("next-servers")
+		newProfile.Owners, _ = cmd.Flags().GetStringArray("owners")
+		newProfile.Proxy, _ = cmd.Flags().GetString("proxy")
+		newProfile.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		newProfile.Repos, _ = cmd.Flags().GetString("repos")
+		newProfile.Server, _ = cmd.Flags().GetString("server")
+		newProfile.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		newProfile.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
+		newProfile.VirtBridge, _ = cmd.Flags().GetString("virt-bridge")
+		newProfile.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
+		newProfile.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
+		newProfile.VirtFileSize, _ = cmd.Flags().GetString("virt-file-size")
+		newProfile.VirtPath, _ = cmd.Flags().GetString("virt-path")
+		newProfile.VirtRAM, _ = cmd.Flags().GetString("virt-ram")
+		newProfile.VirtType, _ = cmd.Flags().GetString("virt-type")
+
+		profile, err = Client.CreateProfile(newProfile)
+
+		if checkError(err) == nil {
+			fmt.Printf("Profile %s created", newProfile.Name)
+		} else {
+			fmt.Println(err.Error())
+		}
 	},
 }
 
@@ -34,6 +82,7 @@ var profileCopyCmd = &cobra.Command{
 	Long:  `Copies a profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +92,7 @@ var profileDumpVarsCmd = &cobra.Command{
 	Long:  `Prints all profile variables to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -51,7 +101,151 @@ var profileEditCmd = &cobra.Command{
 	Short: "edit profile",
 	Long:  `Edits a profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		// find profile through its name
+		pname, _ := cmd.Flags().GetString("name")
+		var updateProfile, err = Client.GetProfile(pname)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
+		var tmpArgs, _ = cmd.Flags().GetString("autoinstall")
+		if tmpArgs != "" {
+			updateProfile.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("autoinstall-meta")
+		if tmpArgs != "" {
+			updateProfile.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("bootfiles")
+		if tmpArgs != "" {
+			updateProfile.BootFiles, _ = cmd.Flags().GetString("bootfiles")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("comment")
+		if tmpArgs != "" {
+			updateProfile.Comment, _ = cmd.Flags().GetString("comment")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("dhcp-tag")
+		if tmpArgs != "" {
+			updateProfile.DHCPTag, _ = cmd.Flags().GetString("dhcp-tag")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("distro")
+		if tmpArgs != "" {
+			updateProfile.Distro, _ = cmd.Flags().GetString("distro")
+		}
+		// TODO
+		/* 		var tmpArgsbool, _ = cmd.Flags().GetBool("enable-ipxe")
+		   		if tmpArgsbool != "" {
+		   			updateProfile.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
+		   		}
+		   		tmpArgsbool, _ = cmd.Flags().GetBool("enable-menu")
+		   		if tmpArgsbool != "" {
+		   			updateProfile.EnableMenu, _ = cmd.Flags().GetBool("enable-menu")
+		   		}
+		*/
+		tmpArgs, _ = cmd.Flags().GetString("fetchable-files")
+		if tmpArgs != "" {
+			updateProfile.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel-options")
+		if tmpArgs != "" {
+			updateProfile.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel-options-post")
+		if tmpArgs != "" {
+			updateProfile.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		}
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("mgmt-parameters")
+		if tmpArgs != "" {
+			updateProfile.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("name")
+		if tmpArgs != "" {
+			updateProfile.Name, _ = cmd.Flags().GetString("name")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("name-servers")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("name-servers-search")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("next-servers")
+		if tmpArgs != "" {
+			updateProfile.NextServer, _ = cmd.Flags().GetString("next-servers")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.Owners, _ = cmd.Flags().GetStringArray("owners")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("proxy")
+		if tmpArgs != "" {
+			updateProfile.Proxy, _ = cmd.Flags().GetString("proxy")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
+		if tmpArgs != "" {
+			updateProfile.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("repos")
+		if tmpArgs != "" {
+			updateProfile.Repos, _ = cmd.Flags().GetString("repos")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("server")
+		if tmpArgs != "" {
+			updateProfile.Server, _ = cmd.Flags().GetString("server")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("template-files")
+		if tmpArgs != "" {
+			updateProfile.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-auto-boot")
+		if tmpArgs != "" {
+			updateProfile.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-bridge")
+		if tmpArgs != "" {
+			updateProfile.VirtBridge, _ = cmd.Flags().GetString("virt-bridge")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-cpus")
+		if tmpArgs != "" {
+			updateProfile.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-disk-driver")
+		if tmpArgs != "" {
+			updateProfile.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-file-size")
+		if tmpArgs != "" {
+			updateProfile.VirtFileSize, _ = cmd.Flags().GetString("virt-file-size")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-path")
+		if tmpArgs != "" {
+			updateProfile.VirtPath, _ = cmd.Flags().GetString("virt-path")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-ram")
+		if tmpArgs != "" {
+			updateProfile.VirtRAM, _ = cmd.Flags().GetString("virt-ram")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-type")
+		if tmpArgs != "" {
+			updateProfile.VirtType, _ = cmd.Flags().GetString("virt-type")
+		}
+
+		err = Client.UpdateProfile(updateProfile)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
 	},
 }
 
@@ -61,6 +255,7 @@ var profileFindCmd = &cobra.Command{
 	Long:  `Finds a given profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -70,6 +265,7 @@ var profileGetAutoinstallCmd = &cobra.Command{
 	Long:  `Prints the autoinstall XML file of the given profile to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -78,7 +274,15 @@ var profileListCmd = &cobra.Command{
 	Short: "list all profiles",
 	Long:  `Lists all available profiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		profiles, err = Client.GetDistros()
+
+		if checkError(err) == nil {
+			fmt.Println(profiles)
+		} else {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -87,7 +291,13 @@ var profileRemoveCmd = &cobra.Command{
 	Short: "remove profile",
 	Long:  `Removes a given profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		pname, _ := cmd.Flags().GetString("name")
+		err := Client.DeleteProfile(pname)
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -97,6 +307,7 @@ var profileRenameCmd = &cobra.Command{
 	Long:  `Renames a given profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -106,6 +317,7 @@ var profileReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all profiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
