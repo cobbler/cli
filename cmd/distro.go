@@ -104,12 +104,6 @@ func init() {
 
 	// local flags for distro add
 	distroAddCmd.Flags().String("name", "", "the distro name")
-	distroAddCmd.Flags().String("ctime", "", "")
-	distroAddCmd.Flags().String("depth", "", "")
-	distroAddCmd.Flags().String("mtime", "", "")
-	distroAddCmd.Flags().String("source-repos", "", "source repositories")
-	distroAddCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroAddCmd.Flags().String("uid", "", "UID")
 	distroAddCmd.Flags().String("arch", "", "Architecture")
 	distroAddCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroAddCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -133,12 +127,6 @@ func init() {
 	// local flags for distro copy
 	distroCopyCmd.Flags().String("name", "", "the distro name")
 	distroCopyCmd.Flags().String("newname", "", "the new distro name")
-	distroCopyCmd.Flags().String("ctime", "", "")
-	distroCopyCmd.Flags().String("depth", "", "")
-	distroCopyCmd.Flags().String("mtime", "", "")
-	distroCopyCmd.Flags().String("source-repos", "", "source repositories")
-	distroCopyCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroCopyCmd.Flags().String("uid", "", "UID")
 	distroCopyCmd.Flags().String("arch", "", "Architecture")
 	distroCopyCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroCopyCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -161,12 +149,6 @@ func init() {
 
 	// local flags for distro edit
 	distroEditCmd.Flags().String("name", "", "the distro name")
-	distroEditCmd.Flags().String("ctime", "", "")
-	distroEditCmd.Flags().String("depth", "", "")
-	distroEditCmd.Flags().String("mtime", "", "")
-	distroEditCmd.Flags().String("source-repos", "", "source repositories")
-	distroEditCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroEditCmd.Flags().String("uid", "", "UID")
 	distroEditCmd.Flags().String("arch", "", "Architecture")
 	distroEditCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroEditCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -221,12 +203,6 @@ func init() {
 	// local flags for distro rename
 	distroRenameCmd.Flags().String("name", "", "the distro name")
 	distroRenameCmd.Flags().String("newname", "", "the new distro name")
-	distroRenameCmd.Flags().String("ctime", "", "")
-	distroRenameCmd.Flags().String("depth", "", "")
-	distroRenameCmd.Flags().String("mtime", "", "")
-	distroRenameCmd.Flags().String("source-repos", "", "source repositories")
-	distroRenameCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroRenameCmd.Flags().String("uid", "", "UID")
 	distroRenameCmd.Flags().String("arch", "", "Architecture")
 	distroRenameCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroRenameCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
