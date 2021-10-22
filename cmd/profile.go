@@ -124,11 +124,7 @@ func init() {
 
 	// local flags for profile add
 	profileAddCmd.Flags().String("name", "", "the profile name")
-	profileAddCmd.Flags().String("ctime", "", "")
-	profileAddCmd.Flags().String("depth", "", "")
-	profileAddCmd.Flags().String("mtime", "", "")
 	profileAddCmd.Flags().String("repos", "", "(repos to auto-assign to this profile")
-	profileAddCmd.Flags().String("uid", "", "UID")
 	profileAddCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	profileAddCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	profileAddCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -168,11 +164,7 @@ func init() {
 	// local flags for profile copy
 	profileCopyCmd.Flags().String("name", "", "the profile name")
 	profileCopyCmd.Flags().String("newname", "", "the new profile name")
-	profileCopyCmd.Flags().String("ctime", "", "")
-	profileCopyCmd.Flags().String("depth", "", "")
-	profileCopyCmd.Flags().String("mtime", "", "")
 	profileCopyCmd.Flags().String("repos", "", "(repos to auto-assign to this profile")
-	profileCopyCmd.Flags().String("uid", "", "UID")
 	profileCopyCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	profileCopyCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	profileCopyCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -214,11 +206,7 @@ func init() {
 
 	// local flags for profile edit
 	profileEditCmd.Flags().String("name", "", "the profile name")
-	profileEditCmd.Flags().String("ctime", "", "")
-	profileEditCmd.Flags().String("depth", "", "")
-	profileEditCmd.Flags().String("mtime", "", "")
 	profileEditCmd.Flags().String("repos", "", "(repos to auto-assign to this profile")
-	profileEditCmd.Flags().String("uid", "", "UID")
 	profileEditCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	profileEditCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	profileEditCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -307,11 +295,7 @@ func init() {
 	// local flags for profile rename
 	profileRenameCmd.Flags().String("name", "", "the profile name")
 	profileRenameCmd.Flags().String("newname", "", "the new profile name")
-	profileRenameCmd.Flags().String("ctime", "", "")
-	profileRenameCmd.Flags().String("depth", "", "")
-	profileRenameCmd.Flags().String("mtime", "", "")
 	profileRenameCmd.Flags().String("repos", "", "(repos to auto-assign to this profile")
-	profileRenameCmd.Flags().String("uid", "", "UID")
 	profileRenameCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	profileRenameCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	profileRenameCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
