@@ -18,7 +18,9 @@ changed behind the scenes. It brings the filesystem up to date with the configur
 
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-sync for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		// not fully implemented in the cobblerclient library. You cannot use flags at the moment!
+		Client.Sync()
 	},
 }
 
