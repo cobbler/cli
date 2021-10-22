@@ -15,7 +15,7 @@ var mgmtclassCmd = &cobra.Command{
 	Long: `Let you manage mgmtclasses.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-mgmtclass for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -25,6 +25,7 @@ var mgmtclassAddCmd = &cobra.Command{
 	Long:  `Adds a mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -34,6 +35,7 @@ var mgmtclassCopyCmd = &cobra.Command{
 	Long:  `Copies a mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +45,7 @@ var mgmtclassEditCmd = &cobra.Command{
 	Long:  `Edits a mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -52,6 +55,7 @@ var mgmtclassFindCmd = &cobra.Command{
 	Long:  `Finds a given mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -61,6 +65,7 @@ var mgmtclassListCmd = &cobra.Command{
 	Long:  `Lists all available mgmtclasses.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -70,6 +75,7 @@ var mgmtclassRemoveCmd = &cobra.Command{
 	Long:  `Removes a given mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -79,6 +85,7 @@ var mgmtclassRenameCmd = &cobra.Command{
 	Long:  `Renames a given mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -88,6 +95,7 @@ var mgmtclassReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all mgmtclasses.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 

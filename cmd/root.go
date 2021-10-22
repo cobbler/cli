@@ -20,6 +20,7 @@ var cfgFile string
 var Client cobbler.Client
 var conf cobbler.ClientConfig
 var httpClient = &http.Client{}
+var err error
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -70,6 +71,14 @@ func initConfig() {
 	generateCobblerClient()
 }
 
+func checkError(err error) error {
+	if err != nil {
+		return fmt.Errorf("error occured: %s", err)
+	} else {
+		return nil
+	}
+}
+
 // basic connection to the Cobbler server
 func generateCobblerClient() {
 
@@ -79,10 +88,15 @@ func generateCobblerClient() {
 	conf.Password = viper.GetString("server_password")
 
 	Client = cobbler.NewClient(httpClient, conf)
-	login, _ := Client.Login()
+	login, err := Client.Login()
 
-	// TODO: Remove debug messages
-	if !login {
-		fmt.Println("Login not successful!")
+	if !login || err != nil {
+		fmt.Println(fmt.Errorf("failed to login: %s", err))
 	}
+}
+
+// simply prints a message about functions not implemented in the cobblerclient library
+func notImplemented() {
+	fmt.Println(fmt.Errorf(`error! Not yet implemented in the cobblerclient library
+See https://github.com/cobbler/cobblerclient/issues/4`))
 }

@@ -15,7 +15,7 @@ var imageCmd = &cobra.Command{
 	Long: `Let you manage images.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-image for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -25,6 +25,7 @@ var imageAddCmd = &cobra.Command{
 	Long:  `Adds a image.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -34,6 +35,7 @@ var imageCopyCmd = &cobra.Command{
 	Long:  `Copies a image.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +45,7 @@ var imageEditCmd = &cobra.Command{
 	Long:  `Edits a image.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -52,6 +55,7 @@ var imageFindCmd = &cobra.Command{
 	Long:  `Finds a given image.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -61,6 +65,7 @@ var imageListCmd = &cobra.Command{
 	Long:  `Lists all available images.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -70,6 +75,7 @@ var imageRemoveCmd = &cobra.Command{
 	Long:  `Removes a given image.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -79,6 +85,7 @@ var imageRenameCmd = &cobra.Command{
 	Long:  `Renames a given image.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -88,6 +95,7 @@ var imageimagertCmd = &cobra.Command{
 	Long:  `Shows detailed information about all images.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 

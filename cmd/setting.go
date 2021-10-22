@@ -14,7 +14,7 @@ var settingCmd = &cobra.Command{
 	Short: "Settings management",
 	Long:  `Let you manage settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -24,6 +24,7 @@ var settingEditCmd = &cobra.Command{
 	Long:  `Edits the settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -33,6 +34,7 @@ var settingReportCmd = &cobra.Command{
 	Long:  `Prints settings to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -45,6 +47,6 @@ func init() {
 	settingEditCmd.Flags().String("name", "", "the settings name to edit (e.g. server)")
 	settingEditCmd.Flags().String("value", "", "the new value (e.g. 127.0.0.1)")
 
-	// local flags for setting edit
+	// local flags for setting report
 	settingReportCmd.Flags().String("name", "", "the settings name to show")
 }
