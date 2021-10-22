@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -58,6 +59,7 @@ var distroAddCmd = &cobra.Command{
 			fmt.Printf("Distro %s created", newDistro.Name)
 		} else {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 	},
 }
@@ -81,6 +83,11 @@ var distroEditCmd = &cobra.Command{
 		// find distro through its name
 		dname, _ := cmd.Flags().GetString("name")
 		var updateDistro, err = Client.GetDistro(dname)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 
 		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
 		var tmpArgs, _ = cmd.Flags().GetString("arch")
@@ -153,6 +160,7 @@ var distroEditCmd = &cobra.Command{
 
 		if checkError(err) != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 	},
 }
@@ -190,6 +198,7 @@ var distroListCmd = &cobra.Command{
 			fmt.Println(distros)
 		} else {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 	},
 }
@@ -204,6 +213,7 @@ var distroRemoveCmd = &cobra.Command{
 		err := Client.DeleteDistro(dname)
 		if checkError(err) != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 	},
 }
