@@ -71,7 +71,7 @@ var profileAddCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Printf("Profile %s created", newProfile.Name)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 		}
 	},
 }
@@ -107,7 +107,7 @@ var profileEditCmd = &cobra.Command{
 		var updateProfile, err = Client.GetProfile(pname)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
@@ -242,7 +242,7 @@ var profileEditCmd = &cobra.Command{
 		err = Client.UpdateProfile(updateProfile)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
@@ -280,7 +280,7 @@ var profileListCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Println(profiles)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -295,7 +295,7 @@ var profileRemoveCmd = &cobra.Command{
 		pname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteProfile(pname)
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},

@@ -58,7 +58,7 @@ var distroAddCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Printf("Distro %s created", newDistro.Name)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -85,7 +85,7 @@ var distroEditCmd = &cobra.Command{
 		var updateDistro, err = Client.GetDistro(dname)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
@@ -159,7 +159,7 @@ var distroEditCmd = &cobra.Command{
 		err = Client.UpdateDistro(updateDistro)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -179,7 +179,7 @@ var distroFindCmd = &cobra.Command{
 			   	str, _ := json.MarshalIndent(distro, "", " ")
 			   	fmt.Println(string(str))
 			} else {
-			   	fmt.Println(err.Error())
+			   	fmt.Fprintln(os.Stderr, err.Error())
 			}
 		*/
 		notImplemented()
@@ -197,7 +197,7 @@ var distroListCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Println(distros)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -212,7 +212,7 @@ var distroRemoveCmd = &cobra.Command{
 		dname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteDistro(dname)
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},

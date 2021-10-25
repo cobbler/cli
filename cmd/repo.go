@@ -57,7 +57,7 @@ var repoAddCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Printf("Repo %s created", newRepo.Name)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -94,7 +94,7 @@ var repoEditCmd = &cobra.Command{
 		var updateRepo, err = Client.GetRepo(rname)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
@@ -163,7 +163,7 @@ var repoEditCmd = &cobra.Command{
 		err = Client.UpdateRepo(updateRepo)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -190,7 +190,7 @@ var repoListCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Println(repos)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 		}
 	},
 }
@@ -204,7 +204,7 @@ var repoRemoveCmd = &cobra.Command{
 		rname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteRepo(rname)
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 		}
 	},
 }
