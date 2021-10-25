@@ -13,7 +13,7 @@ import (
 	cobbler "github.com/cobbler/cobblerclient"
 )
 
-var distro *cobbler.Distro
+var distro *cobbler.Distro //nolint:golint,unused
 var distros []*cobbler.Distro
 
 // distroCmd represents the distro command

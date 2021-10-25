@@ -13,7 +13,7 @@ import (
 	cobbler "github.com/cobbler/cobblerclient"
 )
 
-var system *cobbler.System
+var system *cobbler.System //nolint:golint,unused
 var systems []*cobbler.System
 var iface cobbler.Interface
 
