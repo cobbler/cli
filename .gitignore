@@ -16,3 +16,6 @@ cobbler
 # vendor/
 .vscode/
 .idea/
+
+# shell completion folders
+config/completions/*
