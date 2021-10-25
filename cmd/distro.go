@@ -5,8 +5,16 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
+
+	cobbler "github.com/cobbler/cobblerclient"
 )
+
+var distro *cobbler.Distro
+var distros []*cobbler.Distro
 
 // distroCmd represents the distro command
 var distroCmd = &cobra.Command{
@@ -16,6 +24,7 @@ var distroCmd = &cobra.Command{
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-distro for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -24,7 +33,34 @@ var distroAddCmd = &cobra.Command{
 	Short: "add distribution",
 	Long:  `Adds a distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		var newDistro cobbler.Distro
+		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
+		newDistro.Arch, _ = cmd.Flags().GetString("arch")
+		newDistro.BootFiles, _ = cmd.Flags().GetString("boot-files")
+		newDistro.BootLoader, _ = cmd.Flags().GetString("boot-loaders")
+		newDistro.Breed, _ = cmd.Flags().GetString("breed")
+		newDistro.Comment, _ = cmd.Flags().GetString("comment")
+		newDistro.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		newDistro.Initrd, _ = cmd.Flags().GetString("initrd")
+		newDistro.Kernel, _ = cmd.Flags().GetString("kernel")
+		newDistro.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		newDistro.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		newDistro.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		newDistro.Name, _ = cmd.Flags().GetString("name")
+		newDistro.OSVersion, _ = cmd.Flags().GetString("os-version")
+		newDistro.Owners, _ = cmd.Flags().GetStringArray("owners")
+		newDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		newDistro.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+
+		distro, err = Client.CreateDistro(newDistro)
+
+		if checkError(err) == nil {
+			fmt.Printf("Distro %s created", newDistro.Name)
+		} else {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -34,6 +70,7 @@ var distroCopyCmd = &cobra.Command{
 	Long:  `Copies a distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -42,7 +79,89 @@ var distroEditCmd = &cobra.Command{
 	Short: "edit distribution",
 	Long:  `Edits a distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		// find distro through its name
+		dname, _ := cmd.Flags().GetString("name")
+		var updateDistro, err = Client.GetDistro(dname)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
+		var tmpArgs, _ = cmd.Flags().GetString("arch")
+
+		if tmpArgs != "" {
+			updateDistro.Arch, _ = cmd.Flags().GetString("arch")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("boot-files")
+		if tmpArgs != "" {
+			updateDistro.BootFiles, _ = cmd.Flags().GetString("boot-files")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("boot-loaders")
+		if tmpArgs != "" {
+			updateDistro.BootLoader, _ = cmd.Flags().GetString("boot-loaders")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("breed")
+		if tmpArgs != "" {
+			updateDistro.Breed, _ = cmd.Flags().GetString("breed")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("comment")
+		if tmpArgs != "" {
+			updateDistro.Comment, _ = cmd.Flags().GetString("comment")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("fetchable-files")
+		if tmpArgs != "" {
+			updateDistro.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("initrd")
+		if tmpArgs != "" {
+			updateDistro.Initrd, _ = cmd.Flags().GetString("initrd")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel")
+		if tmpArgs != "" {
+			updateDistro.Kernel, _ = cmd.Flags().GetString("kernel")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel-options")
+		if tmpArgs != "" {
+			updateDistro.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel-options-post")
+		if tmpArgs != "" {
+			updateDistro.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("mgmt-classes")
+		if tmpArgs != "" {
+			updateDistro.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("name")
+		if tmpArgs != "" {
+			updateDistro.Name, _ = cmd.Flags().GetString("name")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("os-version")
+		if tmpArgs != "" {
+			updateDistro.OSVersion, _ = cmd.Flags().GetString("os-version")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("owners")
+		if tmpArgs != "" {
+			updateDistro.Owners, _ = cmd.Flags().GetStringArray("owners")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
+		if tmpArgs != "" {
+			updateDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("template-files")
+		if tmpArgs != "" {
+			updateDistro.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		}
+
+		err = Client.UpdateDistro(updateDistro)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -51,7 +170,19 @@ var distroFindCmd = &cobra.Command{
 	Short: "find distribution",
 	Long:  `Finds a given distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		/*
+			dname, _ := cmd.Flags().GetString("name")
+			distro, err = Client.GetDistro(dname)
+
+			if checkError(err) == nil {
+			   	str, _ := json.MarshalIndent(distro, "", " ")
+			   	fmt.Println(string(str))
+			} else {
+			   	fmt.Println(err.Error())
+			}
+		*/
+		notImplemented()
 	},
 }
 
@@ -60,7 +191,15 @@ var distroListCmd = &cobra.Command{
 	Short: "list all distributions",
 	Long:  `Lists all available distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		distros, err = Client.GetDistros()
+
+		if checkError(err) == nil {
+			fmt.Println(distros)
+		} else {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -69,7 +208,13 @@ var distroRemoveCmd = &cobra.Command{
 	Short: "remove distribution",
 	Long:  `Removes a given distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		dname, _ := cmd.Flags().GetString("name")
+		err := Client.DeleteDistro(dname)
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -79,6 +224,7 @@ var distroRenameCmd = &cobra.Command{
 	Long:  `Renames a given distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -88,6 +234,7 @@ var distroReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -104,12 +251,6 @@ func init() {
 
 	// local flags for distro add
 	distroAddCmd.Flags().String("name", "", "the distro name")
-	distroAddCmd.Flags().String("ctime", "", "")
-	distroAddCmd.Flags().String("depth", "", "")
-	distroAddCmd.Flags().String("mtime", "", "")
-	distroAddCmd.Flags().String("source-repos", "", "source repositories")
-	distroAddCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroAddCmd.Flags().String("uid", "", "UID")
 	distroAddCmd.Flags().String("arch", "", "Architecture")
 	distroAddCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroAddCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -133,12 +274,6 @@ func init() {
 	// local flags for distro copy
 	distroCopyCmd.Flags().String("name", "", "the distro name")
 	distroCopyCmd.Flags().String("newname", "", "the new distro name")
-	distroCopyCmd.Flags().String("ctime", "", "")
-	distroCopyCmd.Flags().String("depth", "", "")
-	distroCopyCmd.Flags().String("mtime", "", "")
-	distroCopyCmd.Flags().String("source-repos", "", "source repositories")
-	distroCopyCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroCopyCmd.Flags().String("uid", "", "UID")
 	distroCopyCmd.Flags().String("arch", "", "Architecture")
 	distroCopyCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroCopyCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -161,12 +296,6 @@ func init() {
 
 	// local flags for distro edit
 	distroEditCmd.Flags().String("name", "", "the distro name")
-	distroEditCmd.Flags().String("ctime", "", "")
-	distroEditCmd.Flags().String("depth", "", "")
-	distroEditCmd.Flags().String("mtime", "", "")
-	distroEditCmd.Flags().String("source-repos", "", "source repositories")
-	distroEditCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroEditCmd.Flags().String("uid", "", "UID")
 	distroEditCmd.Flags().String("arch", "", "Architecture")
 	distroEditCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroEditCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -221,12 +350,6 @@ func init() {
 	// local flags for distro rename
 	distroRenameCmd.Flags().String("name", "", "the distro name")
 	distroRenameCmd.Flags().String("newname", "", "the new distro name")
-	distroRenameCmd.Flags().String("ctime", "", "")
-	distroRenameCmd.Flags().String("depth", "", "")
-	distroRenameCmd.Flags().String("mtime", "", "")
-	distroRenameCmd.Flags().String("source-repos", "", "source repositories")
-	distroRenameCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroRenameCmd.Flags().String("uid", "", "UID")
 	distroRenameCmd.Flags().String("arch", "", "Architecture")
 	distroRenameCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
 	distroRenameCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")

@@ -14,14 +14,17 @@ var signatureCmd = &cobra.Command{
 	Short: "Signature management",
 	Long:  `Reloads, reports or updates the signatures of the distinct operating system versions.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// cmd.Help() this should be used once the library is implemented
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(signatureCmd)
 
-	//local flags
+	// local flags
 	signatureCmd.Flags().Bool("reload", false, "reload the signatures file")
 	signatureCmd.Flags().Bool("report", false, "list the currently loaded signatures")
 	signatureCmd.Flags().Bool("update", false, "update the signatures file")

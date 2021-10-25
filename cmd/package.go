@@ -15,7 +15,7 @@ var packageCmd = &cobra.Command{
 	Long: `Let you manage packages.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-package for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -25,6 +25,7 @@ var packageAddCmd = &cobra.Command{
 	Long:  `Adds a package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -34,6 +35,7 @@ var packageCopyCmd = &cobra.Command{
 	Long:  `Copies a package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +45,7 @@ var packageEditCmd = &cobra.Command{
 	Long:  `Edits a package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -52,6 +55,7 @@ var packageFindCmd = &cobra.Command{
 	Long:  `Finds a given package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -61,6 +65,7 @@ var packageListCmd = &cobra.Command{
 	Long:  `Lists all available packages.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -70,6 +75,7 @@ var packageRemoveCmd = &cobra.Command{
 	Long:  `Removes a given package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -79,6 +85,7 @@ var packageRenameCmd = &cobra.Command{
 	Long:  `Renames a given package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -88,6 +95,7 @@ var packageReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all packages.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 

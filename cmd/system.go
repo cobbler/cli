@@ -5,8 +5,17 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
+
+	cobbler "github.com/cobbler/cobblerclient"
 )
+
+var system *cobbler.System
+var systems []*cobbler.System
+var iface cobbler.Interface
 
 // systemCmd represents the system command
 var systemCmd = &cobra.Command{
@@ -15,7 +24,7 @@ var systemCmd = &cobra.Command{
 	Long: `Let you manage systems.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-system for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -24,7 +33,86 @@ var systemAddCmd = &cobra.Command{
 	Short: "add system",
 	Long:  `Adds a system.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		var newSystem cobbler.System
+
+		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
+		newSystem.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
+		newSystem.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		newSystem.BootFiles, _ = cmd.Flags().GetString("bootfiles")
+		newSystem.Comment, _ = cmd.Flags().GetString("comment")
+		newSystem.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
+		newSystem.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		newSystem.Gateway, _ = cmd.Flags().GetString("gateway")
+		newSystem.Hostname, _ = cmd.Flags().GetString("hostname")
+		newSystem.Image, _ = cmd.Flags().GetString("image")
+		newSystem.IPv6DefaultDevice, _ = cmd.Flags().GetString("ipv6-default-device")
+		newSystem.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		newSystem.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		newSystem.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		newSystem.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
+		newSystem.Name, _ = cmd.Flags().GetString("name")
+		newSystem.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
+		newSystem.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
+		newSystem.NetbootEnabled, _ = cmd.Flags().GetBool("netboot-enabled")
+		newSystem.NextServer, _ = cmd.Flags().GetString("next-servers")
+		newSystem.Owners, _ = cmd.Flags().GetStringArray("owners")
+		newSystem.PowerAddress, _ = cmd.Flags().GetString("power-address")
+		newSystem.PowerID, _ = cmd.Flags().GetString("power-id")
+		newSystem.PowerPass, _ = cmd.Flags().GetString("power-pass")
+		newSystem.PowerType, _ = cmd.Flags().GetString("power-type")
+		newSystem.PowerUser, _ = cmd.Flags().GetString("power-user")
+		newSystem.Profile, _ = cmd.Flags().GetString("profile")
+		newSystem.Proxy, _ = cmd.Flags().GetString("proxy")
+		newSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		newSystem.Status, _ = cmd.Flags().GetString("status")
+		newSystem.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		newSystem.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
+		newSystem.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
+		newSystem.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
+		newSystem.VirtFileSize, _ = cmd.Flags().GetString("virt-file-size")
+		newSystem.VirtPath, _ = cmd.Flags().GetString("virt-path")
+		newSystem.VirtPXEBoot, _ = cmd.Flags().GetInt("virt-pxe-boot")
+		newSystem.VirtRAM, _ = cmd.Flags().GetString("virt-ram")
+		newSystem.VirtType, _ = cmd.Flags().GetString("virt-type")
+
+		// interface type
+		iface.CNAMEs, _ = cmd.Flags().GetStringArray("cnames")
+		iface.DHCPTag, _ = cmd.Flags().GetString("dhcp-tag")
+		iface.DNSName, _ = cmd.Flags().GetString("dns-name")
+		iface.BondingOpts, _ = cmd.Flags().GetString("bonding-opts")
+		//iface.BridgeOpts, _ = cmd.Flags().GetString("bridge-opts")
+		iface.Gateway, _ = cmd.Flags().GetString("gateway")
+		iface.InterfaceType, _ = cmd.Flags().GetString("interface-type")
+		iface.InterfaceMaster, _ = cmd.Flags().GetString("interface-master")
+		iface.IPAddress, _ = cmd.Flags().GetString("ip-address")
+		iface.IPv6Address, _ = cmd.Flags().GetString("ipv6-address")
+		iface.IPv6Secondaries, _ = cmd.Flags().GetStringArray("ipv6-secondaries")
+		iface.IPv6MTU, _ = cmd.Flags().GetString("ipv6-mtu")
+		iface.IPv6StaticRoutes, _ = cmd.Flags().GetStringArray("ipv6-static-routes")
+		iface.IPv6DefaultGateway, _ = cmd.Flags().GetString("ipv6-default-gateway")
+		iface.MACAddress, _ = cmd.Flags().GetString("mac-address")
+		iface.Management, _ = cmd.Flags().GetBool("management")
+		iface.Netmask, _ = cmd.Flags().GetString("netmask")
+		iface.Static, _ = cmd.Flags().GetBool("static")
+		iface.StaticRoutes, _ = cmd.Flags().GetStringArray("static-routes")
+		iface.VirtBridge, _ = cmd.Flags().GetString("virt-bridge")
+
+		// TODO: Implementation for more interfaces
+		// See https://github.com/cobbler/cli/issues/38
+		err = newSystem.CreateInterface("default", iface)
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		system, err = Client.CreateSystem(newSystem)
+		if checkError(err) == nil {
+			fmt.Printf("System %s created", newSystem.Name)
+		} else {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -34,6 +122,7 @@ var systemCopyCmd = &cobra.Command{
 	Long:  `Copies a system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +132,7 @@ var systemDumpVarsCmd = &cobra.Command{
 	Long:  `Prints all system variables to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -51,7 +141,184 @@ var systemEditCmd = &cobra.Command{
 	Short: "edit system",
 	Long:  `Edits a system.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		// find profile through its name
+		pname, _ := cmd.Flags().GetString("name")
+		var updateSystem, err = Client.GetSystem(pname)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
+		var tmpArgs, _ = cmd.Flags().GetString("autoinstall")
+		if tmpArgs != "" {
+			updateSystem.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("autoinstall-meta")
+		if tmpArgs != "" {
+			updateSystem.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("bootfiles")
+		if tmpArgs != "" {
+			updateSystem.BootFiles, _ = cmd.Flags().GetString("bootfiles")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("comment")
+		if tmpArgs != "" {
+			updateSystem.Comment, _ = cmd.Flags().GetString("comment")
+		}
+		// TODO
+		/*
+			var tmpArgsBool, _ = cmd.Flags().GetBool("enable-ipxe")
+			if tmpArgsBool != "" {
+				updateSystem.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
+			}
+		*/
+		tmpArgs, _ = cmd.Flags().GetString("fetchable-files")
+		if tmpArgs != "" {
+			updateSystem.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("gateway")
+		if tmpArgs != "" {
+			updateSystem.Gateway, _ = cmd.Flags().GetString("gateway")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("hostname")
+		if tmpArgs != "" {
+			updateSystem.Hostname, _ = cmd.Flags().GetString("hostname")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("image")
+		if tmpArgs != "" {
+			updateSystem.Image, _ = cmd.Flags().GetString("image")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("ipv6-default-device")
+		if tmpArgs != "" {
+			updateSystem.IPv6DefaultDevice, _ = cmd.Flags().GetString("ipv6-default-device")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel-options")
+		if tmpArgs != "" {
+			updateSystem.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("kernel-options-post")
+		if tmpArgs != "" {
+			updateSystem.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		}
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("mgmt-parameters")
+		if tmpArgs != "" {
+			updateSystem.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("name")
+		if tmpArgs != "" {
+			updateSystem.Name, _ = cmd.Flags().GetString("name")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("name-servers")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("name-servers-search")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
+		}
+		// TODO
+		/*
+			tmpArgsBool, _ = cmd.Flags().GetBool("netboot-enabled")
+			if tmpArgsBool != "" {
+				updateSystem.NetbootEnabled, _ = cmd.Flags().GetBool("netboot-enabled")
+			}
+		*/
+		tmpArgs, _ = cmd.Flags().GetString("next-servers")
+		if tmpArgs != "" {
+			updateSystem.NextServer, _ = cmd.Flags().GetString("next-servers")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.Owners, _ = cmd.Flags().GetStringArray("owners")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("power-address")
+		if tmpArgs != "" {
+			updateSystem.PowerAddress, _ = cmd.Flags().GetString("power-address")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("power-id")
+		if tmpArgs != "" {
+			updateSystem.PowerID, _ = cmd.Flags().GetString("power-id")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("power-pass")
+		if tmpArgs != "" {
+			updateSystem.PowerPass, _ = cmd.Flags().GetString("power-pass")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("power-type")
+		if tmpArgs != "" {
+			updateSystem.PowerType, _ = cmd.Flags().GetString("power-type")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("power-user")
+		if tmpArgs != "" {
+			updateSystem.PowerUser, _ = cmd.Flags().GetString("power-user")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("profile")
+		if tmpArgs != "" {
+			updateSystem.Profile, _ = cmd.Flags().GetString("profile")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("proxy")
+		if tmpArgs != "" {
+			updateSystem.Proxy, _ = cmd.Flags().GetString("proxy")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
+		if tmpArgs != "" {
+			updateSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("status")
+		if tmpArgs != "" {
+			updateSystem.Status, _ = cmd.Flags().GetString("status")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("template-files")
+		if tmpArgs != "" {
+			updateSystem.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-auto-boot")
+		if tmpArgs != "" {
+			updateSystem.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-cpus")
+		if tmpArgs != "" {
+			updateSystem.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-disk-driver")
+		if tmpArgs != "" {
+			updateSystem.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-file-size")
+		if tmpArgs != "" {
+			updateSystem.VirtFileSize, _ = cmd.Flags().GetString("virt-file-size")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-path")
+		if tmpArgs != "" {
+			updateSystem.VirtPath, _ = cmd.Flags().GetString("virt-path")
+		}
+
+		// FIXME: what happens when the int value is acutally 0 instead of 1?
+		var tmpArgsInt, _ = cmd.Flags().GetInt("virt-pxe-boot")
+		if tmpArgsInt != 0 {
+			updateSystem.VirtPXEBoot, _ = cmd.Flags().GetInt("virt-pxe-boot")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-ram")
+		if tmpArgs != "" {
+			updateSystem.VirtRAM, _ = cmd.Flags().GetString("virt-ram")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("virt-type")
+		if tmpArgs != "" {
+			updateSystem.VirtType, _ = cmd.Flags().GetString("virt-type")
+		}
+
+		err = Client.UpdateSystem(updateSystem)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -61,6 +328,7 @@ var systemFindCmd = &cobra.Command{
 	Long:  `Finds a given system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -70,6 +338,7 @@ var systemGetAutoinstallCmd = &cobra.Command{
 	Long:  `Prints the autoinstall XML file of the given system to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -78,7 +347,15 @@ var systemListCmd = &cobra.Command{
 	Short: "list all systems",
 	Long:  `Lists all available systems.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		systems, err = Client.GetSystems()
+
+		if checkError(err) == nil {
+			fmt.Println(systems)
+		} else {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -88,6 +365,7 @@ var systemPowerOffCmd = &cobra.Command{
 	Long:  `Powers off the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -97,6 +375,7 @@ var systemPowerOnCmd = &cobra.Command{
 	Long:  `Powers on the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -106,6 +385,7 @@ var systemPowerStatusCmd = &cobra.Command{
 	Long:  `Querys the power status of the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -115,6 +395,7 @@ var systemRebootCmd = &cobra.Command{
 	Long:  `Reboots the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -123,7 +404,13 @@ var systemRemoveCmd = &cobra.Command{
 	Short: "remove system",
 	Long:  `Removes a given system.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		sname, _ := cmd.Flags().GetString("name")
+		err := Client.DeleteSystem(sname)
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -133,6 +420,7 @@ var systemRenameCmd = &cobra.Command{
 	Long:  `Renames a given system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -142,6 +430,7 @@ var systemReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all systems.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -164,10 +453,6 @@ func init() {
 
 	// local flags for system add
 	systemAddCmd.Flags().String("name", "", "the system name")
-	systemAddCmd.Flags().String("ctime", "", "")
-	systemAddCmd.Flags().String("depth", "", "")
-	systemAddCmd.Flags().String("mtime", "", "")
-	systemAddCmd.Flags().String("uid", "", "UID")
 	systemAddCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	systemAddCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	systemAddCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -202,8 +487,6 @@ func init() {
 	systemAddCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
 	systemAddCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
 	systemAddCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemAddCmd.Flags().Bool("ipv6-autoconfiguration", false, "IPv6 auto configuration")
-	systemAddCmd.Flags().Bool("repos-enabled", false, "(re)configure local repos on this machine at next config update?")
 	systemAddCmd.Flags().String("gateway", "", "gateway")
 	systemAddCmd.Flags().String("hostname", "", "hostname")
 	systemAddCmd.Flags().String("image", "", "parent image (if not a profile)")
@@ -212,12 +495,7 @@ func init() {
 	systemAddCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
 	systemAddCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
 	systemAddCmd.Flags().String("power-pass", "", "power management password")
-	systemAddCmd.Flags().String("power-type", "", `power management script to use. Valid options: aliyun,alom,amt,apc,apc_snmp,azure_arm,
-bladecenter,brocade,cdu,cisco_mds,cisco_ucs,compute,docker,drac5,eaton_snmp,emerson,eps,
-evacuate,gce,hds_cb,hpblade,ibmblade,ibmz,idrac,ifmib,ilo,ilo2,ilo3,ilo3_ssh,ilo4,ilo4_ssh,
-ilo5,ilo5_ssh,ilo_moonshot,ilo_mp,ilo_ssh,imm,intelmodular,ipdu,ipmilan,ipmilanplus,ironic,
-kdump,ldom,lpar,mpath,netio,openstack,powerman,pve,raritan,rcd_serial,redfish,rhevm,rsa,rsb,
-sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvmip`)
+	systemAddCmd.Flags().String("power-type", "", "power management script to use")
 	systemAddCmd.Flags().String("power-user", "", "power management username")
 	systemAddCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
 	systemAddCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
@@ -243,7 +521,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemAddCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
 	systemAddCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
 	systemAddCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a	random MAC Address.)")
-	systemAddCmd.Flags().String("management", "", "Defines the management interface (should be used with --interface) ")
+	systemAddCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
 	systemAddCmd.Flags().String("mtu", "", "MTU")
 	systemAddCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
 	systemAddCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
@@ -254,10 +532,6 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 
 	// local flags for system copy
 	systemCopyCmd.Flags().String("name", "", "the system name")
-	systemCopyCmd.Flags().String("ctime", "", "")
-	systemCopyCmd.Flags().String("depth", "", "")
-	systemCopyCmd.Flags().String("mtime", "", "")
-	systemCopyCmd.Flags().String("uid", "", "UID")
 	systemCopyCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	systemCopyCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	systemCopyCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -292,8 +566,6 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemCopyCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
 	systemCopyCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
 	systemCopyCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemCopyCmd.Flags().Bool("ipv6-autoconfiguration", false, "IPv6 auto configuration")
-	systemCopyCmd.Flags().Bool("repos-enabled", false, "(re)configure local repos on this machine at next config update?")
 	systemCopyCmd.Flags().String("gateway", "", "gateway")
 	systemCopyCmd.Flags().String("hostname", "", "hostname")
 	systemCopyCmd.Flags().String("image", "", "parent image (if not a profile)")
@@ -302,12 +574,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemCopyCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
 	systemCopyCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
 	systemCopyCmd.Flags().String("power-pass", "", "power management password")
-	systemCopyCmd.Flags().String("power-type", "", `power management script to use. Valid options: aliyun,alom,amt,apc,apc_snmp,azure_arm,
-bladecenter,brocade,cdu,cisco_mds,cisco_ucs,compute,docker,drac5,eaton_snmp,emerson,eps,
-evacuate,gce,hds_cb,hpblade,ibmblade,ibmz,idrac,ifmib,ilo,ilo2,ilo3,ilo3_ssh,ilo4,ilo4_ssh,
-ilo5,ilo5_ssh,ilo_moonshot,ilo_mp,ilo_ssh,imm,intelmodular,ipdu,ipmilan,ipmilanplus,ironic,
-kdump,ldom,lpar,mpath,netio,openstack,powerman,pve,raritan,rcd_serial,redfish,rhevm,rsa,rsb,
-sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvmip`)
+	systemCopyCmd.Flags().String("power-type", "", "power management script to use")
 	systemCopyCmd.Flags().String("power-user", "", "power management username")
 	systemCopyCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
 	systemCopyCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
@@ -333,7 +600,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemCopyCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
 	systemCopyCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
 	systemCopyCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a random MAC Address.)")
-	systemCopyCmd.Flags().String("management", "", "Defines the management interface (should be used with --interface) ")
+	systemCopyCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
 	systemCopyCmd.Flags().String("mtu", "", "MTU")
 	systemCopyCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
 	systemCopyCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
@@ -347,10 +614,6 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 
 	// local flags for system edit
 	systemEditCmd.Flags().String("name", "", "the system name")
-	systemEditCmd.Flags().String("ctime", "", "")
-	systemEditCmd.Flags().String("depth", "", "")
-	systemEditCmd.Flags().String("mtime", "", "")
-	systemEditCmd.Flags().String("uid", "", "UID")
 	systemEditCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	systemEditCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	systemEditCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -385,8 +648,6 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemEditCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
 	systemEditCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
 	systemEditCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemEditCmd.Flags().Bool("ipv6-autoconfiguration", false, "IPv6 auto configuration")
-	systemEditCmd.Flags().Bool("repos-enabled", false, "(re)configure local repos on this machine at next config update?")
 	systemEditCmd.Flags().String("gateway", "", "gateway")
 	systemEditCmd.Flags().String("hostname", "", "hostname")
 	systemEditCmd.Flags().String("image", "", "parent image (if not a profile)")
@@ -395,12 +656,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemEditCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
 	systemEditCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
 	systemEditCmd.Flags().String("power-pass", "", "power management password")
-	systemEditCmd.Flags().String("power-type", "", `power management script to use. Valid options: aliyun,alom,amt,apc,apc_snmp,azure_arm,
-bladecenter,brocade,cdu,cisco_mds,cisco_ucs,compute,docker,drac5,eaton_snmp,emerson,eps,
-evacuate,gce,hds_cb,hpblade,ibmblade,ibmz,idrac,ifmib,ilo,ilo2,ilo3,ilo3_ssh,ilo4,ilo4_ssh,
-ilo5,ilo5_ssh,ilo_moonshot,ilo_mp,ilo_ssh,imm,intelmodular,ipdu,ipmilan,ipmilanplus,ironic,
-kdump,ldom,lpar,mpath,netio,openstack,powerman,pve,raritan,rcd_serial,redfish,rhevm,rsa,rsb,
-sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvmip`)
+	systemEditCmd.Flags().String("power-type", "", "power management script to use")
 	systemEditCmd.Flags().String("power-user", "", "power management username")
 	systemEditCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
 	systemEditCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
@@ -426,7 +682,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemEditCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
 	systemEditCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
 	systemEditCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a random MAC Address.)")
-	systemEditCmd.Flags().String("management", "", "Defines the management interface (should be used with --interface) ")
+	systemEditCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
 	systemEditCmd.Flags().String("mtu", "", "MTU")
 	systemEditCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
 	systemEditCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
@@ -482,12 +738,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemFindCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
 	systemFindCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
 	systemFindCmd.Flags().String("power-pass", "", "power management password")
-	systemFindCmd.Flags().String("power-type", "", `power management script to use. Valid options: aliyun,alom,amt,apc,apc_snmp,azure_arm,
-bladecenter,brocade,cdu,cisco_mds,cisco_ucs,compute,docker,drac5,eaton_snmp,emerson,eps,
-evacuate,gce,hds_cb,hpblade,ibmblade,ibmz,idrac,ifmib,ilo,ilo2,ilo3,ilo3_ssh,ilo4,ilo4_ssh,
-ilo5,ilo5_ssh,ilo_moonshot,ilo_mp,ilo_ssh,imm,intelmodular,ipdu,ipmilan,ipmilanplus,ironic,
-kdump,ldom,lpar,mpath,netio,openstack,powerman,pve,raritan,rcd_serial,redfish,rhevm,rsa,rsb,
-sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvmip`)
+	systemFindCmd.Flags().String("power-type", "", "power management script to use")
 	systemFindCmd.Flags().String("power-user", "", "power management username")
 	systemFindCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
 	systemFindCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
@@ -513,7 +764,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemFindCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
 	systemFindCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
 	systemFindCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a random MAC Address.)")
-	systemFindCmd.Flags().String("management", "", "Defines the management interface (should be used with --interface) ")
+	systemFindCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
 	systemFindCmd.Flags().String("mtu", "", "MTU")
 	systemFindCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
 	systemFindCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
@@ -544,10 +795,6 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	// local flags for system rename
 	systemRenameCmd.Flags().String("name", "", "the system name")
 	systemRenameCmd.Flags().String("newname", "", "the new system name")
-	systemRenameCmd.Flags().String("ctime", "", "")
-	systemRenameCmd.Flags().String("depth", "", "")
-	systemRenameCmd.Flags().String("mtime", "", "")
-	systemRenameCmd.Flags().String("uid", "", "UID")
 	systemRenameCmd.Flags().String("autoinstall", "", "path to automatic installation template")
 	systemRenameCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
 	systemRenameCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
@@ -582,8 +829,6 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemRenameCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
 	systemRenameCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
 	systemRenameCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemRenameCmd.Flags().Bool("ipv6-autoconfiguration", false, "IPv6 auto configuration")
-	systemRenameCmd.Flags().Bool("repos-enabled", false, "(re)configure local repos on this machine at next config update?")
 	systemRenameCmd.Flags().String("gateway", "", "gateway")
 	systemRenameCmd.Flags().String("hostname", "", "hostname")
 	systemRenameCmd.Flags().String("image", "", "parent image (if not a profile)")
@@ -592,12 +837,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemRenameCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
 	systemRenameCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
 	systemRenameCmd.Flags().String("power-pass", "", "power management password")
-	systemRenameCmd.Flags().String("power-type", "", `power management script to use. Valid options: aliyun,alom,amt,apc,apc_snmp,azure_arm,
-bladecenter,brocade,cdu,cisco_mds,cisco_ucs,compute,docker,drac5,eaton_snmp,emerson,eps,
-evacuate,gce,hds_cb,hpblade,ibmblade,ibmz,idrac,ifmib,ilo,ilo2,ilo3,ilo3_ssh,ilo4,ilo4_ssh,
-ilo5,ilo5_ssh,ilo_moonshot,ilo_mp,ilo_ssh,imm,intelmodular,ipdu,ipmilan,ipmilanplus,ironic,
-kdump,ldom,lpar,mpath,netio,openstack,powerman,pve,raritan,rcd_serial,redfish,rhevm,rsa,rsb,
-sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvmip`)
+	systemRenameCmd.Flags().String("power-type", "", "power management script to use")
 	systemRenameCmd.Flags().String("power-user", "", "power management username")
 	systemRenameCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
 	systemRenameCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
@@ -623,7 +863,7 @@ sanbox2,sbd,scsi,tripplite_snmp,vbox,virsh,vmware,vmware_rest,wti,xenapi,zvm,zvm
 	systemRenameCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries")
 	systemRenameCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes")
 	systemRenameCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a	random MAC Address.)")
-	systemRenameCmd.Flags().String("management", "", "Defines the management interface (should be used with --interface) ")
+	systemRenameCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
 	systemRenameCmd.Flags().String("mtu", "", "MTU")
 	systemRenameCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
 	systemRenameCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")

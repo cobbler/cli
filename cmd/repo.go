@@ -5,8 +5,16 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
+
+	cobbler "github.com/cobbler/cobblerclient"
 )
+
+var repo *cobbler.Repo
+var repos []*cobbler.Repo
 
 // repoCmd represents the repo command
 var repoCmd = &cobra.Command{
@@ -15,7 +23,7 @@ var repoCmd = &cobra.Command{
 	Long: `Let you manage repositories.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-repo for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -24,7 +32,34 @@ var repoAddCmd = &cobra.Command{
 	Short: "add repository",
 	Long:  `Adds a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		var newRepo cobbler.Repo
+
+		// internal fields (ctime, mtime, depth, uid, parent, tree-build-time) cannot be modified
+		newRepo.AptComponents, _ = cmd.Flags().GetStringArray("apt-components")
+		newRepo.AptDists, _ = cmd.Flags().GetStringArray("apt-dists")
+		newRepo.Arch, _ = cmd.Flags().GetString("arch")
+		newRepo.Breed, _ = cmd.Flags().GetString("breed")
+		newRepo.Comment, _ = cmd.Flags().GetString("comment")
+		newRepo.CreateRepoFlags, _ = cmd.Flags().GetString("createrepo-flags")
+		newRepo.Environment, _ = cmd.Flags().GetString("environment")
+		newRepo.KeepUpdated, _ = cmd.Flags().GetBool("keep-updated")
+		newRepo.Mirror, _ = cmd.Flags().GetString("mirror")
+		// not implemented in Cobbler yet
+		// newRepo.MirrorLocally, _ = cmd.Flags().GetBool("mirror-locally")
+		newRepo.Name, _ = cmd.Flags().GetString("name")
+		newRepo.Owners, _ = cmd.Flags().GetStringArray("owners")
+		newRepo.Proxy, _ = cmd.Flags().GetString("proxy")
+		newRepo.RpmList, _ = cmd.Flags().GetStringArray("rpm-list")
+
+		repo, err = Client.CreateRepo(newRepo)
+
+		if checkError(err) == nil {
+			fmt.Printf("Repo %s created", newRepo.Name)
+		} else {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -34,6 +69,7 @@ var repoAutoAddCmd = &cobra.Command{
 	Long:  `Automatically adds a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +79,7 @@ var repoCopyCmd = &cobra.Command{
 	Long:  `Copies a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -51,7 +88,84 @@ var repoEditCmd = &cobra.Command{
 	Short: "edit repository",
 	Long:  `Edits a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		// find repo through its name
+		rname, _ := cmd.Flags().GetString("name")
+		var updateRepo, err = Client.GetRepo(rname)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		// internal fields (ctime, mtime, depth, uid, parent, tree-build-time) cannot be modified
+		var tmpArgs, _ = cmd.Flags().GetString("apt-components")
+		if tmpArgs != "" {
+			updateRepo.AptDists, _ = cmd.Flags().GetStringArray("apt-components")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("apt-dists")
+		if tmpArgs != "" {
+			updateRepo.AptDists, _ = cmd.Flags().GetStringArray("apt-dists")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("arch")
+		if tmpArgs != "" {
+			updateRepo.Arch, _ = cmd.Flags().GetString("arch")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("breed")
+		if tmpArgs != "" {
+			updateRepo.Breed, _ = cmd.Flags().GetString("breed")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("comment")
+		if tmpArgs != "" {
+			updateRepo.Comment, _ = cmd.Flags().GetString("comment")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("createrepo-flags")
+		if tmpArgs != "" {
+			updateRepo.CreateRepoFlags, _ = cmd.Flags().GetString("createrepo-flags")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("environment")
+		if tmpArgs != "" {
+			updateRepo.Environment, _ = cmd.Flags().GetString("environment")
+		}
+		// TODO
+		/* 		tmpArgs, _ = cmd.Flags().GetBool("keep-updated")
+		   		if tmpArgs != "" {
+		   			updateRepo.KeepUpdated, _ = cmd.Flags().GetBool("keep-updated")
+		   		}
+		*/
+		tmpArgs, _ = cmd.Flags().GetString("mirror")
+		if tmpArgs != "" {
+			updateRepo.Mirror, _ = cmd.Flags().GetString("mirror")
+		}
+		// not implemented in Cobbler yet
+		/* 		tmpArgs, _ = cmd.Flags().GetBool("mirror-locally")
+		   		if tmpArgs != "" {
+		   			updateRepo.KeepUpdated, _ = cmd.Flags().GetBool("mirror-locally")
+		   		}
+		*/
+		tmpArgs, _ = cmd.Flags().GetString("name")
+		if tmpArgs != "" {
+			updateRepo.Name, _ = cmd.Flags().GetString("name")
+		}
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
+		if len(tmpArgsArray) > 0 {
+			updateRepo.Owners, _ = cmd.Flags().GetStringArray("owners")
+		}
+		tmpArgs, _ = cmd.Flags().GetString("proxy")
+		if tmpArgs != "" {
+			updateRepo.Proxy, _ = cmd.Flags().GetString("proxy")
+		}
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("rpm-list")
+		if len(tmpArgsArray) > 0 {
+			updateRepo.RpmList, _ = cmd.Flags().GetStringArray("rpm-list")
+		}
+
+		err = Client.UpdateRepo(updateRepo)
+
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -61,6 +175,7 @@ var repoFindCmd = &cobra.Command{
 	Long:  `Finds a given repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -69,7 +184,14 @@ var repoListCmd = &cobra.Command{
 	Short: "list all repositorys",
 	Long:  `Lists all available repositories.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		repos, err = Client.GetRepos()
+
+		if checkError(err) == nil {
+			fmt.Println(repos)
+		} else {
+			fmt.Println(err.Error())
+		}
 	},
 }
 
@@ -78,7 +200,12 @@ var repoRemoveCmd = &cobra.Command{
 	Short: "remove repository",
 	Long:  `Removes a given repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+
+		rname, _ := cmd.Flags().GetString("name")
+		err := Client.DeleteRepo(rname)
+		if checkError(err) != nil {
+			fmt.Println(err.Error())
+		}
 	},
 }
 
@@ -88,6 +215,7 @@ var repoRenameCmd = &cobra.Command{
 	Long:  `Renames a given repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -97,6 +225,7 @@ var repoReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all repositories.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -114,16 +243,11 @@ func init() {
 
 	// local flags for repo add
 	repoAddCmd.Flags().String("name", "", "the repo name")
-	repoAddCmd.Flags().String("ctime", "", "")
-	repoAddCmd.Flags().String("depth", "", "")
-	repoAddCmd.Flags().String("mtime", "", "")
-	repoAddCmd.Flags().String("uid", "", "UID")
 	repoAddCmd.Flags().String("arch", "", "Architecture")
 	repoAddCmd.Flags().String("breed", "", "Breed (valid options: none,rsync,rhn,yum,apt,wget)")
 	repoAddCmd.Flags().String("comment", "", "free form text description")
 	repoAddCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	repoAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	repoAddCmd.Flags().String("parent", "", "")
 	repoAddCmd.Flags().String("apt-components", "", "APT components (e.g. main restricted universe)")
 	repoAddCmd.Flags().String("apt-dists", "", "APT dist names (e.g. precise,bullseye,buster)")
 	repoAddCmd.Flags().String("createrepo-flags", "", "flags to use with createrepo")
@@ -139,16 +263,11 @@ func init() {
 
 	// local flags for repo autoadd
 	repoAutoAddCmd.Flags().String("name", "", "the repo name")
-	repoAutoAddCmd.Flags().String("ctime", "", "")
-	repoAutoAddCmd.Flags().String("depth", "", "")
-	repoAutoAddCmd.Flags().String("mtime", "", "")
-	repoAutoAddCmd.Flags().String("uid", "", "UID")
 	repoAutoAddCmd.Flags().String("arch", "", "Architecture")
 	repoAutoAddCmd.Flags().String("breed", "", "Breed (valid options: none,rsync,rhn,yum,apt,wget)")
 	repoAutoAddCmd.Flags().String("comment", "", "free form text description")
 	repoAutoAddCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	repoAutoAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	repoAutoAddCmd.Flags().String("parent", "", "")
 	repoAutoAddCmd.Flags().String("apt-components", "", "APT components (e.g. main restricted universe)")
 	repoAutoAddCmd.Flags().String("apt-dists", "", "APT dist names (e.g. precise,bullseye,buster)")
 	repoAutoAddCmd.Flags().String("createrepo-flags", "", "flags to use with createrepo")
@@ -165,16 +284,11 @@ func init() {
 	// local flags for repo copy
 	repoCopyCmd.Flags().String("name", "", "the repo name")
 	repoCopyCmd.Flags().String("newname", "", "the new repo name")
-	repoCopyCmd.Flags().String("ctime", "", "")
-	repoCopyCmd.Flags().String("depth", "", "")
-	repoCopyCmd.Flags().String("mtime", "", "")
-	repoCopyCmd.Flags().String("uid", "", "UID")
 	repoCopyCmd.Flags().String("arch", "", "Architecture")
 	repoCopyCmd.Flags().String("breed", "", "Breed (valid options: none,rsync,rhn,yum,apt,wget)")
 	repoCopyCmd.Flags().String("comment", "", "free form text description")
 	repoCopyCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	repoCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	repoCopyCmd.Flags().String("parent", "", "")
 	repoCopyCmd.Flags().String("apt-components", "", "APT components (e.g. main restricted universe)")
 	repoCopyCmd.Flags().String("apt-dists", "", "APT dist names (e.g. precise,bullseye,buster)")
 	repoCopyCmd.Flags().String("createrepo-flags", "", "flags to use with createrepo")
@@ -190,16 +304,11 @@ func init() {
 
 	// local flags for repo edit
 	repoEditCmd.Flags().String("name", "", "the repo name")
-	repoEditCmd.Flags().String("ctime", "", "")
-	repoEditCmd.Flags().String("depth", "", "")
-	repoEditCmd.Flags().String("mtime", "", "")
-	repoEditCmd.Flags().String("uid", "", "UID")
 	repoEditCmd.Flags().String("arch", "", "Architecture")
 	repoEditCmd.Flags().String("breed", "", "Breed (valid options: none,rsync,rhn,yum,apt,wget)")
 	repoEditCmd.Flags().String("comment", "", "free form text description")
 	repoEditCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	repoEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	repoEditCmd.Flags().String("parent", "", "")
 	repoEditCmd.Flags().String("apt-components", "", "APT components (e.g. main restricted universe)")
 	repoEditCmd.Flags().String("apt-dists", "", "APT dist names (e.g. precise,bullseye,buster)")
 	repoEditCmd.Flags().String("createrepo-flags", "", "flags to use with createrepo")
@@ -245,16 +354,11 @@ func init() {
 	// local flags for repo rename
 	repoRenameCmd.Flags().String("name", "", "the repo name")
 	repoRenameCmd.Flags().String("newname", "", "the new repo name")
-	repoRenameCmd.Flags().String("ctime", "", "")
-	repoRenameCmd.Flags().String("depth", "", "")
-	repoRenameCmd.Flags().String("mtime", "", "")
-	repoRenameCmd.Flags().String("uid", "", "UID")
 	repoRenameCmd.Flags().String("arch", "", "Architecture")
 	repoRenameCmd.Flags().String("breed", "", "Breed (valid options: none,rsync,rhn,yum,apt,wget)")
 	repoRenameCmd.Flags().String("comment", "", "free form text description")
 	repoRenameCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	repoRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	repoRenameCmd.Flags().String("parent", "", "")
 	repoRenameCmd.Flags().String("apt-components", "", "APT components (e.g. main restricted universe)")
 	repoRenameCmd.Flags().String("apt-dists", "", "APT dist names (e.g. precise,bullseye,buster)")
 	repoRenameCmd.Flags().String("createrepo-flags", "", "flags to use with createrepo")

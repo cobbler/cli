@@ -15,7 +15,7 @@ var menuCmd = &cobra.Command{
 	Long: `Let you manage menus.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-menu for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
+		cmd.Help()
 	},
 }
 
@@ -25,6 +25,7 @@ var menuAddCmd = &cobra.Command{
 	Long:  `Adds a menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -34,6 +35,7 @@ var menuCopyCmd = &cobra.Command{
 	Long:  `Copies a menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -43,6 +45,7 @@ var menuEditCmd = &cobra.Command{
 	Long:  `Edits a menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -52,6 +55,7 @@ var menuFindCmd = &cobra.Command{
 	Long:  `Finds a given menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -61,6 +65,7 @@ var menuListCmd = &cobra.Command{
 	Long:  `Lists all available menus.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -70,6 +75,7 @@ var menuRemoveCmd = &cobra.Command{
 	Long:  `Removes a given menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -79,6 +85,7 @@ var menuRenameCmd = &cobra.Command{
 	Long:  `Renames a given menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
@@ -88,6 +95,7 @@ var menuReportCmd = &cobra.Command{
 	Long:  `Shows detailed information about all menus.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: call cobblerclient
+		notImplemented()
 	},
 }
 
