@@ -65,7 +65,7 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		// TODO: Do we need the output what configl file is used?
+		// TODO: Do we need the output what config file is used?
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 	generateCobblerClient()
@@ -73,7 +73,7 @@ func initConfig() {
 
 func checkError(err error) error {
 	if err != nil {
-		return fmt.Errorf("error occured: %s", err)
+		return err
 	} else {
 		return nil
 	}
@@ -91,12 +91,12 @@ func generateCobblerClient() {
 	login, err := Client.Login()
 
 	if !login || err != nil {
-		fmt.Println(fmt.Errorf("failed to login: %s", err))
+		fmt.Fprintln(os.Stderr, fmt.Errorf("error! Failed to login: %s", err))
 	}
 }
 
 // simply prints a message about functions not implemented in the cobblerclient library
 func notImplemented() {
-	fmt.Println(fmt.Errorf(`error! Not yet implemented in the cobblerclient library
+	fmt.Fprintln(os.Stderr, fmt.Errorf(`error! Not yet implemented in the cobblerclient library
 See https://github.com/cobbler/cobblerclient/issues/4`))
 }

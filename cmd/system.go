@@ -102,7 +102,7 @@ var systemAddCmd = &cobra.Command{
 		// See https://github.com/cobbler/cli/issues/38
 		err = newSystem.CreateInterface("default", iface)
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
@@ -110,7 +110,7 @@ var systemAddCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Printf("System %s created", newSystem.Name)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -147,7 +147,7 @@ var systemEditCmd = &cobra.Command{
 		var updateSystem, err = Client.GetSystem(pname)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
@@ -316,7 +316,7 @@ var systemEditCmd = &cobra.Command{
 		err = Client.UpdateSystem(updateSystem)
 
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -353,7 +353,7 @@ var systemListCmd = &cobra.Command{
 		if checkError(err) == nil {
 			fmt.Println(systems)
 		} else {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
@@ -408,7 +408,7 @@ var systemRemoveCmd = &cobra.Command{
 		sname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteSystem(sname)
 		if checkError(err) != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	},
