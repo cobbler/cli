@@ -16,6 +16,13 @@ cobbler
 # vendor/
 .vscode/
 .idea/
+.venv
+venv
 
 # shell completion folders
 config/completions/*
+
+# docs - ignore pod output
+docs/*.gz
+docs/*.html
+docs/_build

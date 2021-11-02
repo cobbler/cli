@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var profile *cobbler.Profile
+var profile *cobbler.Profile //nolint:golint,unused
 var profiles []*cobbler.Distro
 
 // profileCmd represents the profile command

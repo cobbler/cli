@@ -13,7 +13,7 @@ import (
 	cobbler "github.com/cobbler/cobblerclient"
 )
 
-var repo *cobbler.Repo
+var repo *cobbler.Repo //nolint:golint,unused
 var repos []*cobbler.Repo
 
 // repoCmd represents the repo command
