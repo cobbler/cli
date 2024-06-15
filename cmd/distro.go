@@ -37,21 +37,21 @@ var distroAddCmd = &cobra.Command{
 		var newDistro cobbler.Distro
 		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
 		newDistro.Arch, _ = cmd.Flags().GetString("arch")
-		newDistro.BootFiles, _ = cmd.Flags().GetString("boot-files")
-		newDistro.BootLoader, _ = cmd.Flags().GetString("boot-loaders")
+		newDistro.BootFiles, _ = cmd.Flags().GetStringArray("boot-files")
+		newDistro.BootLoaders, _ = cmd.Flags().GetStringArray("boot-loaders")
 		newDistro.Breed, _ = cmd.Flags().GetString("breed")
 		newDistro.Comment, _ = cmd.Flags().GetString("comment")
-		newDistro.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		newDistro.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
 		newDistro.Initrd, _ = cmd.Flags().GetString("initrd")
 		newDistro.Kernel, _ = cmd.Flags().GetString("kernel")
-		newDistro.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
-		newDistro.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		newDistro.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
+		newDistro.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
 		newDistro.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		newDistro.Name, _ = cmd.Flags().GetString("name")
 		newDistro.OSVersion, _ = cmd.Flags().GetString("os-version")
 		newDistro.Owners, _ = cmd.Flags().GetStringArray("owners")
-		newDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		newDistro.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		// newDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		newDistro.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 
 		distro, err = Client.CreateDistro(newDistro)
 
@@ -95,13 +95,13 @@ var distroEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateDistro.Arch, _ = cmd.Flags().GetString("arch")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("boot-files")
-		if tmpArgs != "" {
-			updateDistro.BootFiles, _ = cmd.Flags().GetString("boot-files")
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("boot-files")
+		if len(tmpArgsArray) > 0 {
+			updateDistro.BootFiles, _ = cmd.Flags().GetStringArray("boot-files")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("boot-loaders")
-		if tmpArgs != "" {
-			updateDistro.BootLoader, _ = cmd.Flags().GetString("boot-loaders")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("boot-loaders")
+		if len(tmpArgsArray) > 0 {
+			updateDistro.BootLoaders, _ = cmd.Flags().GetStringArray("boot-loaders")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("breed")
 		if tmpArgs != "" {
@@ -111,9 +111,9 @@ var distroEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateDistro.Comment, _ = cmd.Flags().GetString("comment")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("fetchable-files")
-		if tmpArgs != "" {
-			updateDistro.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("fetchable-files")
+		if len(tmpArgsArray) > 0 {
+			updateDistro.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("initrd")
 		if tmpArgs != "" {
@@ -123,13 +123,13 @@ var distroEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateDistro.Kernel, _ = cmd.Flags().GetString("kernel")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel-options")
-		if tmpArgs != "" {
-			updateDistro.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options")
+		if len(tmpArgsArray) > 0 {
+			updateDistro.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel-options-post")
-		if tmpArgs != "" {
-			updateDistro.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options-post")
+		if len(tmpArgsArray) > 0 {
+			updateDistro.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("mgmt-classes")
 		if tmpArgs != "" {
@@ -147,13 +147,15 @@ var distroEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateDistro.Owners, _ = cmd.Flags().GetStringArray("owners")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
-		if tmpArgs != "" {
-			updateDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("template-files")
-		if tmpArgs != "" {
-			updateDistro.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		/*
+			tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
+			if tmpArgs != "" {
+				updateDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+			}
+		*/
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("template-files")
+		if len(tmpArgsArray) > 0 {
+			updateDistro.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 		}
 
 		err = Client.UpdateDistro(updateDistro)

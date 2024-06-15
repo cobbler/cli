@@ -42,7 +42,7 @@ var repoAddCmd = &cobra.Command{
 		newRepo.Breed, _ = cmd.Flags().GetString("breed")
 		newRepo.Comment, _ = cmd.Flags().GetString("comment")
 		newRepo.CreateRepoFlags, _ = cmd.Flags().GetString("createrepo-flags")
-		newRepo.Environment, _ = cmd.Flags().GetString("environment")
+		newRepo.Environment, _ = cmd.Flags().GetStringArray("environment")
 		newRepo.KeepUpdated, _ = cmd.Flags().GetBool("keep-updated")
 		newRepo.Mirror, _ = cmd.Flags().GetString("mirror")
 		// not implemented in Cobbler yet
@@ -123,9 +123,9 @@ var repoEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateRepo.CreateRepoFlags, _ = cmd.Flags().GetString("createrepo-flags")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("environment")
-		if tmpArgs != "" {
-			updateRepo.Environment, _ = cmd.Flags().GetString("environment")
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("environment")
+		if len(tmpArgsArray) > 0 {
+			updateRepo.Environment, _ = cmd.Flags().GetStringArray("environment")
 		}
 		// TODO
 		/* 		tmpArgs, _ = cmd.Flags().GetBool("keep-updated")
@@ -147,7 +147,7 @@ var repoEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateRepo.Name, _ = cmd.Flags().GetString("name")
 		}
-		var tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
 		if len(tmpArgsArray) > 0 {
 			updateRepo.Owners, _ = cmd.Flags().GetStringArray("owners")
 		}
