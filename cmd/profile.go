@@ -35,28 +35,28 @@ var profileAddCmd = &cobra.Command{
 		var newProfile cobbler.Profile
 		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
 		newProfile.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
-		newProfile.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
-		newProfile.BootFiles, _ = cmd.Flags().GetString("bootfiles")
+		newProfile.AutoinstallMeta, _ = cmd.Flags().GetStringArray("autoinstall-meta")
+		newProfile.BootFiles, _ = cmd.Flags().GetStringArray("bootfiles")
 		newProfile.Comment, _ = cmd.Flags().GetString("comment")
 		newProfile.DHCPTag, _ = cmd.Flags().GetString("dhcp-tag")
 		newProfile.Distro, _ = cmd.Flags().GetString("distro")
 		newProfile.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
 		newProfile.EnableMenu, _ = cmd.Flags().GetBool("enable-menu")
-		newProfile.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
-		newProfile.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
-		newProfile.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		newProfile.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
+		newProfile.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
+		newProfile.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
 		newProfile.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		newProfile.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
 		newProfile.Name, _ = cmd.Flags().GetString("name")
 		newProfile.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
 		newProfile.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
-		newProfile.NextServer, _ = cmd.Flags().GetString("next-servers")
+		newProfile.NextServerv4, _ = cmd.Flags().GetString("next-server-v4")
 		newProfile.Owners, _ = cmd.Flags().GetStringArray("owners")
 		newProfile.Proxy, _ = cmd.Flags().GetString("proxy")
-		newProfile.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		newProfile.Repos, _ = cmd.Flags().GetString("repos")
+		// newProfile.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		newProfile.Repos, _ = cmd.Flags().GetStringArray("repos")
 		newProfile.Server, _ = cmd.Flags().GetString("server")
-		newProfile.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		newProfile.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 		newProfile.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
 		newProfile.VirtBridge, _ = cmd.Flags().GetString("virt-bridge")
 		newProfile.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
@@ -116,13 +116,13 @@ var profileEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateProfile.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("autoinstall-meta")
-		if tmpArgs != "" {
-			updateProfile.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("autoinstall-meta")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.AutoinstallMeta, _ = cmd.Flags().GetStringArray("autoinstall-meta")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("bootfiles")
-		if tmpArgs != "" {
-			updateProfile.BootFiles, _ = cmd.Flags().GetString("bootfiles")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("bootfiles")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.BootFiles, _ = cmd.Flags().GetStringArray("bootfiles")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("comment")
 		if tmpArgs != "" {
@@ -146,19 +146,19 @@ var profileEditCmd = &cobra.Command{
 		   			updateProfile.EnableMenu, _ = cmd.Flags().GetBool("enable-menu")
 		   		}
 		*/
-		tmpArgs, _ = cmd.Flags().GetString("fetchable-files")
-		if tmpArgs != "" {
-			updateProfile.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("fetchable-files")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel-options")
-		if tmpArgs != "" {
-			updateProfile.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel-options-post")
-		if tmpArgs != "" {
-			updateProfile.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options-post")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
 		}
-		var tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		if len(tmpArgsArray) > 0 {
 			updateProfile.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		}
@@ -178,9 +178,9 @@ var profileEditCmd = &cobra.Command{
 		if len(tmpArgsArray) > 0 {
 			updateProfile.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("next-servers")
+		tmpArgs, _ = cmd.Flags().GetString("next-server-v4")
 		if tmpArgs != "" {
-			updateProfile.NextServer, _ = cmd.Flags().GetString("next-servers")
+			updateProfile.NextServerv4, _ = cmd.Flags().GetString("next-server-v4")
 		}
 		tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
 		if len(tmpArgsArray) > 0 {
@@ -190,21 +190,23 @@ var profileEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateProfile.Proxy, _ = cmd.Flags().GetString("proxy")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
-		if tmpArgs != "" {
-			updateProfile.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("repos")
-		if tmpArgs != "" {
-			updateProfile.Repos, _ = cmd.Flags().GetString("repos")
+		/*
+		 * tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
+		 * if tmpArgs != "" {
+		 * 	 updateProfile.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		 * }
+		 */
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("repos")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.Repos, _ = cmd.Flags().GetStringArray("repos")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("server")
 		if tmpArgs != "" {
 			updateProfile.Server, _ = cmd.Flags().GetString("server")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("template-files")
-		if tmpArgs != "" {
-			updateProfile.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("template-files")
+		if len(tmpArgsArray) > 0 {
+			updateProfile.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("virt-auto-boot")
 		if tmpArgs != "" {

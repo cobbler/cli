@@ -38,24 +38,24 @@ var systemAddCmd = &cobra.Command{
 
 		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
 		newSystem.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
-		newSystem.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		newSystem.AutoinstallMeta, _ = cmd.Flags().GetStringArray("autoinstall-meta")
 		newSystem.BootFiles, _ = cmd.Flags().GetString("bootfiles")
 		newSystem.Comment, _ = cmd.Flags().GetString("comment")
 		newSystem.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
-		newSystem.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		newSystem.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
 		newSystem.Gateway, _ = cmd.Flags().GetString("gateway")
 		newSystem.Hostname, _ = cmd.Flags().GetString("hostname")
 		newSystem.Image, _ = cmd.Flags().GetString("image")
 		newSystem.IPv6DefaultDevice, _ = cmd.Flags().GetString("ipv6-default-device")
-		newSystem.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
-		newSystem.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		newSystem.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
+		newSystem.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
 		newSystem.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		newSystem.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
 		newSystem.Name, _ = cmd.Flags().GetString("name")
 		newSystem.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
 		newSystem.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
 		newSystem.NetbootEnabled, _ = cmd.Flags().GetBool("netboot-enabled")
-		newSystem.NextServer, _ = cmd.Flags().GetString("next-servers")
+		newSystem.NextServerv4, _ = cmd.Flags().GetString("next-server-v4")
 		newSystem.Owners, _ = cmd.Flags().GetStringArray("owners")
 		newSystem.PowerAddress, _ = cmd.Flags().GetString("power-address")
 		newSystem.PowerID, _ = cmd.Flags().GetString("power-id")
@@ -64,9 +64,9 @@ var systemAddCmd = &cobra.Command{
 		newSystem.PowerUser, _ = cmd.Flags().GetString("power-user")
 		newSystem.Profile, _ = cmd.Flags().GetString("profile")
 		newSystem.Proxy, _ = cmd.Flags().GetString("proxy")
-		newSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		// newSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
 		newSystem.Status, _ = cmd.Flags().GetString("status")
-		newSystem.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		newSystem.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 		newSystem.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
 		newSystem.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
 		newSystem.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
@@ -156,9 +156,9 @@ var systemEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateSystem.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("autoinstall-meta")
-		if tmpArgs != "" {
-			updateSystem.AutoinstallMeta, _ = cmd.Flags().GetString("autoinstall-meta")
+		var tmpArgsArray, _ = cmd.Flags().GetStringArray("autoinstall-meta")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.AutoinstallMeta, _ = cmd.Flags().GetStringArray("autoinstall-meta")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("bootfiles")
 		if tmpArgs != "" {
@@ -175,9 +175,9 @@ var systemEditCmd = &cobra.Command{
 				updateSystem.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
 			}
 		*/
-		tmpArgs, _ = cmd.Flags().GetString("fetchable-files")
-		if tmpArgs != "" {
-			updateSystem.FetchableFiles, _ = cmd.Flags().GetString("fetchable-files")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("fetchable-files")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("gateway")
 		if tmpArgs != "" {
@@ -195,15 +195,15 @@ var systemEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateSystem.IPv6DefaultDevice, _ = cmd.Flags().GetString("ipv6-default-device")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel-options")
-		if tmpArgs != "" {
-			updateSystem.KernelOptions, _ = cmd.Flags().GetString("kernel-options")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel-options-post")
-		if tmpArgs != "" {
-			updateSystem.KernelOptionsPost, _ = cmd.Flags().GetString("kernel-options-post")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options-post")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
 		}
-		var tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		if len(tmpArgsArray) > 0 {
 			updateSystem.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
 		}
@@ -232,7 +232,7 @@ var systemEditCmd = &cobra.Command{
 		*/
 		tmpArgs, _ = cmd.Flags().GetString("next-servers")
 		if tmpArgs != "" {
-			updateSystem.NextServer, _ = cmd.Flags().GetString("next-servers")
+			updateSystem.NextServerv4, _ = cmd.Flags().GetString("next-server-v4")
 		}
 		tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
 		if len(tmpArgsArray) > 0 {
@@ -266,17 +266,19 @@ var systemEditCmd = &cobra.Command{
 		if tmpArgs != "" {
 			updateSystem.Proxy, _ = cmd.Flags().GetString("proxy")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
-		if tmpArgs != "" {
-			updateSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		}
+		/*
+			tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
+			if tmpArgs != "" {
+				updateSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+			}
+		*/
 		tmpArgs, _ = cmd.Flags().GetString("status")
 		if tmpArgs != "" {
 			updateSystem.Status, _ = cmd.Flags().GetString("status")
 		}
-		tmpArgs, _ = cmd.Flags().GetString("template-files")
-		if tmpArgs != "" {
-			updateSystem.TemplateFiles, _ = cmd.Flags().GetString("template-files")
+		tmpArgsArray, _ = cmd.Flags().GetStringArray("template-files")
+		if len(tmpArgsArray) > 0 {
+			updateSystem.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 		}
 		tmpArgs, _ = cmd.Flags().GetString("virt-auto-boot")
 		if tmpArgs != "" {
