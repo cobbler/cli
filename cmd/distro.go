@@ -33,6 +33,7 @@ var distroAddCmd = &cobra.Command{
 	Short: "add distribution",
 	Long:  `Adds a distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		var newDistro cobbler.Distro
 		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
@@ -69,6 +70,7 @@ var distroCopyCmd = &cobra.Command{
 	Short: "copy distribution",
 	Long:  `Copies a distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -79,6 +81,7 @@ var distroEditCmd = &cobra.Command{
 	Short: "edit distribution",
 	Long:  `Edits a distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		// find distro through its name
 		dname, _ := cmd.Flags().GetString("name")
@@ -172,7 +175,7 @@ var distroFindCmd = &cobra.Command{
 	Short: "find distribution",
 	Long:  `Finds a given distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		generateCobblerClient()
 		/*
 			dname, _ := cmd.Flags().GetString("name")
 			distro, err = Client.GetDistro(dname)
@@ -193,6 +196,7 @@ var distroListCmd = &cobra.Command{
 	Short: "list all distributions",
 	Long:  `Lists all available distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		distros, err = Client.GetDistros()
 
@@ -210,6 +214,7 @@ var distroRemoveCmd = &cobra.Command{
 	Short: "remove distribution",
 	Long:  `Removes a given distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		dname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteDistro(dname)
@@ -225,6 +230,7 @@ var distroRenameCmd = &cobra.Command{
 	Short: "rename distribution",
 	Long:  `Renames a given distribution.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -235,6 +241,7 @@ var distroReportCmd = &cobra.Command{
 	Short: "list all distributions in detail",
 	Long:  `Shows detailed information about all distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 		notImplemented()
 	},

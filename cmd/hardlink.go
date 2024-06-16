@@ -14,6 +14,7 @@ var hardlinkCmd = &cobra.Command{
 	Short: "Hardlink files",
 	Long:  "Hardlink all files where it is possible to improve performance.",
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }

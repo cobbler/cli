@@ -17,6 +17,7 @@ then this also generates bootloaders for different architectures then the one of
 The options are configured in the Cobbler settings file.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }

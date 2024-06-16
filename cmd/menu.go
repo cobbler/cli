@@ -24,6 +24,8 @@ var menuAddCmd = &cobra.Command{
 	Short: "add menu",
 	Long:  `Adds a menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -34,6 +36,8 @@ var menuCopyCmd = &cobra.Command{
 	Short: "copy menu",
 	Long:  `Copies a menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -44,6 +48,8 @@ var menuEditCmd = &cobra.Command{
 	Short: "edit menu",
 	Long:  `Edits a menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -54,6 +60,8 @@ var menuFindCmd = &cobra.Command{
 	Short: "find menu",
 	Long:  `Finds a given menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -64,6 +72,8 @@ var menuListCmd = &cobra.Command{
 	Short: "list all menus",
 	Long:  `Lists all available menus.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -74,6 +84,8 @@ var menuRemoveCmd = &cobra.Command{
 	Short: "remove menu",
 	Long:  `Removes a given menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -84,6 +96,8 @@ var menuRenameCmd = &cobra.Command{
 	Short: "rename menu",
 	Long:  `Renames a given menu.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -94,6 +108,8 @@ var menuReportCmd = &cobra.Command{
 	Short: "list all menus in detail",
 	Long:  `Shows detailed information about all menus.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

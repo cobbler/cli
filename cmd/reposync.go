@@ -17,6 +17,8 @@ var reposyncCmd = &cobra.Command{
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-reposync for more information.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 	},
 }

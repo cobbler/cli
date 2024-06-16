@@ -68,7 +68,6 @@ func initConfig() {
 		// TODO: Do we need the output what config file is used?
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
-	generateCobblerClient()
 }
 
 func checkError(err error) error {

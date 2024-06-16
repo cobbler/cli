@@ -17,6 +17,8 @@ most of the other Cobbler commands (currently: distro, profile, system, repo, im
 Identical to 'cobbler list'`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 	},
 }

@@ -19,6 +19,7 @@ relevant cobbler.conf and modules.conf, as these files are not synced.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for more information.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }

@@ -16,6 +16,7 @@ var importCmd = &cobra.Command{
 See https://cobbler.readthedocs.io/en/latest/quickstart-guide.html#importing-your-first-distribution for more information.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }

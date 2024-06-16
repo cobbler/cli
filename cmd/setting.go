@@ -23,6 +23,8 @@ var settingEditCmd = &cobra.Command{
 	Short: "edit settings",
 	Long:  `Edits the settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -33,6 +35,8 @@ var settingReportCmd = &cobra.Command{
 	Short: "list settings",
 	Long:  `Prints settings to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

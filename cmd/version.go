@@ -14,6 +14,8 @@ var versionCmd = &cobra.Command{
 	Short: "Print the Cobbler version",
 	Long:  `Shows the Cobbler server version.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 	},
 }
