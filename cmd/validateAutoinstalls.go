@@ -14,6 +14,7 @@ var validateAutoinstallsCmd = &cobra.Command{
 	Short: "Autoinstall validation",
 	Long:  `Validates the autoinstall files.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }

@@ -24,6 +24,8 @@ var fileAddCmd = &cobra.Command{
 	Short: "add file",
 	Long:  `Adds a file.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -34,6 +36,8 @@ var fileCopyCmd = &cobra.Command{
 	Short: "copy file",
 	Long:  `Copies a file.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -44,6 +48,8 @@ var fileEditCmd = &cobra.Command{
 	Short: "edit file",
 	Long:  `Edits a file.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -54,6 +60,8 @@ var fileFindCmd = &cobra.Command{
 	Short: "find file",
 	Long:  `Finds a given file.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -64,6 +72,8 @@ var fileListCmd = &cobra.Command{
 	Short: "list all files",
 	Long:  `Lists all available files.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -74,6 +84,8 @@ var fileRemoveCmd = &cobra.Command{
 	Short: "remove file",
 	Long:  `Removes a given file.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -84,6 +96,8 @@ var fileRenameCmd = &cobra.Command{
 	Short: "rename file",
 	Long:  `Renames a given file.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -94,6 +108,8 @@ var fileReportCmd = &cobra.Command{
 	Short: "list all files in detail",
 	Long:  `Shows detailed information about all files.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

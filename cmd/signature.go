@@ -14,6 +14,7 @@ var signatureCmd = &cobra.Command{
 	Short: "Signature management",
 	Long:  `Reloads, reports or updates the signatures of the distinct operating system versions.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		// cmd.Help() this should be used once the library is implemented
 		// TODO: call cobblerclient

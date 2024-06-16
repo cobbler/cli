@@ -24,6 +24,8 @@ var mgmtclassAddCmd = &cobra.Command{
 	Short: "add mgmtclass",
 	Long:  `Adds a mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -34,6 +36,8 @@ var mgmtclassCopyCmd = &cobra.Command{
 	Short: "copy mgmtclass",
 	Long:  `Copies a mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -44,6 +48,8 @@ var mgmtclassEditCmd = &cobra.Command{
 	Short: "edit mgmtclass",
 	Long:  `Edits a mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -54,6 +60,8 @@ var mgmtclassFindCmd = &cobra.Command{
 	Short: "find mgmtclass",
 	Long:  `Finds a given mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -64,6 +72,8 @@ var mgmtclassListCmd = &cobra.Command{
 	Short: "list all mgmtclasses",
 	Long:  `Lists all available mgmtclasses.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -74,6 +84,8 @@ var mgmtclassRemoveCmd = &cobra.Command{
 	Short: "remove mgmtclass",
 	Long:  `Removes a given mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -84,6 +96,8 @@ var mgmtclassRenameCmd = &cobra.Command{
 	Short: "rename mgmtclass",
 	Long:  `Renames a given mgmtclass.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -94,6 +108,8 @@ var mgmtclassReportCmd = &cobra.Command{
 	Short: "list all mgmtclasses in detail",
 	Long:  `Shows detailed information about all mgmtclasses.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

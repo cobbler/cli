@@ -24,6 +24,8 @@ var packageAddCmd = &cobra.Command{
 	Short: "add package",
 	Long:  `Adds a package.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -34,6 +36,8 @@ var packageCopyCmd = &cobra.Command{
 	Short: "copy package",
 	Long:  `Copies a package.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -44,6 +48,8 @@ var packageEditCmd = &cobra.Command{
 	Short: "edit package",
 	Long:  `Edits a package.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -54,6 +60,8 @@ var packageFindCmd = &cobra.Command{
 	Short: "find package",
 	Long:  `Finds a given package.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -64,6 +72,8 @@ var packageListCmd = &cobra.Command{
 	Short: "list all packages",
 	Long:  `Lists all available packages.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -74,6 +84,8 @@ var packageRemoveCmd = &cobra.Command{
 	Short: "remove package",
 	Long:  `Removes a given package.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -84,6 +96,8 @@ var packageRenameCmd = &cobra.Command{
 	Short: "rename package",
 	Long:  `Renames a given package.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -94,6 +108,8 @@ var packageReportCmd = &cobra.Command{
 	Short: "list all packages in detail",
 	Long:  `Shows detailed information about all packages.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

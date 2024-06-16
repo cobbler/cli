@@ -14,6 +14,7 @@ var buildisoCmd = &cobra.Command{
 	Short: "Build an ISO",
 	Long:  "Build all profiles into a bootable CD image. All flags are optional.",
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }

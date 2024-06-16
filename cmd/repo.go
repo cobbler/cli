@@ -32,6 +32,7 @@ var repoAddCmd = &cobra.Command{
 	Short: "add repository",
 	Long:  `Adds a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		var newRepo cobbler.Repo
 
@@ -68,6 +69,8 @@ var repoAutoAddCmd = &cobra.Command{
 	Short: "add repository automatically",
 	Long:  `Automatically adds a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -78,6 +81,8 @@ var repoCopyCmd = &cobra.Command{
 	Short: "copy repository",
 	Long:  `Copies a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -88,6 +93,7 @@ var repoEditCmd = &cobra.Command{
 	Short: "edit repository",
 	Long:  `Edits a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		// find repo through its name
 		rname, _ := cmd.Flags().GetString("name")
@@ -174,6 +180,8 @@ var repoFindCmd = &cobra.Command{
 	Short: "find repository",
 	Long:  `Finds a given repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -184,6 +192,7 @@ var repoListCmd = &cobra.Command{
 	Short: "list all repositorys",
 	Long:  `Lists all available repositories.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		repos, err = Client.GetRepos()
 
@@ -200,6 +209,7 @@ var repoRemoveCmd = &cobra.Command{
 	Short: "remove repository",
 	Long:  `Removes a given repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		rname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteRepo(rname)
@@ -214,6 +224,8 @@ var repoRenameCmd = &cobra.Command{
 	Short: "rename repository",
 	Long:  `Renames a given repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -224,6 +236,8 @@ var repoReportCmd = &cobra.Command{
 	Short: "list all repositorys in detail",
 	Long:  `Shows detailed information about all repositories.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

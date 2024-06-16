@@ -31,6 +31,7 @@ var profileAddCmd = &cobra.Command{
 	Short: "add profile",
 	Long:  `Adds a profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		var newProfile cobbler.Profile
 		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
@@ -81,6 +82,8 @@ var profileCopyCmd = &cobra.Command{
 	Short: "copy profile",
 	Long:  `Copies a profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -91,6 +94,8 @@ var profileDumpVarsCmd = &cobra.Command{
 	Short: "dump profile variables",
 	Long:  `Prints all profile variables to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -101,6 +106,7 @@ var profileEditCmd = &cobra.Command{
 	Short: "edit profile",
 	Long:  `Edits a profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		// find profile through its name
 		pname, _ := cmd.Flags().GetString("name")
@@ -256,6 +262,8 @@ var profileFindCmd = &cobra.Command{
 	Short: "find profile",
 	Long:  `Finds a given profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -266,6 +274,8 @@ var profileGetAutoinstallCmd = &cobra.Command{
 	Short: "dump autoinstall XML",
 	Long:  `Prints the autoinstall XML file of the given profile to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -276,6 +286,7 @@ var profileListCmd = &cobra.Command{
 	Short: "list all profiles",
 	Long:  `Lists all available profiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		profiles, err = Client.GetDistros()
 
@@ -293,6 +304,7 @@ var profileRemoveCmd = &cobra.Command{
 	Short: "remove profile",
 	Long:  `Removes a given profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		pname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteProfile(pname)
@@ -308,6 +320,8 @@ var profileRenameCmd = &cobra.Command{
 	Short: "rename profile",
 	Long:  `Renames a given profile.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -318,6 +332,8 @@ var profileReportCmd = &cobra.Command{
 	Short: "list all profiles in detail",
 	Long:  `Shows detailed information about all profiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

@@ -33,6 +33,7 @@ var systemAddCmd = &cobra.Command{
 	Short: "add system",
 	Long:  `Adds a system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		var newSystem cobbler.System
 
@@ -121,6 +122,8 @@ var systemCopyCmd = &cobra.Command{
 	Short: "copy system",
 	Long:  `Copies a system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -131,6 +134,8 @@ var systemDumpVarsCmd = &cobra.Command{
 	Short: "dump system variables",
 	Long:  `Prints all system variables to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -141,6 +146,7 @@ var systemEditCmd = &cobra.Command{
 	Short: "edit system",
 	Long:  `Edits a system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		// find profile through its name
 		pname, _ := cmd.Flags().GetString("name")
@@ -329,6 +335,8 @@ var systemFindCmd = &cobra.Command{
 	Short: "find system",
 	Long:  `Finds a given system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -339,6 +347,8 @@ var systemGetAutoinstallCmd = &cobra.Command{
 	Short: "dump autoinstall XML",
 	Long:  `Prints the autoinstall XML file of the given system to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -349,6 +359,7 @@ var systemListCmd = &cobra.Command{
 	Short: "list all systems",
 	Long:  `Lists all available systems.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		systems, err = Client.GetSystems()
 
@@ -366,6 +377,8 @@ var systemPowerOffCmd = &cobra.Command{
 	Short: "power off system",
 	Long:  `Powers off the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -376,6 +389,8 @@ var systemPowerOnCmd = &cobra.Command{
 	Short: "power on system",
 	Long:  `Powers on the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -386,6 +401,8 @@ var systemPowerStatusCmd = &cobra.Command{
 	Short: "Power status of the system",
 	Long:  `Querys the power status of the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -396,6 +413,8 @@ var systemRebootCmd = &cobra.Command{
 	Short: "reboot system",
 	Long:  `Reboots the selected system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -406,6 +425,7 @@ var systemRemoveCmd = &cobra.Command{
 	Short: "remove system",
 	Long:  `Removes a given system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 
 		sname, _ := cmd.Flags().GetString("name")
 		err := Client.DeleteSystem(sname)
@@ -421,6 +441,8 @@ var systemRenameCmd = &cobra.Command{
 	Short: "rename system",
 	Long:  `Renames a given system.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},
@@ -431,6 +453,8 @@ var systemReportCmd = &cobra.Command{
 	Short: "list all systems in detail",
 	Long:  `Shows detailed information about all systems.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
+
 		// TODO: call cobblerclient
 		notImplemented()
 	},

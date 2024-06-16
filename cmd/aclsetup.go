@@ -15,6 +15,7 @@ var aclsetupCmd = &cobra.Command{
 	Long:  "Configures users/groups to run the Cobbler CLI as non-root.",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		generateCobblerClient()
 		// TODO: call cobblerclient
 	},
 }
