@@ -5,7 +5,9 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // settingCmd represents the setting command
@@ -14,7 +16,7 @@ var settingCmd = &cobra.Command{
 	Short: "Settings management",
 	Long:  `Let you manage settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -22,11 +24,36 @@ var settingEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "edit settings",
 	Long:  `Edits the settings.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		settings, err := Client.GetSettings()
+		if err != nil {
+			return err
+		}
+		if !settings.AllowDynamicSettings {
+			fmt.Println("Dynamic settings are turned off server-side!")
+			os.Exit(1)
+		}
+
+		settingName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		settingValue, err := cmd.Flags().GetString("value")
+		if err != nil {
+			return err
+		}
+		result, err := Client.ModifySetting(settingName, settingValue)
+		if err != nil {
+			return err
+		}
+		if result == 0 {
+			fmt.Println("Successfully updated!")
+		} else {
+			fmt.Println("Updating settings failed!")
+		}
+		return nil
 	},
 }
 
@@ -34,11 +61,15 @@ var settingReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "list settings",
 	Long:  `Prints settings to stdout.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		settings, err := Client.GetSettings()
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		printStructured(settings)
+		return nil
 	},
 }
 

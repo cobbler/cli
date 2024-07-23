@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -16,9 +17,14 @@ var mkloadersCmd = &cobra.Command{
 then this also generates bootloaders for different architectures then the one of the system.
 The options are configured in the Cobbler settings file.`,
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
+		eventId, err := Client.BackgroundMkLoaders()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Event ID: %s\n", eventId)
+		return nil
 	},
 }
 

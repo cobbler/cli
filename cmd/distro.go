@@ -6,15 +6,314 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/spf13/cobra"
-
 	cobbler "github.com/cobbler/cobblerclient"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-var distro *cobbler.Distro //nolint:golint,unused
-var distros []*cobbler.Distro
+func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
+	var inPlace bool
+	var err error
+	if cmd.Flags().Lookup("in-place") != nil {
+		inPlace, err = cmd.Flags().GetBool("in-place")
+		if err != nil {
+			return err
+		}
+	}
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		if err != nil {
+			// If one of the previous flags has had an error just directly return.
+			return
+		}
+		switch flag.Name {
+		// The rename & copy operations are special operations as such we cannot blindly set this inside here.
+		// Any rename & copy operation must be handled outside of this method.
+		case "arch":
+			var distroNewArch string
+			distroNewArch, err = cmd.Flags().GetString("arch")
+			if err != nil {
+				return
+			}
+			distro.Arch = distroNewArch
+		case "autoinstall-meta":
+			fallthrough
+		case "autoinstall-meta-inherit":
+			var distroNewAutoinstallMeta map[string]string
+			distroNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
+			if err != nil {
+				return
+			}
+			if inPlace {
+				err = Client.ModifyItemInPlace(
+					"distro",
+					distro.Name,
+					"autoinstall_meta",
+					convertMapStringToMapInterface(distroNewAutoinstallMeta),
+				)
+				if err != nil {
+					return
+				}
+			} else {
+				distro.AutoinstallMeta.IsInherited = false
+				distro.AutoinstallMeta.Data = convertMapStringToMapInterface(distroNewAutoinstallMeta)
+			}
+		case "boot-files":
+			fallthrough
+		case "boot-files-inherit":
+			var distroNewBootFiles map[string]string
+			distroNewBootFiles, err = cmd.Flags().GetStringToString("boot-files")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("boot-files-inherit").Changed {
+				distro.BootFiles.Data = make(map[string]interface{})
+				distro.BootFiles.IsInherited, err = cmd.Flags().GetBool("boot-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				distro.BootFiles.IsInherited = false
+				distro.BootFiles.Data = convertMapStringToMapInterface(distroNewBootFiles)
+			}
+		case "boot-loaders":
+			fallthrough
+		case "boot-loaders-inherit":
+			var distroNewBootLoaders []string
+			distroNewBootLoaders, err = cmd.Flags().GetStringSlice("boot-loaders")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+				distro.BootLoaders.Data = []string{}
+				distro.BootLoaders.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				distro.BootLoaders.IsInherited = false
+				distro.BootLoaders.Data = distroNewBootLoaders
+			}
+		case "breed":
+			var distroNewBreed string
+			distroNewBreed, err = cmd.Flags().GetString("breed")
+			if err != nil {
+				return
+			}
+			distro.Breed = distroNewBreed
+		case "comment":
+			var distroNewComment string
+			distroNewComment, err = cmd.Flags().GetString("comment")
+			if err != nil {
+				return
+			}
+			distro.Comment = distroNewComment
+		case "fetchable-files":
+			fallthrough
+		case "fetchable-files-inherit":
+			var newFetchableFiles map[string]string
+			newFetchableFiles, err = cmd.Flags().GetStringToString("fetchable-files")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("fetchable-files-inherit").Changed {
+				distro.FetchableFiles.Data = make(map[string]interface{})
+				distro.FetchableFiles.IsInherited, err = cmd.Flags().GetBool("fetchable-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"distro",
+						distro.Name,
+						"fetchable_files",
+						convertMapStringToMapInterface(newFetchableFiles),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					distro.FetchableFiles.IsInherited = false
+					distro.FetchableFiles.Data = convertMapStringToMapInterface(newFetchableFiles)
+				}
+			}
+		case "initrd":
+			var distroNewInitrd string
+			distroNewInitrd, err = cmd.Flags().GetString("initrd")
+			if err != nil {
+				return
+			}
+			distro.Initrd = distroNewInitrd
+		case "remote-boot-initrd":
+			var distroNewRemoteBootInitrd string
+			distroNewRemoteBootInitrd, err = cmd.Flags().GetString("remote-boot-initrd")
+			if err != nil {
+				return
+			}
+			distro.RemoteBootInitrd = distroNewRemoteBootInitrd
+		case "kernel":
+			var distroNewKernel string
+			distroNewKernel, err = cmd.Flags().GetString("kernel")
+			if err != nil {
+				return
+			}
+			distro.Kernel = distroNewKernel
+		case "remote-boot-kernel":
+			var distroNewRemoteBootKernel string
+			distroNewRemoteBootKernel, err = cmd.Flags().GetString("remote-boot-kernel")
+			if err != nil {
+				return
+			}
+			distro.RemoteBootKernel = distroNewRemoteBootKernel
+		case "kernel-options":
+			fallthrough
+		case "kernel-options-inherit":
+			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
+				distro.KernelOptions.Data = make(map[string]interface{})
+				distro.KernelOptions.IsInherited, err = cmd.Flags().GetBool("kernel-options-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var newKernelOptions map[string]string
+				newKernelOptions, err = cmd.Flags().GetStringToString("kernel-options")
+				if err != nil {
+					return
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"distro",
+						distro.Name,
+						"kernel_options",
+						convertMapStringToMapInterface(newKernelOptions),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					distro.KernelOptions.IsInherited = false
+					distro.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptions)
+				}
+			}
+		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-inherit":
+			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
+				distro.KernelOptionsPost.Data = make(map[string]interface{})
+				distro.KernelOptionsPost.IsInherited, err = cmd.Flags().GetBool("kernel-options-post-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var newKernelOptionsPost map[string]string
+				newKernelOptionsPost, err = cmd.Flags().GetStringToString("kernel-options-post")
+				if err != nil {
+					return
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"distro",
+						distro.Name,
+						"kernel_options_post",
+						convertMapStringToMapInterface(newKernelOptionsPost),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					distro.KernelOptionsPost.IsInherited = false
+					distro.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptionsPost)
+				}
+			}
+		case "mgmt-classes":
+			fallthrough
+		case "mgmt-classes-inherit":
+			var distroNewMgmtClasses []string
+			distroNewMgmtClasses, err = cmd.Flags().GetStringSlice("mgmt-classes")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("mgmt-classes-inherit").Changed {
+				distro.MgmtClasses.Data = []string{}
+				distro.MgmtClasses.IsInherited, err = cmd.Flags().GetBool("mgmt-classes-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				distro.MgmtClasses.IsInherited = false
+				distro.MgmtClasses.Data = distroNewMgmtClasses
+			}
+		case "os-version":
+			var distroNewOsVersion string
+			distroNewOsVersion, err = cmd.Flags().GetString("os-version")
+			if err != nil {
+				return
+			}
+			distro.OSVersion = distroNewOsVersion
+		case "owners":
+			fallthrough
+		case "owners-inherit":
+			var distroNewOwners []string
+			distroNewOwners, err = cmd.Flags().GetStringSlice("owners")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("owners-inherit").Changed {
+				distro.Owners.Data = []string{}
+				distro.Owners.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				distro.Owners.IsInherited = false
+				distro.Owners.Data = distroNewOwners
+			}
+		case "redhat-management-key":
+			var distroNewRedhatManagementKey string
+			distroNewRedhatManagementKey, err = cmd.Flags().GetString("redhat-management-key")
+			if err != nil {
+				return
+			}
+			distro.RedhatManagementKey = distroNewRedhatManagementKey
+		case "template-files":
+			fallthrough
+		case "template-files-inherit":
+			if cmd.Flags().Lookup("template-files-inherit").Changed {
+				distro.TemplateFiles.Data = make(map[string]interface{})
+				distro.TemplateFiles.IsInherited, err = cmd.Flags().GetBool("template-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var newTemplateFiles map[string]string
+				newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
+				if err != nil {
+					return
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"distro",
+						distro.Name,
+						"template_files",
+						convertMapStringToMapInterface(newTemplateFiles),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					distro.TemplateFiles.IsInherited = false
+					distro.TemplateFiles.Data = convertMapStringToMapInterface(newTemplateFiles)
+				}
+			}
+		}
+	})
+	if inPlace {
+		// Update distro in case we did modify the distro
+		distro.Meta.IsDirty = true
+	}
+	// Don't blindly return nil because maybe one of the flags had an issue retrieving an argument.
+	return err
+}
 
 // distroCmd represents the distro command
 var distroCmd = &cobra.Command{
@@ -23,8 +322,7 @@ var distroCmd = &cobra.Command{
 	Long: `Let you manage distributions.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-distro for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: call cobblerclient
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -32,36 +330,28 @@ var distroAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add distribution",
 	Long:  `Adds a distribution.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		newDistro := cobbler.NewDistro()
+		var err error
 
-		var newDistro cobbler.Distro
 		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
-		newDistro.Arch, _ = cmd.Flags().GetString("arch")
-		newDistro.BootFiles, _ = cmd.Flags().GetStringArray("boot-files")
-		newDistro.BootLoaders, _ = cmd.Flags().GetStringArray("boot-loaders")
-		newDistro.Breed, _ = cmd.Flags().GetString("breed")
-		newDistro.Comment, _ = cmd.Flags().GetString("comment")
-		newDistro.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
-		newDistro.Initrd, _ = cmd.Flags().GetString("initrd")
-		newDistro.Kernel, _ = cmd.Flags().GetString("kernel")
-		newDistro.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
-		newDistro.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
-		newDistro.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
-		newDistro.Name, _ = cmd.Flags().GetString("name")
-		newDistro.OSVersion, _ = cmd.Flags().GetString("os-version")
-		newDistro.Owners, _ = cmd.Flags().GetStringArray("owners")
-		// newDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		newDistro.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
-
-		distro, err = Client.CreateDistro(newDistro)
-
-		if checkError(err) == nil {
-			fmt.Printf("Distro %s created", newDistro.Name)
-		} else {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		newDistro.Name, err = cmd.Flags().GetString("name")
+		if err != nil {
+			return err
 		}
+		// Update distro in-memory
+		err = updateDistroFromFlags(cmd, &newDistro)
+		if err != nil {
+			return err
+		}
+		// Now create the distro via XML-RPC
+		distro, err := Client.CreateDistro(newDistro)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Distro %s created\n", distro.Name)
+		return nil
 	},
 }
 
@@ -69,10 +359,36 @@ var distroCopyCmd = &cobra.Command{
 	Use:   "copy",
 	Short: "copy distribution",
 	Long:  `Copies a distribution.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
-		notImplemented()
+		dname, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		distroNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
+
+		dhandle, err := Client.GetDistroHandle(dname)
+		if err != nil {
+			return err
+		}
+		err = Client.CopyDistro(dhandle, distroNewName)
+		if err != nil {
+			return err
+		}
+		newDistro, err := Client.GetDistro(distroNewName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update distro in-memory
+		err = updateDistroFromFlags(cmd, newDistro)
+		if err != nil {
+			return err
+		}
+		// Update the distro via XML-RPC
+		return Client.UpdateDistro(newDistro)
 	},
 }
 
@@ -80,93 +396,36 @@ var distroEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "edit distribution",
 	Long:  `Edits a distribution.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
 		// find distro through its name
-		dname, _ := cmd.Flags().GetString("name")
-		var updateDistro, err = Client.GetDistro(dname)
-
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		dname, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
 		}
-
-		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
-		var tmpArgs, _ = cmd.Flags().GetString("arch")
-
-		if tmpArgs != "" {
-			updateDistro.Arch, _ = cmd.Flags().GetString("arch")
+		// Get distro from the API
+		updateDistro, err := Client.GetDistro(dname, false, false)
+		if err != nil {
+			return err
 		}
-		var tmpArgsArray, _ = cmd.Flags().GetStringArray("boot-files")
-		if len(tmpArgsArray) > 0 {
-			updateDistro.BootFiles, _ = cmd.Flags().GetStringArray("boot-files")
+		// Update distro in-memory
+		err = updateDistroFromFlags(cmd, updateDistro)
+		if err != nil {
+			return err
 		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("boot-loaders")
-		if len(tmpArgsArray) > 0 {
-			updateDistro.BootLoaders, _ = cmd.Flags().GetStringArray("boot-loaders")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("breed")
-		if tmpArgs != "" {
-			updateDistro.Breed, _ = cmd.Flags().GetString("breed")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("comment")
-		if tmpArgs != "" {
-			updateDistro.Comment, _ = cmd.Flags().GetString("comment")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("fetchable-files")
-		if len(tmpArgsArray) > 0 {
-			updateDistro.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("initrd")
-		if tmpArgs != "" {
-			updateDistro.Initrd, _ = cmd.Flags().GetString("initrd")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("kernel")
-		if tmpArgs != "" {
-			updateDistro.Kernel, _ = cmd.Flags().GetString("kernel")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options")
-		if len(tmpArgsArray) > 0 {
-			updateDistro.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options-post")
-		if len(tmpArgsArray) > 0 {
-			updateDistro.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("mgmt-classes")
-		if tmpArgs != "" {
-			updateDistro.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("name")
-		if tmpArgs != "" {
-			updateDistro.Name, _ = cmd.Flags().GetString("name")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("os-version")
-		if tmpArgs != "" {
-			updateDistro.OSVersion, _ = cmd.Flags().GetString("os-version")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("owners")
-		if tmpArgs != "" {
-			updateDistro.Owners, _ = cmd.Flags().GetStringArray("owners")
-		}
-		/*
-			tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
-			if tmpArgs != "" {
-				updateDistro.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
+		if updateDistro.Meta.IsDirty {
+			updateDistro, err = Client.GetDistro(
+				updateDistro.Name,
+				updateDistro.Meta.IsFlattened,
+				updateDistro.Meta.IsResolved,
+			)
+			if err != nil {
+				return err
 			}
-		*/
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("template-files")
-		if len(tmpArgsArray) > 0 {
-			updateDistro.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
 		}
-
-		err = Client.UpdateDistro(updateDistro)
-
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
+		// Now update distro via XML-RPC
+		return Client.UpdateDistro(updateDistro)
 	},
 }
 
@@ -174,20 +433,9 @@ var distroFindCmd = &cobra.Command{
 	Use:   "find",
 	Short: "find distribution",
 	Long:  `Finds a given distribution.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		/*
-			dname, _ := cmd.Flags().GetString("name")
-			distro, err = Client.GetDistro(dname)
-
-			if checkError(err) == nil {
-			   	str, _ := json.MarshalIndent(distro, "", " ")
-			   	fmt.Println(string(str))
-			} else {
-			   	fmt.Fprintln(os.Stderr, err.Error())
-			}
-		*/
-		notImplemented()
+		return FindItemNames(cmd, args, "distro")
 	},
 }
 
@@ -195,17 +443,14 @@ var distroListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list all distributions",
 	Long:  `Lists all available distributions.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		distros, err = Client.GetDistros()
-
-		if checkError(err) == nil {
-			fmt.Println(distros)
-		} else {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		distroNames, err := Client.ListDistroNames()
+		if err != nil {
+			return err
 		}
+		listItems("distros", distroNames)
+		return nil
 	},
 }
 
@@ -213,15 +458,18 @@ var distroRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove distribution",
 	Long:  `Removes a given distribution.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		dname, _ := cmd.Flags().GetString("name")
-		err := Client.DeleteDistro(dname)
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		dname, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
 		}
+		recursiveDelete, err := cmd.Flags().GetBool("recursive")
+		if err != nil {
+			return err
+		}
+		return Client.DeleteDistroRecursive(dname, recursiveDelete)
 	},
 }
 
@@ -229,21 +477,76 @@ var distroRenameCmd = &cobra.Command{
 	Use:   "rename",
 	Short: "rename distribution",
 	Long:  `Renames a given distribution.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
-		notImplemented()
+
+		// Get the name and newname flags
+		distroName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		distroNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
+
+		// Get the distro API handle
+		distroHandle, err := Client.GetDistroHandle(distroName)
+		if err != nil {
+			return err
+		}
+		// Perform the rename operation server-side
+		err = Client.RenameDistro(distroHandle, distroNewName)
+		if err != nil {
+			return err
+		}
+		// Retrieve the renamed distro from the API
+		newDistro, err := Client.GetDistro(distroNewName, false, false)
+		if err != nil {
+			return err
+		}
+		// Now edit the distro in-memory
+		err = updateDistroFromFlags(cmd, newDistro)
+		if err != nil {
+			return err
+		}
+		// Now update the distro via XML-RPC
+		return Client.UpdateDistro(newDistro)
 	},
+}
+
+func reportDistros(distroNames []string) error {
+	for _, itemName := range distroNames {
+		distro, err := Client.GetDistro(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(distro)
+		fmt.Println("")
+	}
+	return nil
 }
 
 var distroReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "list all distributions in detail",
 	Long:  `Shows detailed information about all distributions.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
-		notImplemented()
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		itemNames := make([]string, 0)
+		if name == "" {
+			itemNames, err = Client.ListDistroNames()
+			if err != nil {
+				return err
+			}
+		} else {
+			itemNames = append(itemNames, name)
+		}
+		return reportDistros(itemNames)
 	},
 }
 
@@ -259,124 +562,53 @@ func init() {
 	distroCmd.AddCommand(distroReportCmd)
 
 	// local flags for distro add
-	distroAddCmd.Flags().String("name", "", "the distro name")
-	distroAddCmd.Flags().String("arch", "", "Architecture")
-	distroAddCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
-	distroAddCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	distroAddCmd.Flags().String("boot-loaders", "", "boot loaders (network installation boot loaders)")
-	distroAddCmd.Flags().String("breed", "", "Breed (what is the type of the distribution?)")
-	distroAddCmd.Flags().String("comment", "", "free form text description")
-	distroAddCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	distroAddCmd.Flags().String("initrd", "", "initrd (absolute path on filesystem)")
-	distroAddCmd.Flags().String("remote-boot-initrd", "", "remote boot initrd (URL the bootloader directly retrieves and boots from)")
-	distroAddCmd.Flags().String("kernel", "", "Kernel (absolute path on filesystem)")
-	distroAddCmd.Flags().String("remote-boot-kernel", "", "remote boot kernel (URL the bootloader directly retrieves and boots from)")
-	distroAddCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	distroAddCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	distroAddCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	distroAddCmd.Flags().String("os-version", "", "OS version (needed for some virtualization optimizations)")
-	distroAddCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	distroAddCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	distroAddCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
-	distroAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addCommonArgs(distroAddCmd)
+	addStringFlags(distroAddCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroAddCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroAddCmd, distroMapFlagMetadata)
+	// Required Flags
+	err := distroAddCmd.MarkFlagRequired("name")
+	if err != nil {
+		panic(err)
+	}
 
 	// local flags for distro copy
-	distroCopyCmd.Flags().String("name", "", "the distro name")
+	addCommonArgs(distroCopyCmd)
+	addStringFlags(distroCopyCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroCopyCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroCopyCmd, distroMapFlagMetadata)
 	distroCopyCmd.Flags().String("newname", "", "the new distro name")
-	distroCopyCmd.Flags().String("arch", "", "Architecture")
-	distroCopyCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
-	distroCopyCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	distroCopyCmd.Flags().String("boot-loaders", "", "boot loaders (network installation boot loaders)")
-	distroCopyCmd.Flags().String("breed", "", "Breed (what is the type of the distribution?)")
-	distroCopyCmd.Flags().String("comment", "", "free form text description")
-	distroCopyCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	distroCopyCmd.Flags().String("initrd", "", "initrd (absolute path on filesystem)")
-	distroCopyCmd.Flags().String("remote-boot-initrd", "", "remote boot initrd (URL the bootloader directly retrieves and boots from)")
-	distroCopyCmd.Flags().String("kernel", "", "Kernel (absolute path on filesystem)")
-	distroCopyCmd.Flags().String("remote-boot-kernel", "", "remote boot kernel (URL the bootloader directly retrieves and boots from)")
-	distroCopyCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	distroCopyCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	distroCopyCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	distroCopyCmd.Flags().String("os-version", "", "OS version (needed for some virtualization optimizations)")
-	distroCopyCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	distroCopyCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	distroCopyCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
 	distroCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for distro edit
-	distroEditCmd.Flags().String("name", "", "the distro name")
-	distroEditCmd.Flags().String("arch", "", "Architecture")
-	distroEditCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
-	distroEditCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	distroEditCmd.Flags().String("boot-loaders", "", "boot loaders (network installation boot loaders)")
-	distroEditCmd.Flags().String("breed", "", "Breed (what is the type of the distribution?)")
-	distroEditCmd.Flags().String("comment", "", "free form text description")
-	distroEditCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	distroEditCmd.Flags().String("initrd", "", "initrd (absolute path on filesystem)")
-	distroEditCmd.Flags().String("remote-boot-initrd", "", "remote boot initrd (URL the bootloader directly retrieves and boots from)")
-	distroEditCmd.Flags().String("kernel", "", "Kernel (absolute path on filesystem)")
-	distroEditCmd.Flags().String("remote-boot-kernel", "", "remote boot kernel (URL the bootloader directly retrieves and boots from)")
-	distroEditCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	distroEditCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	distroEditCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	distroEditCmd.Flags().String("os-version", "", "OS version (needed for some virtualization optimizations)")
-	distroEditCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	distroEditCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	distroEditCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
+	addCommonArgs(distroEditCmd)
+	addStringFlags(distroEditCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroEditCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroEditCmd, distroMapFlagMetadata)
 	distroEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for distro find
-	distroFindCmd.Flags().String("name", "", "the distro name")
+	addCommonArgs(distroFindCmd)
+	addStringFlags(distroFindCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroFindCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroFindCmd, distroMapFlagMetadata)
 	distroFindCmd.Flags().String("ctime", "", "")
 	distroFindCmd.Flags().String("depth", "", "")
 	distroFindCmd.Flags().String("mtime", "", "")
 	distroFindCmd.Flags().String("source-repos", "", "source repositories")
 	distroFindCmd.Flags().String("tree-build-time", "", "tree build time")
 	distroFindCmd.Flags().String("uid", "", "UID")
-	distroFindCmd.Flags().String("arch", "", "Architecture")
-	distroFindCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
-	distroFindCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	distroFindCmd.Flags().String("boot-loaders", "", "boot loaders (network installation boot loaders)")
-	distroFindCmd.Flags().String("breed", "", "Breed (what is the type of the distribution?)")
-	distroFindCmd.Flags().String("comment", "", "free form text description")
-	distroFindCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	distroFindCmd.Flags().String("initrd", "", "initrd (absolute path on filesystem)")
-	distroFindCmd.Flags().String("remote-boot-initrd", "", "remote boot initrd (URL the bootloader directly retrieves and boots from)")
-	distroFindCmd.Flags().String("kernel", "", "Kernel (absolute path on filesystem)")
-	distroFindCmd.Flags().String("remote-boot-kernel", "", "remote boot kernel (URL the bootloader directly retrieves and boots from)")
-	distroFindCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	distroFindCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	distroFindCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	distroFindCmd.Flags().String("os-version", "", "OS version (needed for some virtualization optimizations)")
-	distroFindCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	distroFindCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	distroFindCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
 
 	// local flags for distro remove
 	distroRemoveCmd.Flags().String("name", "", "the distro name")
 	distroRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
 
 	// local flags for distro rename
-	distroRenameCmd.Flags().String("name", "", "the distro name")
+	addCommonArgs(distroRenameCmd)
+	addStringFlags(distroRenameCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroRenameCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroRenameCmd, distroMapFlagMetadata)
 	distroRenameCmd.Flags().String("newname", "", "the new distro name")
-	distroRenameCmd.Flags().String("arch", "", "Architecture")
-	distroRenameCmd.Flags().String("autoinstall-meta", "", "automatic installation template metadata")
-	distroRenameCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	distroRenameCmd.Flags().String("boot-loaders", "", "boot loaders (network installation boot loaders)")
-	distroRenameCmd.Flags().String("breed", "", "Breed (what is the type of the distribution?)")
-	distroRenameCmd.Flags().String("comment", "", "free form text description")
-	distroRenameCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	distroRenameCmd.Flags().String("initrd", "", "initrd (absolute path on filesystem)")
-	distroRenameCmd.Flags().String("remote-boot-initrd", "", "remote boot initrd (URL the bootloader directly retrieves and boots from)")
-	distroRenameCmd.Flags().String("kernel", "", "Kernel (absolute path on filesystem)")
-	distroRenameCmd.Flags().String("remote-boot-kernel", "", "remote boot kernel (URL the bootloader directly retrieves and boots from)")
-	distroRenameCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	distroRenameCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	distroRenameCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	distroRenameCmd.Flags().String("os-version", "", "OS version (needed for some virtualization optimizations)")
-	distroRenameCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	distroRenameCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	distroRenameCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
 	distroRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for distro report

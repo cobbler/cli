@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -13,9 +14,14 @@ var validateAutoinstallsCmd = &cobra.Command{
 	Use:   "validate-autoinstalls",
 	Short: "Autoinstall validation",
 	Long:  `Validates the autoinstall files.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
+		eventId, err := Client.BackgroundValidateAutoinstallFiles()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Event ID: %s\n", eventId)
+		return nil
 	},
 }
 

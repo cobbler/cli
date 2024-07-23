@@ -5,7 +5,9 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
+	"runtime/debug"
 )
 
 // versionCmd represents the version command
@@ -15,9 +17,31 @@ var versionCmd = &cobra.Command{
 	Long:  `Shows the Cobbler server version.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
+		version, err := Client.ExtendedVersion()
+		if err != nil {
+			fmt.Println(err)
+		}
+		clientVersion, cliVersion, _ := getClientVersion()
+		fmt.Printf("Cobbler %s\n", version.Version)
+		fmt.Printf("  source: %s, %s\n", version.Gitstamp, version.Gitdate)
+		fmt.Printf("  build time: %s\n", version.Builddate)
+		fmt.Printf("  cli: %s\n", cliVersion)
+		fmt.Printf("  client: %s\n", clientVersion)
 	},
+}
+
+func getClientVersion() (string, string, error) {
+	bi, _ := debug.ReadBuildInfo()
+	var clientVersion, cliVersion string
+	for _, dep := range bi.Deps {
+		switch dep.Path {
+		case "github.com/cobbler/cli":
+			cliVersion = dep.Version
+		case "github.com/cobbler/cobblerclient":
+			clientVersion = dep.Version
+		}
+	}
+	return clientVersion, cliVersion, nil
 }
 
 func init() {
