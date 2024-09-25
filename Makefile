@@ -8,7 +8,7 @@ build:
 
 clean:
 	go clean
-	rm ${BINARY_NAME}
+	rm -f ${BINARY_NAME}
 	rm -rf config/completions/*
 
 cleandoc: ## Cleans the docs directory.

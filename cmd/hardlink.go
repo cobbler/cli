@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -13,9 +14,14 @@ var hardlinkCmd = &cobra.Command{
 	Use:   "hardlink",
 	Short: "Hardlink files",
 	Long:  "Hardlink all files where it is possible to improve performance.",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
+		eventId, err := Client.BackgroundHardlink()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Event ID: %s\n", eventId)
+		return nil
 	},
 }
 

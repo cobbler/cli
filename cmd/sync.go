@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 )
 
@@ -17,11 +19,46 @@ services. It is used to repair or rebuild the contents of '/tftpboot' or '/var/w
 changed behind the scenes. It brings the filesystem up to date with the configuration.
 
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-sync for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		dhcpOption, err := cmd.Flags().GetBool("dhcp")
+		if err != nil {
+			return err
+		}
+		dnsOption, err := cmd.Flags().GetBool("dns")
+		if err != nil {
+			return err
+		}
+		verboseOption, err := cmd.Flags().GetBool("verbose")
+		if err != nil {
+			return err
+		}
+		systemsOption, err := cmd.Flags().GetStringSlice("systems")
+		if err != nil {
+			return err
+		}
 
-		// not fully implemented in the cobblerclient library. You cannot use flags at the moment!
-		Client.Sync()
+		var eventId string
+		if len(systemsOption) > 0 {
+			backgroundSyncSystemsOptions := cobblerclient.BackgroundSyncSystemsOptions{
+				Systems: systemsOption,
+				Verbose: verboseOption,
+			}
+			eventId, err = Client.BackgroundSyncSystems(backgroundSyncSystemsOptions)
+		} else {
+			backgroundSyncOptions := cobblerclient.BackgroundSyncOptions{
+				Dhcp:    dhcpOption,
+				Dns:     dnsOption,
+				Verbose: verboseOption,
+			}
+			eventId, err = Client.BackgroundSync(backgroundSyncOptions)
+		}
+
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Event ID: %s\n", eventId)
+		return nil
 	},
 }
 
@@ -31,6 +68,8 @@ func init() {
 	//local flags
 	syncCmd.Flags().Bool("dhcp", false, "write DHCP config files and restart service")
 	syncCmd.Flags().Bool("dns", false, "write DNS config files and restart service")
-	syncCmd.Flags().String("systems", "", "run a sync only on specified systems")
+	syncCmd.Flags().StringSlice("systems", []string{}, "run a sync only on specified systems")
 	syncCmd.Flags().Bool("verbose", false, "more verbose output")
+	syncCmd.MarkFlagsMutuallyExclusive("dhcp", "systems")
+	syncCmd.MarkFlagsMutuallyExclusive("dns", "systems")
 }

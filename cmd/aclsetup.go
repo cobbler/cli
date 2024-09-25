@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +16,36 @@ var aclsetupCmd = &cobra.Command{
 	Short: "Adjust the access control list",
 	Long:  "Configures users/groups to run the Cobbler CLI as non-root.",
 	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-		// TODO: call cobblerclient
+		addUserOption, err := cmd.Flags().GetString("adduser")
+		if err != nil {
+			return err
+		}
+		addGroupOption, err := cmd.Flags().GetString("addgroup")
+		if err != nil {
+			return err
+		}
+		removeUserOption, err := cmd.Flags().GetString("removeuser")
+		if err != nil {
+			return err
+		}
+		removeGroupOption, err := cmd.Flags().GetString("removegroup")
+		if err != nil {
+			return err
+		}
+		aclSetupOptions := cobblerclient.AclSetupOptions{
+			AddUser:     addUserOption,
+			AddGroup:    addGroupOption,
+			RemoveUser:  removeUserOption,
+			RemoveGroup: removeGroupOption,
+		}
+		eventId, err := Client.BackgroundAclSetup(aclSetupOptions)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Event ID: ", eventId)
+		return nil
 	},
 }
 

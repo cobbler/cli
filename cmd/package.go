@@ -5,8 +5,75 @@
 package cmd
 
 import (
+	"fmt"
+	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+func updatePackageFromFlags(cmd *cobra.Command, p *cobbler.Package) error {
+	// TODO: in-place flag
+	// inPlace, err := cmd.Flags().GetBool("in-place")
+	_, err := cmd.Flags().GetBool("in-place")
+	if err != nil {
+		return err
+	}
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		if err != nil {
+			// If one of the previous flags has had an error just directly return.
+			return
+		}
+		switch flag.Name {
+		case "comment":
+			var packageNewComment string
+			packageNewComment, err = cmd.Flags().GetString("comment")
+			if err != nil {
+				return
+			}
+			p.Comment = packageNewComment
+		case "owners":
+			fallthrough
+		case "owners-inherit":
+			if cmd.Flags().Lookup("owners-inherit").Changed {
+				p.Owners.Data = []string{}
+				p.Owners.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var packageNewOwners []string
+				packageNewOwners, err = cmd.Flags().GetStringSlice("owners")
+				if err != nil {
+					return
+				}
+				p.Owners.IsInherited = false
+				p.Owners.Data = packageNewOwners
+			}
+		case "action":
+			var packageNewAction string
+			packageNewAction, err = cmd.Flags().GetString("action")
+			if err != nil {
+				return
+			}
+			p.Action = packageNewAction
+		case "installer":
+			var packageNewInstaller string
+			packageNewInstaller, err = cmd.Flags().GetString("installer")
+			if err != nil {
+				return
+			}
+			p.Action = packageNewInstaller
+		case "version":
+			var packageNewVersion string
+			packageNewVersion, err = cmd.Flags().GetString("version")
+			if err != nil {
+				return
+			}
+			p.Action = packageNewVersion
+		}
+	})
+	return err
+}
 
 // packageCmd represents the package command
 var packageCmd = &cobra.Command{
@@ -15,7 +82,7 @@ var packageCmd = &cobra.Command{
 	Long: `Let you manage packages.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-package for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -23,11 +90,28 @@ var packageAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add package",
 	Long:  `Adds a package.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		newPackage := cobbler.NewPackage()
+		var err error
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// internal fields (ctime, mtime, depth, uid) cannot be modified
+		newPackage.Name, err = cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		// Update package in-memory
+		err = updatePackageFromFlags(cmd, &newPackage)
+		if err != nil {
+			return err
+		}
+		// Create package via XML-RPC
+		linuxpackage, err := Client.CreatePackage(newPackage)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Package %s created\n", linuxpackage.Name)
+		return nil
 	},
 }
 
@@ -35,11 +119,40 @@ var packageCopyCmd = &cobra.Command{
 	Use:   "copy",
 	Short: "copy package",
 	Long:  `Copies a package.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		// Collect CLI flags
+		packageName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		packageNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get package handle
+		packageHandle, err := Client.GetPackageHandle(packageName)
+		if err != nil {
+			return err
+		}
+		// Copy the package server-side
+		err = Client.CopyPackage(packageHandle, packageNewName)
+		if err != nil {
+			return err
+		}
+		// Get the copied package from the API
+		newPackage, err := Client.GetPackage(packageNewName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update package in-memory
+		err = updatePackageFromFlags(cmd, newPackage)
+		if err != nil {
+			return err
+		}
+		// Update the package via XML-RPC
+		return Client.UpdatePackage(newPackage)
 	},
 }
 
@@ -47,11 +160,25 @@ var packageEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "edit package",
 	Long:  `Edits a package.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		packageName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get package from the API
+		packageToEdit, err := Client.GetPackage(packageName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update package in-memory
+		err = updatePackageFromFlags(cmd, packageToEdit)
+		if err != nil {
+			return err
+		}
+		// Update package via XML-RPC
+		return Client.UpdatePackage(packageToEdit)
 	},
 }
 
@@ -59,11 +186,9 @@ var packageFindCmd = &cobra.Command{
 	Use:   "find",
 	Short: "find package",
 	Long:  `Finds a given package.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return FindItemNames(cmd, args, "package")
 	},
 }
 
@@ -73,9 +198,11 @@ var packageListCmd = &cobra.Command{
 	Long:  `Lists all available packages.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		packageNames, err := Client.ListPackageNames()
+		if err != nil {
+			fmt.Println(err)
+		}
+		listItems("packages", packageNames)
 	},
 }
 
@@ -83,11 +210,9 @@ var packageRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove package",
 	Long:  `Removes a given package.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return RemoveItemRecursive(cmd, args, "package")
 	},
 }
 
@@ -95,23 +220,76 @@ var packageRenameCmd = &cobra.Command{
 	Use:   "rename",
 	Short: "rename package",
 	Long:  `Renames a given package.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// internal fields (ctime, mtime, depth, uid) cannot be modified
+		packageName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		packageNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
+
+		// Get package API handle
+		packageHandle, err := Client.GetPackageHandle(packageName)
+		if err != nil {
+			return err
+		}
+		// Perform server-side package rename
+		err = Client.RenamePackage(packageHandle, packageNewName)
+		if err != nil {
+			return err
+		}
+		// Get the renamed package from the API
+		newPackage, err := Client.GetPackage(packageNewName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update package in-memory
+		err = updatePackageFromFlags(cmd, newPackage)
+		if err != nil {
+			return err
+		}
+		// Update package via XML-RPC
+		return Client.UpdatePackage(newPackage)
 	},
+}
+
+func reportPackages(packageNames []string) error {
+	for _, itemName := range packageNames {
+		repo, err := Client.GetRepo(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(repo)
+		fmt.Println("")
+	}
+	return nil
 }
 
 var packageReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "list all packages in detail",
 	Long:  `Shows detailed information about all packages.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		itemNames := make([]string, 0)
+		if name == "" {
+			itemNames, err = Client.ListRepoNames()
+			if err != nil {
+				return err
+			}
+		} else {
+			itemNames = append(itemNames, name)
+		}
+		return reportPackages(itemNames)
 	},
 }
 
@@ -127,75 +305,35 @@ func init() {
 	packageCmd.AddCommand(packageReportCmd)
 
 	// local flags for package add
-	packageAddCmd.Flags().String("name", "", "the package name")
-	packageAddCmd.Flags().String("ctime", "", "")
-	packageAddCmd.Flags().String("depth", "", "")
-	packageAddCmd.Flags().String("mtime", "", "")
-	packageAddCmd.Flags().String("uid", "", "")
-	packageAddCmd.Flags().String("comment", "", "free form text description")
-	packageAddCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	packageAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	packageAddCmd.Flags().String("action", "", "install or remove package resourc")
-	packageAddCmd.Flags().String("installer", "", "package manager")
-	packageAddCmd.Flags().String("version", "", "package version")
+	addCommonArgs(packageAddCmd)
+	addStringFlags(packageAddCmd, packageStringFlagMetadata)
 
 	// local flags for package copy
-	packageCopyCmd.Flags().String("name", "", "the package name")
+	addCommonArgs(packageCopyCmd)
+	addStringFlags(packageCopyCmd, packageStringFlagMetadata)
 	packageCopyCmd.Flags().String("newname", "", "the new package name")
-	packageCopyCmd.Flags().String("ctime", "", "")
-	packageCopyCmd.Flags().String("depth", "", "")
-	packageCopyCmd.Flags().String("mtime", "", "")
-	packageCopyCmd.Flags().String("uid", "", "")
-	packageCopyCmd.Flags().String("comment", "", "free form text description")
-	packageCopyCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited)")
 	packageCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	packageCopyCmd.Flags().String("action", "", "install or remove package resourc")
-	packageCopyCmd.Flags().String("installer", "", "package manager")
-	packageCopyCmd.Flags().String("version", "", "package version")
 
 	// local flags for package edit
-	packageEditCmd.Flags().String("name", "", "the package name")
-	packageEditCmd.Flags().String("ctime", "", "")
-	packageEditCmd.Flags().String("depth", "", "")
-	packageEditCmd.Flags().String("mtime", "", "")
-	packageEditCmd.Flags().String("uid", "", "")
-	packageEditCmd.Flags().String("comment", "", "free form text description")
-	packageEditCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
+	addCommonArgs(packageEditCmd)
+	addStringFlags(packageEditCmd, packageStringFlagMetadata)
 	packageEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	packageEditCmd.Flags().String("action", "", "install or remove package resourc")
-	packageEditCmd.Flags().String("installer", "", "package manager")
-	packageEditCmd.Flags().String("version", "", "package version")
 
 	// local flags for package find
-	packageFindCmd.Flags().String("name", "", "the package name")
-	packageFindCmd.Flags().String("ctime", "", "")
-	packageFindCmd.Flags().String("depth", "", "")
-	packageFindCmd.Flags().String("mtime", "", "")
-	packageFindCmd.Flags().String("uid", "", "")
-	packageFindCmd.Flags().String("comment", "", "free form text description")
-	packageFindCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
+	addCommonArgs(packageFindCmd)
+	addStringFlags(packageFindCmd, packageStringFlagMetadata)
+	// TODO: ctime, mtime, depth, uid
 	packageFindCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	packageFindCmd.Flags().String("action", "", "install or remove package resourc")
-	packageFindCmd.Flags().String("installer", "", "package manager")
-	packageFindCmd.Flags().String("version", "", "package version")
 
 	// local flags for package remove
 	packageRemoveCmd.Flags().String("name", "", "the package name")
 	packageRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
 
 	// local flags for package rename
-	packageRenameCmd.Flags().String("name", "", "the package name")
+	addCommonArgs(packageRenameCmd)
+	addStringFlags(packageRenameCmd, packageStringFlagMetadata)
 	packageRenameCmd.Flags().String("newname", "", "the new package name")
-	packageRenameCmd.Flags().String("ctime", "", "")
-	packageRenameCmd.Flags().String("depth", "", "")
-	packageRenameCmd.Flags().String("mtime", "", "")
-	packageRenameCmd.Flags().String("uid", "", "")
-	packageRenameCmd.Flags().String("comment", "", "free form text description")
-	packageRenameCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	packageRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	packageRenameCmd.Flags().String("action", "", "install or remove package resourc")
-	packageRenameCmd.Flags().String("installer", "", "package manager")
-	packageRenameCmd.Flags().String("version", "", "package version")
 
 	// local flags for package report
 	packageReportCmd.Flags().String("name", "", "the package name")

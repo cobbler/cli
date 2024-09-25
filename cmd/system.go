@@ -5,17 +5,701 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"os"
+	"reflect"
 
 	cobbler "github.com/cobbler/cobblerclient"
 )
 
-var system *cobbler.System //nolint:golint,unused
-var systems []*cobbler.System
-var iface cobbler.Interface
+func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
+	// TODO: Implementation for more interfaces
+	// See https://github.com/cobbler/cli/issues/38
+	systemNewInterface, err := cmd.Flags().GetString("interface")
+	if err != nil {
+		return err
+	}
+	systemInterface, keyInMap := system.Interfaces[systemNewInterface]
+	if !keyInMap {
+		// Interface doesn't exist, so add a new one.
+		// We cannot call CreateInterface because the system might not exist.
+		system.Interfaces[systemNewInterface] = cobbler.Interface{}
+		systemInterface = system.Interfaces[systemNewInterface]
+	}
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		if err != nil {
+			// If one of the previous flags has had an error just directly return.
+			return
+		}
+		switch flag.Name {
+		// The rename & copy operations are special operations as such we cannot blindly set this inside here.
+		// Any rename & copy operation must be handled outside of this method.
+		case "autoinstall":
+			var systemNewAutoinstall string
+			systemNewAutoinstall, err = cmd.Flags().GetString("autoinstall")
+			if err != nil {
+				return
+			}
+			system.Autoinstall = systemNewAutoinstall
+		case "autoinstall-meta":
+			fallthrough
+		case "autoinstall-meta-inherit":
+			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
+				system.AutoinstallMeta.Data = make(map[string]interface{})
+				system.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("autoinstall-meta-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewAutoinstallMeta map[string]string
+				systemNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
+				if err != nil {
+					return
+				}
+				system.AutoinstallMeta.IsInherited = false
+				system.AutoinstallMeta.Data = convertMapStringToMapInterface(systemNewAutoinstallMeta)
+			}
+		case "boot-files":
+			fallthrough
+		case "boot-files-inherit":
+			if cmd.Flags().Lookup("boot-files-inherit").Changed {
+				system.BootFiles.Data = make(map[string]interface{})
+				system.BootFiles.IsInherited, err = cmd.Flags().GetBool("boot-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewBootFiles map[string]string
+				systemNewBootFiles, err = cmd.Flags().GetStringToString("boot-files")
+				if err != nil {
+					return
+				}
+				system.BootFiles.IsInherited = false
+				system.BootFiles.Data = convertMapStringToMapInterface(systemNewBootFiles)
+			}
+		case "boot-loaders":
+			fallthrough
+		case "boot-loaders-inherit":
+			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+				system.BootLoaders.Data = []string{}
+				system.BootLoaders.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewBootLoaders []string
+				systemNewBootLoaders, err = cmd.Flags().GetStringSlice("boot-loaders")
+				if err != nil {
+					return
+				}
+				system.BootLoaders.IsInherited = false
+				system.BootLoaders.Data = systemNewBootLoaders
+			}
+		case "comment":
+			var systemNewComment string
+			systemNewComment, err = cmd.Flags().GetString("comment")
+			if err != nil {
+				return
+			}
+			system.Comment = systemNewComment
+		case "fetchable-files":
+			fallthrough
+		case "fetchable-files-inherit":
+			if cmd.Flags().Lookup("fetchable-files-inherit").Changed {
+				system.FetchableFiles.Data = make(map[string]interface{})
+				system.FetchableFiles.IsInherited, err = cmd.Flags().GetBool("fetchable-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewFetchableFiles map[string]string
+				systemNewFetchableFiles, err = cmd.Flags().GetStringToString("fetchable-files")
+				if err != nil {
+					return
+				}
+				system.FetchableFiles.IsInherited = false
+				system.FetchableFiles.Data = convertMapStringToMapInterface(systemNewFetchableFiles)
+			}
+		case "kernel-options":
+			fallthrough
+		case "kernel-options-inherit":
+			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
+				system.KernelOptions.Data = make(map[string]interface{})
+				system.KernelOptions.IsInherited, err = cmd.Flags().GetBool("kernel-options-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewKernelOptions map[string]string
+				systemNewKernelOptions, err = cmd.Flags().GetStringToString("kernel-options")
+				if err != nil {
+					return
+				}
+				system.KernelOptions.IsInherited = false
+				system.KernelOptions.Data = convertMapStringToMapInterface(systemNewKernelOptions)
+			}
+		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-inherit":
+			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
+				system.KernelOptionsPost.Data = make(map[string]interface{})
+				system.KernelOptionsPost.IsInherited, err = cmd.Flags().GetBool("kernel-options-post-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewKernelOptionsPost map[string]string
+				systemNewKernelOptionsPost, err = cmd.Flags().GetStringToString("kernel-options-post")
+				if err != nil {
+					return
+				}
+				system.KernelOptionsPost.IsInherited = false
+				system.KernelOptionsPost.Data = convertMapStringToMapInterface(systemNewKernelOptionsPost)
+			}
+		case "mgmt-classes":
+			fallthrough
+		case "mgmt-classes-inherit":
+			if cmd.Flags().Lookup("mgmt-classes-inherit").Changed {
+				system.MgmtClasses.Data = []string{}
+				system.MgmtClasses.IsInherited, err = cmd.Flags().GetBool("mgmt-classes-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewMgmtClasses []string
+				systemNewMgmtClasses, err = cmd.Flags().GetStringSlice("mgmt-classes")
+				if err != nil {
+					return
+				}
+				system.MgmtClasses.IsInherited = false
+				system.MgmtClasses.Data = systemNewMgmtClasses
+			}
+		case "owners":
+			fallthrough
+		case "owners-inherit":
+			if cmd.Flags().Lookup("owners-inherit").Changed {
+				system.Owners.Data = []string{}
+				system.Owners.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewOwners []string
+				systemNewOwners, err = cmd.Flags().GetStringSlice("owners")
+				if err != nil {
+					return
+				}
+				system.Owners.IsInherited = false
+				system.Owners.Data = systemNewOwners
+			}
+		case "redhat-management-key":
+			var systemNewRedhatManagementKey string
+			systemNewRedhatManagementKey, err = cmd.Flags().GetString("redhat-management-key")
+			if err != nil {
+				return
+			}
+			system.RedhatManagementKey = systemNewRedhatManagementKey
+		case "template-files-post":
+			fallthrough
+		case "template-files-inherit":
+			if cmd.Flags().Lookup("template-files-inherit").Changed {
+				system.TemplateFiles.Data = make(map[string]interface{})
+				system.TemplateFiles.IsInherited, err = cmd.Flags().GetBool("template-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewTemplateFiles map[string]string
+				systemNewTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
+				if err != nil {
+					return
+				}
+				system.TemplateFiles.IsInherited = false
+				system.TemplateFiles.Data = convertMapStringToMapInterface(systemNewTemplateFiles)
+			}
+		case "dhcp-tag":
+			var systemNewDhcpTag string
+			systemNewDhcpTag, err = cmd.Flags().GetString("dhcp-tag")
+			if err != nil {
+				return
+			}
+			systemInterface.DHCPTag = systemNewDhcpTag
+		case "enable-ipxe":
+			fallthrough
+		case "enable-ipxe-inherit":
+			if cmd.Flags().Lookup("enable-ipxe-inherit").Changed {
+				system.EnableIPXE.Data = false
+				system.EnableIPXE.IsInherited, err = cmd.Flags().GetBool("enable-ipxe-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewEnableIpxe bool
+				systemNewEnableIpxe, err = cmd.Flags().GetBool("enable-ipxe")
+				if err != nil {
+					return
+				}
+				system.EnableIPXE.IsInherited = false
+				system.EnableIPXE.Data = systemNewEnableIpxe
+			}
+		case "enable-menu":
+			fallthrough
+		case "enable-menu-inherit":
+			if cmd.Flags().Lookup("enable-menu-inherit").Changed {
+				system.EnableMenu.Data = false
+				system.EnableMenu.IsInherited, err = cmd.Flags().GetBool("enable-menu-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewEnableMenu bool
+				systemNewEnableMenu, err = cmd.Flags().GetBool("enable-menu")
+				if err != nil {
+					return
+				}
+				system.EnableMenu.IsInherited = false
+				system.EnableMenu.Data = systemNewEnableMenu
+			}
+		case "mgmt-parameters":
+			fallthrough
+		case "mgmt-parameters-inherit":
+			if cmd.Flags().Lookup("mgmt-parameters-inherit").Changed {
+				system.MgmtParameters.Data = make(map[string]interface{})
+				system.MgmtParameters.IsInherited, err = cmd.Flags().GetBool("mgmt-parameters-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var systemNewMgmtParameters map[string]string
+				systemNewMgmtParameters, err = cmd.Flags().GetStringToString("mgmt-parameters")
+				if err != nil {
+					return
+				}
+				system.MgmtParameters.IsInherited = false
+				system.MgmtParameters.Data = convertMapStringToMapInterface(systemNewMgmtParameters)
+			}
+		case "name-servers":
+			var systemNewNameServers []string
+			systemNewNameServers, err = cmd.Flags().GetStringSlice("name-servers")
+			if err != nil {
+				return
+			}
+			system.NameServers = systemNewNameServers
+		case "name-servers-search":
+			var systemNewNameServersSearch []string
+			systemNewNameServersSearch, err = cmd.Flags().GetStringSlice("name-servers-search")
+			if err != nil {
+				return
+			}
+			system.NameServersSearch = systemNewNameServersSearch
+		case "next-server-v4":
+			var systemNewNextServerV4 string
+			systemNewNextServerV4, err = cmd.Flags().GetString("next-server-v4")
+			if err != nil {
+				return
+			}
+			system.NextServerv4 = systemNewNextServerV4
+		case "next-server-v6":
+			var systemNewNextServerV6 string
+			systemNewNextServerV6, err = cmd.Flags().GetString("next-server-v6")
+			if err != nil {
+				return
+			}
+			system.NextServerv6 = systemNewNextServerV6
+		case "filename":
+			var systemNewFilename string
+			systemNewFilename, err = cmd.Flags().GetString("filename")
+			if err != nil {
+				return
+			}
+			system.Filename = systemNewFilename
+		case "parent":
+			var systemNewParent string
+			systemNewParent, err = cmd.Flags().GetString("parent")
+			if err != nil {
+				return
+			}
+			system.Parent = systemNewParent
+		case "proxy":
+			var systemNewProxy string
+			systemNewProxy, err = cmd.Flags().GetString("proxy")
+			if err != nil {
+				return
+			}
+			system.Proxy = systemNewProxy
+		case "server":
+			var systemNewServer string
+			systemNewServer, err = cmd.Flags().GetString("server")
+			if err != nil {
+				return
+			}
+			system.Server = systemNewServer
+		case "menu":
+			var systemNewMenu string
+			systemNewMenu, err = cmd.Flags().GetString("menu")
+			if err != nil {
+				return
+			}
+			system.Menu = systemNewMenu
+		case "virt-auto-boot":
+			fallthrough
+		case "virt-auto-boot-inherit":
+			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
+				system.VirtAutoBoot.Data = false
+				system.VirtAutoBoot.IsInherited = true
+			} else {
+				var systemNewVirtAutoBoot bool
+				systemNewVirtAutoBoot, err = cmd.Flags().GetBool("virt-auto-boot")
+				if err != nil {
+					return
+				}
+				system.VirtAutoBoot.Data = systemNewVirtAutoBoot
+				system.VirtAutoBoot.IsInherited = false
+			}
+		case "virt-cpus":
+			fallthrough
+		case "virt-cpus-inherit":
+			if cmd.Flags().Lookup("virt-cpus-inherit").Changed {
+				system.VirtCPUs.IsInherited = true
+			} else {
+				var systemNewVirtCpus int
+				systemNewVirtCpus, err = cmd.Flags().GetInt("virt-cpus")
+				if err != nil {
+					return
+				}
+				system.VirtCPUs.Data = systemNewVirtCpus
+				system.VirtCPUs.IsInherited = false
+			}
+		case "virt-disk-driver":
+			var systemNewVirtDiskDriver string
+			systemNewVirtDiskDriver, err = cmd.Flags().GetString("virt-disk-driver")
+			if err != nil {
+				return
+			}
+			system.VirtDiskDriver = systemNewVirtDiskDriver
+		case "virt-file-size":
+			fallthrough
+		case "virt-file-size-inherit":
+			if cmd.Flags().Lookup("virt-file-size-inherit").Changed {
+				system.VirtFileSize.IsInherited = true
+			} else {
+				var systemNewVirtFileSize float64
+				systemNewVirtFileSize, err = cmd.Flags().GetFloat64("virt-file-size")
+				if err != nil {
+					return
+				}
+				system.VirtFileSize.Data = systemNewVirtFileSize
+				system.VirtFileSize.IsInherited = false
+			}
+		case "virt-path":
+			var systemNewVirtPath string
+			systemNewVirtPath, err = cmd.Flags().GetString("virt-path")
+			if err != nil {
+				return
+			}
+			system.VirtPath = systemNewVirtPath
+		case "virt-ram":
+			fallthrough
+		case "virt-ram-inherit":
+			if cmd.Flags().Lookup("virt-ram-inherit").Changed {
+				system.VirtRAM.IsInherited = true
+			} else {
+				var systemNewVirtRam int
+				systemNewVirtRam, err = cmd.Flags().GetInt("virt-ram")
+				if err != nil {
+					return
+				}
+				system.VirtRAM.Data = systemNewVirtRam
+				system.VirtRAM.IsInherited = false
+			}
+		case "virt-type":
+			var systemNewVirtType string
+			systemNewVirtType, err = cmd.Flags().GetString("virt-type")
+			if err != nil {
+				return
+			}
+			system.VirtType = systemNewVirtType
+		case "gateway":
+			var systemNewGateway string
+			systemNewGateway, err = cmd.Flags().GetString("gateway")
+			if err != nil {
+				return
+			}
+			system.Gateway = systemNewGateway
+		case "hostname":
+			var systemNewHostname string
+			systemNewHostname, err := cmd.Flags().GetString("hostname")
+			if err != nil {
+				return
+			}
+			system.Hostname = systemNewHostname
+		case "image":
+			var systemNewImage string
+			systemNewImage, err = cmd.Flags().GetString("image")
+			if err != nil {
+				return
+			}
+			system.Image = systemNewImage
+		case "ipv6-default-device":
+			var systemNewIpv6DefaultDevice string
+			systemNewIpv6DefaultDevice, err = cmd.Flags().GetString("ipv6-default-device")
+			if err != nil {
+				return
+			}
+			system.IPv6DefaultDevice = systemNewIpv6DefaultDevice
+		case "netboot-enabled":
+			var systemNewNetbootEnabled bool
+			systemNewNetbootEnabled, err = cmd.Flags().GetBool("netboot-enabled")
+			if err != nil {
+				return
+			}
+			system.NetbootEnabled = systemNewNetbootEnabled
+		case "power-address":
+			var systemNewPowerAddress string
+			systemNewPowerAddress, err = cmd.Flags().GetString("power-address")
+			if err != nil {
+				return
+			}
+			system.PowerAddress = systemNewPowerAddress
+		case "power-id":
+			var systemNewPowerId string
+			systemNewPowerId, err = cmd.Flags().GetString("power-id")
+			if err != nil {
+				return
+			}
+			system.PowerID = systemNewPowerId
+		case "power-pass":
+			var systemNewPowerPass string
+			systemNewPowerPass, err = cmd.Flags().GetString("power-pass")
+			if err != nil {
+				return
+			}
+			system.PowerPass = systemNewPowerPass
+		case "power-type":
+			var systemNewPowerType string
+			systemNewPowerType, err = cmd.Flags().GetString("power-type")
+			if err != nil {
+				return
+			}
+			system.PowerType = systemNewPowerType
+		case "power-user":
+			var systemNewPowerUser string
+			systemNewPowerUser, err = cmd.Flags().GetString("power-user")
+			if err != nil {
+				return
+			}
+			system.PowerUser = systemNewPowerUser
+		case "power-options":
+			var systemNewPowerOptions string
+			systemNewPowerOptions, err = cmd.Flags().GetString("power-options")
+			if err != nil {
+				return
+			}
+			system.PowerOptions = systemNewPowerOptions
+		case "power-identity-file":
+			var systemNewPowerIdentityFile string
+			systemNewPowerIdentityFile, err = cmd.Flags().GetString("power-identity-file")
+			if err != nil {
+				return
+			}
+			system.PowerIdentityFile = systemNewPowerIdentityFile
+		case "profile":
+			var systemNewProfile string
+			systemNewProfile, err = cmd.Flags().GetString("profile")
+			if err != nil {
+				return
+			}
+			system.Profile = systemNewProfile
+		case "status":
+			var systemNewStatus string
+			systemNewStatus, err = cmd.Flags().GetString("status")
+			if err != nil {
+				return
+			}
+			system.Status = systemNewStatus
+		case "virt-pxe-boot":
+			var systemNewVirtPxeBoot bool
+			systemNewVirtPxeBoot, err = cmd.Flags().GetBool("virt-pxe-boot")
+			if err != nil {
+				return
+			}
+			system.VirtPXEBoot = systemNewVirtPxeBoot
+		case "serial-device":
+			var systemNewSerialDevice int
+			systemNewSerialDevice, err = cmd.Flags().GetInt("serial-device")
+			if err != nil {
+				return
+			}
+			system.SerialDevice = systemNewSerialDevice
+		case "serial-baud-rate":
+			var systemNewSerialBaudRate int
+			systemNewSerialBaudRate, err = cmd.Flags().GetInt("serial-baud-rate")
+			if err != nil {
+				return
+			}
+			system.SerialBaudRate = systemNewSerialBaudRate
+		case "bonding-opts":
+			var systemNewBondingOpts string
+			systemNewBondingOpts, err = cmd.Flags().GetString("bonding-opts")
+			if err != nil {
+				return
+			}
+			systemInterface.BondingOpts = systemNewBondingOpts
+		case "bridge-opts":
+			var systemNewBridgeOpts string
+			systemNewBridgeOpts, err = cmd.Flags().GetString("bridge-opts")
+			if err != nil {
+				return
+			}
+			systemInterface.BridgeOpts = systemNewBridgeOpts
+		case "cnames":
+			var systemNewCNames []string
+			systemNewCNames, err = cmd.Flags().GetStringSlice("cnames")
+			if err != nil {
+				return
+			}
+			systemInterface.CNAMEs = systemNewCNames
+		case "connected-mode":
+			var systemNewConnectedMode bool
+			systemNewConnectedMode, err = cmd.Flags().GetBool("connected-mode")
+			if err != nil {
+				return
+			}
+			systemInterface.ConnectedMode = systemNewConnectedMode
+		case "dns-name":
+			var systemNewDnsName string
+			systemNewDnsName, err = cmd.Flags().GetString("dns-name")
+			if err != nil {
+				return
+			}
+			systemInterface.DNSName = systemNewDnsName
+		case "if-gateway":
+			var systemNewIfGateway string
+			systemNewIfGateway, err = cmd.Flags().GetString("if-gateway")
+			if err != nil {
+				return
+			}
+			systemInterface.Gateway = systemNewIfGateway
+		case "interface-master":
+			var systemNewInterfaceMaster string
+			systemNewInterfaceMaster, err = cmd.Flags().GetString("interface-master")
+			if err != nil {
+				return
+			}
+			systemInterface.InterfaceMaster = systemNewInterfaceMaster
+		case "interface-type":
+			var systemNewInterfaceType string
+			systemNewInterfaceType, err = cmd.Flags().GetString("interface-type")
+			if err != nil {
+				return
+			}
+			systemInterface.InterfaceType = systemNewInterfaceType
+		case "ip-address":
+			var systemNewIpAddress string
+			systemNewIpAddress, err := cmd.Flags().GetString("ip-address")
+			if err != nil {
+				return
+			}
+			systemInterface.IPAddress = systemNewIpAddress
+		case "ipv6-address":
+			var systemNewIpv6Address string
+			systemNewIpv6Address, err = cmd.Flags().GetString("ipv6-address")
+			if err != nil {
+				return
+			}
+			systemInterface.IPv6Address = systemNewIpv6Address
+		case "ipv6-default-gateway":
+			var systemNewIpv6DefaultGateway string
+			systemNewIpv6DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
+			if err != nil {
+				return
+			}
+			systemInterface.IPv6DefaultGateway = systemNewIpv6DefaultGateway
+		case "ipv6-mtu":
+			var systemNewIpv6Mtu string
+			systemNewIpv6Mtu, err = cmd.Flags().GetString("ipv6-mtu")
+			if err != nil {
+				return
+			}
+			systemInterface.IPv6MTU = systemNewIpv6Mtu
+		case "ipv6-prefix":
+			var systemNewIpv6Prefix string
+			systemNewIpv6Prefix, err = cmd.Flags().GetString("ipv6-prefix")
+			if err != nil {
+				return
+			}
+			systemInterface.IPv6Prefix = systemNewIpv6Prefix
+		case "ipv6-secondaries":
+			var systemNewIpv6Secondaries []string
+			systemNewIpv6Secondaries, err = cmd.Flags().GetStringSlice("ipv6-secondaries")
+			if err != nil {
+				return
+			}
+			systemInterface.IPv6Secondaries = systemNewIpv6Secondaries
+		case "ipv6-static-routes":
+			var systemNewIpv6StaticRoutes []string
+			systemNewIpv6StaticRoutes, err = cmd.Flags().GetStringSlice("ipv6-static-routes")
+			if err != nil {
+				return
+			}
+			systemInterface.IPv6StaticRoutes = systemNewIpv6StaticRoutes
+		case "mac-address":
+			var systemNewMacAddress string
+			systemNewMacAddress, err = cmd.Flags().GetString("mac-address")
+			if err != nil {
+				return
+			}
+			systemInterface.MACAddress = systemNewMacAddress
+		case "management":
+			var systemNewManagement bool
+			systemNewManagement, err = cmd.Flags().GetBool("management")
+			if err != nil {
+				return
+			}
+			systemInterface.Management = systemNewManagement
+		case "mtu":
+			var systemNewMtu string
+			systemNewMtu, err = cmd.Flags().GetString("mtu")
+			if err != nil {
+				return
+			}
+			systemInterface.MTU = systemNewMtu
+		case "netmask":
+			var systemNewNetmask string
+			systemNewNetmask, err = cmd.Flags().GetString("netmask")
+			if err != nil {
+				return
+			}
+			systemInterface.Netmask = systemNewNetmask
+		case "static":
+			var systemNewStatic bool
+			systemNewStatic, err = cmd.Flags().GetBool("static")
+			if err != nil {
+				return
+			}
+			systemInterface.Static = systemNewStatic
+		case "static-routes":
+			var systemNewStaticRoutes []string
+			systemNewStaticRoutes, err = cmd.Flags().GetStringSlice("static-routes")
+			if err != nil {
+				return
+			}
+			systemInterface.StaticRoutes = systemNewStaticRoutes
+		case "virt-bridge":
+			var systemNewVirtBridge string
+			systemNewVirtBridge, err = cmd.Flags().GetString("virt-bridge")
+			if err != nil {
+				return
+			}
+			systemInterface.VirtBridge = systemNewVirtBridge
+		}
+	})
+	// Don't blindly return nil because maybe one of the flags had an issue retrieving an argument.
+	return err
+}
 
 // systemCmd represents the system command
 var systemCmd = &cobra.Command{
@@ -24,7 +708,7 @@ var systemCmd = &cobra.Command{
 	Long: `Let you manage systems.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-system for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -32,88 +716,30 @@ var systemAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add system",
 	Long:  `Adds a system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		var newSystem cobbler.System
+		newSystem := cobbler.NewSystem()
+		var err error
 
 		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
-		newSystem.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
-		newSystem.AutoinstallMeta, _ = cmd.Flags().GetStringArray("autoinstall-meta")
-		newSystem.BootFiles, _ = cmd.Flags().GetString("bootfiles")
-		newSystem.Comment, _ = cmd.Flags().GetString("comment")
-		newSystem.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
-		newSystem.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
-		newSystem.Gateway, _ = cmd.Flags().GetString("gateway")
-		newSystem.Hostname, _ = cmd.Flags().GetString("hostname")
-		newSystem.Image, _ = cmd.Flags().GetString("image")
-		newSystem.IPv6DefaultDevice, _ = cmd.Flags().GetString("ipv6-default-device")
-		newSystem.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
-		newSystem.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
-		newSystem.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
-		newSystem.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
-		newSystem.Name, _ = cmd.Flags().GetString("name")
-		newSystem.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
-		newSystem.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
-		newSystem.NetbootEnabled, _ = cmd.Flags().GetBool("netboot-enabled")
-		newSystem.NextServerv4, _ = cmd.Flags().GetString("next-server-v4")
-		newSystem.Owners, _ = cmd.Flags().GetStringArray("owners")
-		newSystem.PowerAddress, _ = cmd.Flags().GetString("power-address")
-		newSystem.PowerID, _ = cmd.Flags().GetString("power-id")
-		newSystem.PowerPass, _ = cmd.Flags().GetString("power-pass")
-		newSystem.PowerType, _ = cmd.Flags().GetString("power-type")
-		newSystem.PowerUser, _ = cmd.Flags().GetString("power-user")
-		newSystem.Profile, _ = cmd.Flags().GetString("profile")
-		newSystem.Proxy, _ = cmd.Flags().GetString("proxy")
-		// newSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-		newSystem.Status, _ = cmd.Flags().GetString("status")
-		newSystem.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
-		newSystem.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
-		newSystem.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
-		newSystem.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
-		newSystem.VirtFileSize, _ = cmd.Flags().GetString("virt-file-size")
-		newSystem.VirtPath, _ = cmd.Flags().GetString("virt-path")
-		newSystem.VirtPXEBoot, _ = cmd.Flags().GetInt("virt-pxe-boot")
-		newSystem.VirtRAM, _ = cmd.Flags().GetString("virt-ram")
-		newSystem.VirtType, _ = cmd.Flags().GetString("virt-type")
-
-		// interface type
-		iface.CNAMEs, _ = cmd.Flags().GetStringArray("cnames")
-		iface.DHCPTag, _ = cmd.Flags().GetString("dhcp-tag")
-		iface.DNSName, _ = cmd.Flags().GetString("dns-name")
-		iface.BondingOpts, _ = cmd.Flags().GetString("bonding-opts")
-		//iface.BridgeOpts, _ = cmd.Flags().GetString("bridge-opts")
-		iface.Gateway, _ = cmd.Flags().GetString("gateway")
-		iface.InterfaceType, _ = cmd.Flags().GetString("interface-type")
-		iface.InterfaceMaster, _ = cmd.Flags().GetString("interface-master")
-		iface.IPAddress, _ = cmd.Flags().GetString("ip-address")
-		iface.IPv6Address, _ = cmd.Flags().GetString("ipv6-address")
-		iface.IPv6Secondaries, _ = cmd.Flags().GetStringArray("ipv6-secondaries")
-		iface.IPv6MTU, _ = cmd.Flags().GetString("ipv6-mtu")
-		iface.IPv6StaticRoutes, _ = cmd.Flags().GetStringArray("ipv6-static-routes")
-		iface.IPv6DefaultGateway, _ = cmd.Flags().GetString("ipv6-default-gateway")
-		iface.MACAddress, _ = cmd.Flags().GetString("mac-address")
-		iface.Management, _ = cmd.Flags().GetBool("management")
-		iface.Netmask, _ = cmd.Flags().GetString("netmask")
-		iface.Static, _ = cmd.Flags().GetBool("static")
-		iface.StaticRoutes, _ = cmd.Flags().GetStringArray("static-routes")
-		iface.VirtBridge, _ = cmd.Flags().GetString("virt-bridge")
-
-		// TODO: Implementation for more interfaces
-		// See https://github.com/cobbler/cli/issues/38
-		err = newSystem.CreateInterface("default", iface)
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		newSystem.Name, err = cmd.Flags().GetString("name")
+		if err != nil {
+			return err
 		}
-
-		system, err = Client.CreateSystem(newSystem)
-		if checkError(err) == nil {
-			fmt.Printf("System %s created", newSystem.Name)
-		} else {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		// Update system in-memory
+		err = updateSystemFromFlags(cmd, &newSystem)
+		if err != nil {
+			return err
 		}
+		// No create the system via XML-RPC
+		// FIXME: Call modify_interface in the client when getting to the interfaces objects
+		system, err := Client.CreateSystem(newSystem)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("System %s created\n", system.Name)
+		return nil
 	},
 }
 
@@ -121,11 +747,37 @@ var systemCopyCmd = &cobra.Command{
 	Use:   "copy",
 	Short: "copy system",
 	Long:  `Copies a system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		systemNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		systemHandle, err := Client.GetSystemHandle(systemName)
+		if err != nil {
+			return err
+		}
+		err = Client.CopySystem(systemHandle, systemNewName)
+		if err != nil {
+			return err
+		}
+		newSystem, err := Client.GetSystem(systemNewName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update the system in-memory
+		err = updateSystemFromFlags(cmd, newSystem)
+		if err != nil {
+			return err
+		}
+		// Update the system via XML-RPC
+		// FIXME: Call modify_interface in the client when getting to the interfaces objects
+		return Client.UpdateSystem(newSystem)
 	},
 }
 
@@ -133,11 +785,64 @@ var systemDumpVarsCmd = &cobra.Command{
 	Use:   "dumpvars",
 	Short: "dump system variables",
 	Long:  `Prints all system variables to stdout.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get CLI flags
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+
+		// Now retrieve data
+		blendedData, err := Client.GetBlendedData("", systemName)
+		if err != nil {
+			return err
+		}
+		// Print data
+		// TODO: Deduplicate with profile
+		for key, value := range blendedData {
+			if value == nil {
+				fmt.Printf("%s:\n", key)
+				continue
+			}
+			valueType := reflect.TypeOf(value).Kind()
+			switch valueType {
+			case reflect.Bool:
+				fmt.Printf("%s: %t\n", key, value.(bool))
+			case reflect.Int64:
+				fmt.Printf("%s: %d\n", key, value.(int64))
+			case reflect.Int32:
+				fmt.Printf("%s: %d\n", key, value.(int32))
+			case reflect.Int16:
+				fmt.Printf("%s: %d\n", key, value.(int16))
+			case reflect.Int8:
+				fmt.Printf("%s: %d\n", key, value.(int8))
+			case reflect.Int:
+				fmt.Printf("%s: %d\n", key, value.(int))
+			case reflect.Float32:
+				fmt.Printf("%s: %f\n", key, value.(float32))
+			case reflect.Float64:
+				fmt.Printf("%s: %f\n", key, value.(float64))
+			case reflect.Slice, reflect.Array:
+				arr := reflect.ValueOf(value)
+				fmt.Printf("%s: [", key)
+				for i := 0; i < arr.Len(); i++ {
+					if i+1 != arr.Len() {
+						fmt.Printf("'%v', ", arr.Index(i).Interface())
+					} else {
+						fmt.Printf("'%v'", arr.Index(i).Interface())
+					}
+				}
+				fmt.Printf("]\n")
+			case reflect.Map:
+				res2B, _ := json.Marshal(value)
+				fmt.Printf("%s: %s\n", key, string(res2B))
+			default:
+				fmt.Printf("%s: %s\n", key, value)
+			}
+		}
+		return err
 	},
 }
 
@@ -145,188 +850,27 @@ var systemEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "edit system",
 	Long:  `Edits a system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
 		// find profile through its name
-		pname, _ := cmd.Flags().GetString("name")
-		var updateSystem, err = Client.GetSystem(pname)
-
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		updateSystem, err := Client.GetSystem(systemName, false, false)
+		if err != nil {
+			return err
 		}
 
-		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
-		var tmpArgs, _ = cmd.Flags().GetString("autoinstall")
-		if tmpArgs != "" {
-			updateSystem.Autoinstall, _ = cmd.Flags().GetString("autoinstall")
+		// Update the system in-memory
+		err = updateSystemFromFlags(cmd, updateSystem)
+		if err != nil {
+			return err
 		}
-		var tmpArgsArray, _ = cmd.Flags().GetStringArray("autoinstall-meta")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.AutoinstallMeta, _ = cmd.Flags().GetStringArray("autoinstall-meta")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("bootfiles")
-		if tmpArgs != "" {
-			updateSystem.BootFiles, _ = cmd.Flags().GetString("bootfiles")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("comment")
-		if tmpArgs != "" {
-			updateSystem.Comment, _ = cmd.Flags().GetString("comment")
-		}
-		// TODO
-		/*
-			var tmpArgsBool, _ = cmd.Flags().GetBool("enable-ipxe")
-			if tmpArgsBool != "" {
-				updateSystem.EnableGPXE, _ = cmd.Flags().GetBool("enable-ipxe")
-			}
-		*/
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("fetchable-files")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.FetchableFiles, _ = cmd.Flags().GetStringArray("fetchable-files")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("gateway")
-		if tmpArgs != "" {
-			updateSystem.Gateway, _ = cmd.Flags().GetString("gateway")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("hostname")
-		if tmpArgs != "" {
-			updateSystem.Hostname, _ = cmd.Flags().GetString("hostname")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("image")
-		if tmpArgs != "" {
-			updateSystem.Image, _ = cmd.Flags().GetString("image")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("ipv6-default-device")
-		if tmpArgs != "" {
-			updateSystem.IPv6DefaultDevice, _ = cmd.Flags().GetString("ipv6-default-device")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.KernelOptions, _ = cmd.Flags().GetStringArray("kernel-options")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("kernel-options-post")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.KernelOptionsPost, _ = cmd.Flags().GetStringArray("kernel-options-post")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("mgmt-classes")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.MGMTClasses, _ = cmd.Flags().GetStringArray("mgmt-classes")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("mgmt-parameters")
-		if tmpArgs != "" {
-			updateSystem.MGMTParameters, _ = cmd.Flags().GetString("mgmt-parameters")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("name")
-		if tmpArgs != "" {
-			updateSystem.Name, _ = cmd.Flags().GetString("name")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("name-servers")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.NameServers, _ = cmd.Flags().GetStringArray("name-servers")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("name-servers-search")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.NameServersSearch, _ = cmd.Flags().GetStringArray("name-servers-search")
-		}
-		// TODO
-		/*
-			tmpArgsBool, _ = cmd.Flags().GetBool("netboot-enabled")
-			if tmpArgsBool != "" {
-				updateSystem.NetbootEnabled, _ = cmd.Flags().GetBool("netboot-enabled")
-			}
-		*/
-		tmpArgs, _ = cmd.Flags().GetString("next-servers")
-		if tmpArgs != "" {
-			updateSystem.NextServerv4, _ = cmd.Flags().GetString("next-server-v4")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("owners")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.Owners, _ = cmd.Flags().GetStringArray("owners")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("power-address")
-		if tmpArgs != "" {
-			updateSystem.PowerAddress, _ = cmd.Flags().GetString("power-address")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("power-id")
-		if tmpArgs != "" {
-			updateSystem.PowerID, _ = cmd.Flags().GetString("power-id")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("power-pass")
-		if tmpArgs != "" {
-			updateSystem.PowerPass, _ = cmd.Flags().GetString("power-pass")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("power-type")
-		if tmpArgs != "" {
-			updateSystem.PowerType, _ = cmd.Flags().GetString("power-type")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("power-user")
-		if tmpArgs != "" {
-			updateSystem.PowerUser, _ = cmd.Flags().GetString("power-user")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("profile")
-		if tmpArgs != "" {
-			updateSystem.Profile, _ = cmd.Flags().GetString("profile")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("proxy")
-		if tmpArgs != "" {
-			updateSystem.Proxy, _ = cmd.Flags().GetString("proxy")
-		}
-		/*
-			tmpArgs, _ = cmd.Flags().GetString("redhat-management-key")
-			if tmpArgs != "" {
-				updateSystem.RedHatManagementKey, _ = cmd.Flags().GetString("redhat-management-key")
-			}
-		*/
-		tmpArgs, _ = cmd.Flags().GetString("status")
-		if tmpArgs != "" {
-			updateSystem.Status, _ = cmd.Flags().GetString("status")
-		}
-		tmpArgsArray, _ = cmd.Flags().GetStringArray("template-files")
-		if len(tmpArgsArray) > 0 {
-			updateSystem.TemplateFiles, _ = cmd.Flags().GetStringArray("template-files")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-auto-boot")
-		if tmpArgs != "" {
-			updateSystem.VirtAutoBoot, _ = cmd.Flags().GetString("virt-auto-boot")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-cpus")
-		if tmpArgs != "" {
-			updateSystem.VirtCPUs, _ = cmd.Flags().GetString("virt-cpus")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-disk-driver")
-		if tmpArgs != "" {
-			updateSystem.VirtDiskDriver, _ = cmd.Flags().GetString("virt-disk-driver")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-file-size")
-		if tmpArgs != "" {
-			updateSystem.VirtFileSize, _ = cmd.Flags().GetString("virt-file-size")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-path")
-		if tmpArgs != "" {
-			updateSystem.VirtPath, _ = cmd.Flags().GetString("virt-path")
-		}
-
-		// FIXME: what happens when the int value is acutally 0 instead of 1?
-		var tmpArgsInt, _ = cmd.Flags().GetInt("virt-pxe-boot")
-		if tmpArgsInt != 0 {
-			updateSystem.VirtPXEBoot, _ = cmd.Flags().GetInt("virt-pxe-boot")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-ram")
-		if tmpArgs != "" {
-			updateSystem.VirtRAM, _ = cmd.Flags().GetString("virt-ram")
-		}
-		tmpArgs, _ = cmd.Flags().GetString("virt-type")
-		if tmpArgs != "" {
-			updateSystem.VirtType, _ = cmd.Flags().GetString("virt-type")
-		}
-
-		err = Client.UpdateSystem(updateSystem)
-
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
+		// Update the system via XML-RPC
+		// FIXME: Call modify_interface in the client when getting to the interfaces objects
+		return Client.UpdateSystem(updateSystem)
 	},
 }
 
@@ -334,11 +878,9 @@ var systemFindCmd = &cobra.Command{
 	Use:   "find",
 	Short: "find system",
 	Long:  `Finds a given system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return FindItemNames(cmd, args, "system")
 	},
 }
 
@@ -346,11 +888,26 @@ var systemGetAutoinstallCmd = &cobra.Command{
 	Use:   "get-autoinstall",
 	Short: "dump autoinstall XML",
 	Long:  `Prints the autoinstall XML file of the given system to stdout.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		systemExists, err := Client.HasItem("system", systemName)
+		if err != nil {
+			return err
+		}
+		if !systemExists {
+			fmt.Println("System does not exist!")
+			os.Exit(1)
+		}
+		autoinstallRendered, err := Client.GenerateAutoinstall("", systemName)
+		if err != nil {
+			return err
+		}
+		fmt.Println(autoinstallRendered)
+		return nil
 	},
 }
 
@@ -358,17 +915,14 @@ var systemListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list all systems",
 	Long:  `Lists all available systems.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		systems, err = Client.GetSystems()
-
-		if checkError(err) == nil {
-			fmt.Println(systems)
-		} else {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+		systemNames, err := Client.ListSystemNames()
+		if err != nil {
+			return err
 		}
+		listItems("systems", systemNames)
+		return nil
 	},
 }
 
@@ -376,11 +930,22 @@ var systemPowerOffCmd = &cobra.Command{
 	Use:   "poweroff",
 	Short: "power off system",
 	Long:  `Powers off the selected system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get flags
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+
+		// Perform action
+		systemHandle, err := Client.GetSystemHandle(systemName)
+		if err != nil {
+			return err
+		}
+		_, err = Client.PowerSystem(systemHandle, "off")
+		return err
 	},
 }
 
@@ -388,11 +953,22 @@ var systemPowerOnCmd = &cobra.Command{
 	Use:   "poweron",
 	Short: "power on system",
 	Long:  `Powers on the selected system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get flags
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+
+		// Perform action
+		systemHandle, err := Client.GetSystemHandle(systemName)
+		if err != nil {
+			return err
+		}
+		_, err = Client.PowerSystem(systemHandle, "on")
+		return err
 	},
 }
 
@@ -400,11 +976,22 @@ var systemPowerStatusCmd = &cobra.Command{
 	Use:   "powerstatus",
 	Short: "Power status of the system",
 	Long:  `Querys the power status of the selected system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get flags
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+
+		// Perform action
+		systemHandle, err := Client.GetSystemHandle(systemName)
+		if err != nil {
+			return err
+		}
+		_, err = Client.PowerSystem(systemHandle, "status")
+		return err
 	},
 }
 
@@ -412,11 +999,22 @@ var systemRebootCmd = &cobra.Command{
 	Use:   "reboot",
 	Short: "reboot system",
 	Long:  `Reboots the selected system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get flags
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+
+		// Perform action
+		systemHandle, err := Client.GetSystemHandle(systemName)
+		if err != nil {
+			return err
+		}
+		_, err = Client.PowerSystem(systemHandle, "reboot")
+		return err
 	},
 }
 
@@ -424,15 +1022,9 @@ var systemRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove system",
 	Long:  `Removes a given system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		sname, _ := cmd.Flags().GetString("name")
-		err := Client.DeleteSystem(sname)
-		if checkError(err) != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
+		return RemoveItemRecursive(cmd, args, "system")
 	},
 }
 
@@ -440,23 +1032,72 @@ var systemRenameCmd = &cobra.Command{
 	Use:   "rename",
 	Short: "rename system",
 	Long:  `Renames a given system.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get flags
+		systemName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		systemNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
+
+		// Perform action
+		systemHandle, err := Client.GetSystemHandle(systemName)
+		if err != nil {
+			return err
+		}
+		err = Client.RenameSystem(systemHandle, systemNewName)
+		if err != nil {
+			return err
+		}
+		newSystem, err := Client.GetSystem(systemNewName, false, false)
+		if err != nil {
+			return err
+		}
+		err = updateSystemFromFlags(cmd, newSystem)
+		if err != nil {
+			return err
+		}
+		return Client.UpdateSystem(newSystem)
 	},
+}
+
+func reportSystems(systemNames []string) error {
+	for _, itemName := range systemNames {
+		system, err := Client.GetSystem(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(system)
+		fmt.Println("")
+	}
+	return nil
 }
 
 var systemReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "list all systems in detail",
 	Long:  `Shows detailed information about all systems.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		itemNames := make([]string, 0)
+		if name == "" {
+			itemNames, err = Client.ListSystemNames()
+			if err != nil {
+				return err
+			}
+		} else {
+			itemNames = append(itemNames, name)
+		}
+		return reportSystems(itemNames)
 	},
 }
 
@@ -478,159 +1119,39 @@ func init() {
 	systemCmd.AddCommand(systemReportCmd)
 
 	// local flags for system add
-	systemAddCmd.Flags().String("name", "", "the system name")
-	systemAddCmd.Flags().String("autoinstall", "", "path to automatic installation template")
-	systemAddCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
-	systemAddCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	systemAddCmd.Flags().String("boot-loaders", "", "boot loader space delimited list (network installation boot loaders). Valid options for list items are: <<inherit>>,grub,pxe,ipxe")
-	systemAddCmd.Flags().String("comment", "", "free form text description")
-	systemAddCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	systemAddCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	systemAddCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	systemAddCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	systemAddCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	systemAddCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	systemAddCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
+	addCommonArgs(systemAddCmd)
+	addStringFlags(systemAddCmd, systemStringFlagMetadata)
+	addStringFlags(systemAddCmd, systemPowerStringFlagMetadata)
+	addBoolFlags(systemAddCmd, systemBoolFlagMetadata)
+	addIntFlags(systemAddCmd, systemIntFlagMetadata)
+	addFloatFlags(systemAddCmd, systemFloatFlagMetadata)
+	addStringSliceFlags(systemAddCmd, systemStringSliceFlagMetadata)
+	addMapFlags(systemAddCmd, systemMapFlagMetadata)
+	// Network interface flags
+	addStringFlags(systemAddCmd, interfaceStringFlagMetadata)
+	addBoolFlags(systemAddCmd, interfaceBoolFlagMetadata)
+	addStringSliceFlags(systemAddCmd, interfaceStringSliceFlagMetadata)
+	// Other
 	systemAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	systemAddCmd.Flags().String("dhcp-tag", "", "DHCP tag (see manpage or leave blank)")
-	systemAddCmd.Flags().Bool("enable-ipxe", false, "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)")
-	systemAddCmd.Flags().Bool("enable-menu", false, "enable PXE Menu? (show this system in the PXE menu?)")
-	systemAddCmd.Flags().String("mgmt-parameters", "", "Parameters which will be handed to your management application (must be a valid YAML dictionary))")
-	systemAddCmd.Flags().String("name-servers", "", "name servers (space delimited)")
-	systemAddCmd.Flags().String("name-servers-search", "", "name servers search path (space delimited)")
-	systemAddCmd.Flags().String("next-server-v4", "", "next server (IPv4) override (see manpage or leave blank)")
-	systemAddCmd.Flags().String("next-server-v6", "", "next server (IPv6) override (see manpage or leave blank)")
-	systemAddCmd.Flags().String("filename", "", "DHCP filename override (used to boot non-default bootloaders)")
-	systemAddCmd.Flags().String("parent", "", "parent system")
-	systemAddCmd.Flags().String("proxy", "", "proxy server URL")
-	systemAddCmd.Flags().String("server", "", "server override")
-	systemAddCmd.Flags().String("menu", "", "parent boot menu")
-	systemAddCmd.Flags().Bool("virt-auto-boot", false, "auto boot this VM?")
-	systemAddCmd.Flags().String("virt-bridge", "", "virt bridge")
-	systemAddCmd.Flags().String("virt-cpus", "", "virt CPUs")
-	systemAddCmd.Flags().String("virt-disk-driver", "", "the on-disk format for the virtualization disk. Valid options: <<inherit>>,raw,qcow2,qed,vdi,vdmk")
-	systemAddCmd.Flags().String("virt-file-size", "", "virt file size in GB")
-	systemAddCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
-	systemAddCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
-	systemAddCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemAddCmd.Flags().String("gateway", "", "gateway")
-	systemAddCmd.Flags().String("hostname", "", "hostname")
-	systemAddCmd.Flags().String("image", "", "parent image (if not a profile)")
-	systemAddCmd.Flags().String("ipv6-default-device", "", "IPv6 default device")
-	systemAddCmd.Flags().Bool("netboot-enabled", false, "PXE (re)install this machine at next boot?")
-	systemAddCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
-	systemAddCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
-	systemAddCmd.Flags().String("power-pass", "", "power management password")
-	systemAddCmd.Flags().String("power-type", "", "power management script to use")
-	systemAddCmd.Flags().String("power-user", "", "power management username")
-	systemAddCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
-	systemAddCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
-	systemAddCmd.Flags().String("profile", "", "Parent profile")
-	systemAddCmd.Flags().String("status", "", "system status. Valid options: development,testing,acceptance,production")
-	systemAddCmd.Flags().Bool("virt-pxe-boot", false, "use PXE to build this VM?")
-	systemAddCmd.Flags().String("serial-device", "", "serial device number")
-	systemAddCmd.Flags().String("serial-baud-rate", "", "serial Baud Rate. Valid options: 2400,4800,9600,19200,38400,57600,115200")
-	systemAddCmd.Flags().String("bonding-opts", "", "bonding opts (should be used with --interface)")
-	systemAddCmd.Flags().String("ridge-opts", "", "bridge opts (should be used with --interface")
-	systemAddCmd.Flags().String("cnames", "", "Cannonical Name Records, should be used with	--interface (in quotes, space delimited)")
-	systemAddCmd.Flags().String("connected-mode", "", "InfiniBand connected mode (should be used with --interface)")
-	systemAddCmd.Flags().String("dns-name", "", "DNS name (should be used with --interface)")
-	systemAddCmd.Flags().String("if-gateway", "", "per-Interface Gateway (should be used with --interface)")
-	systemAddCmd.Flags().String("interface-master", "", "master interface (Should be used with --interface)")
-	systemAddCmd.Flags().String("interface-type", "", `interface Type. Valid options: na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,bmc,infiniband.
-	(should be used with --interface)`)
-	systemAddCmd.Flags().String("ip-address", "", "IPv4 address (should be used with --interface)")
-	systemAddCmd.Flags().String("ipv6-address", "", "IPv6 address (should be used with --interface)")
-	systemAddCmd.Flags().String("ipv6-default-gateway", "", "IPv6 Default Gateway (should be used with --interface)")
-	systemAddCmd.Flags().String("ipv6-mtu", "", "IPv6 MTU")
-	systemAddCmd.Flags().String("ipv6-prefix", "", "IPv6 Prefix (should be used with --interface)")
-	systemAddCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
-	systemAddCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
-	systemAddCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a	random MAC Address.)")
-	systemAddCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
-	systemAddCmd.Flags().String("mtu", "", "MTU")
-	systemAddCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
-	systemAddCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
-	systemAddCmd.Flags().String("static-routes", "", "static routes (should be used with --interface)")
 	systemAddCmd.Flags().String("interface", "", "the interface to operate on")
 	systemAddCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
 	systemAddCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
 
 	// local flags for system copy
-	systemCopyCmd.Flags().String("name", "", "the system name")
-	systemCopyCmd.Flags().String("autoinstall", "", "path to automatic installation template")
-	systemCopyCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
-	systemCopyCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	systemCopyCmd.Flags().String("boot-loaders", "", "boot loader space delimited list (network installation boot loaders). Valid options for list items are: <<inherit>>,grub,pxe,ipxe")
-	systemCopyCmd.Flags().String("comment", "", "free form text description")
-	systemCopyCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	systemCopyCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	systemCopyCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	systemCopyCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	systemCopyCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	systemCopyCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	systemCopyCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
+	addCommonArgs(systemCopyCmd)
+	addStringFlags(systemCopyCmd, systemStringFlagMetadata)
+	addStringFlags(systemCopyCmd, systemPowerStringFlagMetadata)
+	addBoolFlags(systemCopyCmd, systemBoolFlagMetadata)
+	addIntFlags(systemCopyCmd, systemIntFlagMetadata)
+	addFloatFlags(systemCopyCmd, systemFloatFlagMetadata)
+	addStringSliceFlags(systemCopyCmd, systemStringSliceFlagMetadata)
+	addMapFlags(systemCopyCmd, systemMapFlagMetadata)
+	// Network interface flags
+	addStringFlags(systemCopyCmd, interfaceStringFlagMetadata)
+	addBoolFlags(systemCopyCmd, interfaceBoolFlagMetadata)
+	addStringSliceFlags(systemCopyCmd, interfaceStringSliceFlagMetadata)
+	// Other
 	systemCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	systemCopyCmd.Flags().String("dhcp-tag", "", "DHCP tag (see manpage or leave blank)")
-	systemCopyCmd.Flags().Bool("enable-ipxe", false, "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)")
-	systemCopyCmd.Flags().Bool("enable-menu", false, "enable PXE Menu? (show this system in the PXE menu?)")
-	systemCopyCmd.Flags().String("mgmt-parameters", "", "Parameters which will be handed to your management application (must be a valid YAML dictionary))")
-	systemCopyCmd.Flags().String("name-servers", "", "name servers (space delimited)")
-	systemCopyCmd.Flags().String("name-servers-search", "", "name servers search path (space delimited)")
-	systemCopyCmd.Flags().String("next-server-v4", "", "next server (IPv4) override (see manpage or leave blank)")
-	systemCopyCmd.Flags().String("next-server-v6", "", "next server (IPv6) override (see manpage or leave blank)")
-	systemCopyCmd.Flags().String("filename", "", "DHCP filename override (used to boot non-default bootloaders)")
-	systemCopyCmd.Flags().String("parent", "", "parent system")
-	systemCopyCmd.Flags().String("proxy", "", "proxy server URL")
-	systemCopyCmd.Flags().String("server", "", "server override")
-	systemCopyCmd.Flags().String("menu", "", "parent boot menu")
-	systemCopyCmd.Flags().Bool("virt-auto-boot", false, "auto boot this VM?")
-	systemCopyCmd.Flags().String("virt-bridge", "", "virt bridge")
-	systemCopyCmd.Flags().String("virt-cpus", "", "virt CPUs")
-	systemCopyCmd.Flags().String("virt-disk-driver", "", "the on-disk format for the virtualization disk. Valid options: <<inherit>>,raw,qcow2,qed,vdi,vdmk")
-	systemCopyCmd.Flags().String("virt-file-size", "", "virt file size in GB")
-	systemCopyCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
-	systemCopyCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
-	systemCopyCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemCopyCmd.Flags().String("gateway", "", "gateway")
-	systemCopyCmd.Flags().String("hostname", "", "hostname")
-	systemCopyCmd.Flags().String("image", "", "parent image (if not a profile)")
-	systemCopyCmd.Flags().String("ipv6-default-device", "", "IPv6 default device")
-	systemCopyCmd.Flags().Bool("netboot-enabled", false, "PXE (re)install this machine at next boot?")
-	systemCopyCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
-	systemCopyCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
-	systemCopyCmd.Flags().String("power-pass", "", "power management password")
-	systemCopyCmd.Flags().String("power-type", "", "power management script to use")
-	systemCopyCmd.Flags().String("power-user", "", "power management username")
-	systemCopyCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
-	systemCopyCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
-	systemCopyCmd.Flags().String("profile", "", "Parent profile")
-	systemCopyCmd.Flags().String("status", "", "system status. Valid options: development,testing,acceptance,production")
-	systemCopyCmd.Flags().Bool("virt-pxe-boot", false, "use PXE to build this VM?")
-	systemCopyCmd.Flags().String("serial-device", "", "serial device number")
-	systemCopyCmd.Flags().String("serial-baud-rate", "", "serial Baud Rate. Valid options: 2400,4800,9600,19200,38400,57600,115200")
-	systemCopyCmd.Flags().String("bonding-opts", "", "bonding opts (should be used with --interface)")
-	systemCopyCmd.Flags().String("ridge-opts", "", "bridge opts (should be used with --interface")
-	systemCopyCmd.Flags().String("cnames", "", "Cannonical Name Records, should be used with	--interface (in quotes, space delimited)")
-	systemCopyCmd.Flags().String("connected-mode", "", "InfiniBand connected mode (should be used with --interface)")
-	systemCopyCmd.Flags().String("dns-name", "", "DNS name (should be used with --interface)")
-	systemCopyCmd.Flags().String("if-gateway", "", "per-Interface Gateway (should be used with --interface)")
-	systemCopyCmd.Flags().String("interface-master", "", "master interface (Should be used with --interface)")
-	systemCopyCmd.Flags().String("interface-type", "", `interface Type. Valid options: na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,bmc,infiniband.
-	(should be used with --interface)`)
-	systemCopyCmd.Flags().String("ip-address", "", "IPv4 address (should be used with --interface)")
-	systemCopyCmd.Flags().String("ipv6-address", "", "IPv6 address (should be used with --interface)")
-	systemCopyCmd.Flags().String("ipv6-default-gateway", "", "IPv6 Default Gateway (should be used with --interface)")
-	systemCopyCmd.Flags().String("ipv6-mtu", "", "IPv6 MTU")
-	systemCopyCmd.Flags().String("ipv6-prefix", "", "IPv6 Prefix (should be used with --interface)")
-	systemCopyCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
-	systemCopyCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
-	systemCopyCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a random MAC Address.)")
-	systemCopyCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
-	systemCopyCmd.Flags().String("mtu", "", "MTU")
-	systemCopyCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
-	systemCopyCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
-	systemCopyCmd.Flags().String("static-routes", "", "static routes (should be used with --interface)")
 	systemCopyCmd.Flags().String("interface", "", "the interface to operate on")
 	systemCopyCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
 	systemCopyCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
@@ -639,165 +1160,41 @@ func init() {
 	systemDumpVarsCmd.Flags().String("name", "", "the system name")
 
 	// local flags for system edit
-	systemEditCmd.Flags().String("name", "", "the system name")
-	systemEditCmd.Flags().String("autoinstall", "", "path to automatic installation template")
-	systemEditCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
-	systemEditCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	systemEditCmd.Flags().String("boot-loaders", "", "boot loader space delimited list (network installation boot loaders). Valid options for list items are: <<inherit>>,grub,pxe,ipxe")
-	systemEditCmd.Flags().String("comment", "", "free form text description")
-	systemEditCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	systemEditCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	systemEditCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	systemEditCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	systemEditCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	systemEditCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	systemEditCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
+	addCommonArgs(systemEditCmd)
+	addStringFlags(systemEditCmd, systemStringFlagMetadata)
+	addStringFlags(systemEditCmd, systemPowerStringFlagMetadata)
+	addBoolFlags(systemEditCmd, systemBoolFlagMetadata)
+	addIntFlags(systemEditCmd, systemIntFlagMetadata)
+	addFloatFlags(systemEditCmd, systemFloatFlagMetadata)
+	addStringSliceFlags(systemEditCmd, systemStringSliceFlagMetadata)
+	addMapFlags(systemEditCmd, systemMapFlagMetadata)
+	// Network interface flags
+	addStringFlags(systemEditCmd, interfaceStringFlagMetadata)
+	addBoolFlags(systemEditCmd, interfaceBoolFlagMetadata)
+	addStringSliceFlags(systemEditCmd, interfaceStringSliceFlagMetadata)
+	// Other
 	systemEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	systemEditCmd.Flags().String("dhcp-tag", "", "DHCP tag (see manpage or leave blank)")
-	systemEditCmd.Flags().Bool("enable-ipxe", false, "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)")
-	systemEditCmd.Flags().Bool("enable-menu", false, "enable PXE Menu? (show this system in the PXE menu?)")
-	systemEditCmd.Flags().String("mgmt-parameters", "", "Parameters which will be handed to your management application (must be a valid YAML dictionary))")
-	systemEditCmd.Flags().String("name-servers", "", "name servers (space delimited)")
-	systemEditCmd.Flags().String("name-servers-search", "", "name servers search path (space delimited)")
-	systemEditCmd.Flags().String("next-server-v4", "", "next server (IPv4) override (see manpage or leave blank)")
-	systemEditCmd.Flags().String("next-server-v6", "", "next server (IPv6) override (see manpage or leave blank)")
-	systemEditCmd.Flags().String("filename", "", "DHCP filename override (used to boot non-default bootloaders)")
-	systemEditCmd.Flags().String("parent", "", "parent system")
-	systemEditCmd.Flags().String("proxy", "", "proxy server URL")
-	systemEditCmd.Flags().String("server", "", "server override")
-	systemEditCmd.Flags().String("menu", "", "parent boot menu")
-	systemEditCmd.Flags().Bool("virt-auto-boot", false, "auto boot this VM?")
-	systemEditCmd.Flags().String("virt-bridge", "", "virt bridge")
-	systemEditCmd.Flags().String("virt-cpus", "", "virt CPUs")
-	systemEditCmd.Flags().String("virt-disk-driver", "", "the on-disk format for the virtualization disk. Valid options: <<inherit>>,raw,qcow2,qed,vdi,vdmk")
-	systemEditCmd.Flags().String("virt-file-size", "", "virt file size in GB")
-	systemEditCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
-	systemEditCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
-	systemEditCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemEditCmd.Flags().String("gateway", "", "gateway")
-	systemEditCmd.Flags().String("hostname", "", "hostname")
-	systemEditCmd.Flags().String("image", "", "parent image (if not a profile)")
-	systemEditCmd.Flags().String("ipv6-default-device", "", "IPv6 default device")
-	systemEditCmd.Flags().Bool("netboot-enabled", false, "PXE (re)install this machine at next boot?")
-	systemEditCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
-	systemEditCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
-	systemEditCmd.Flags().String("power-pass", "", "power management password")
-	systemEditCmd.Flags().String("power-type", "", "power management script to use")
-	systemEditCmd.Flags().String("power-user", "", "power management username")
-	systemEditCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
-	systemEditCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
-	systemEditCmd.Flags().String("profile", "", "Parent profile")
-	systemEditCmd.Flags().String("status", "", "system status. Valid options: development,testing,acceptance,production")
-	systemEditCmd.Flags().Bool("virt-pxe-boot", false, "use PXE to build this VM?")
-	systemEditCmd.Flags().String("serial-device", "", "serial device number")
-	systemEditCmd.Flags().String("serial-baud-rate", "", "serial Baud Rate. Valid options: 2400,4800,9600,19200,38400,57600,115200")
-	systemEditCmd.Flags().String("bonding-opts", "", "bonding opts (should be used with --interface)")
-	systemEditCmd.Flags().String("ridge-opts", "", "bridge opts (should be used with --interface")
-	systemEditCmd.Flags().String("cnames", "", "Cannonical Name Records, should be used with	--interface (in quotes, space delimited)")
-	systemEditCmd.Flags().String("connected-mode", "", "InfiniBand connected mode (should be used with --interface)")
-	systemEditCmd.Flags().String("dns-name", "", "DNS name (should be used with --interface)")
-	systemEditCmd.Flags().String("if-gateway", "", "per-Interface Gateway (should be used with --interface)")
-	systemEditCmd.Flags().String("interface-master", "", "master interface (Should be used with --interface)")
-	systemEditCmd.Flags().String("interface-type", "", `interface Type. Valid options: na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,bmc,infiniband.
-	(should be used with --interface)`)
-	systemEditCmd.Flags().String("ip-address", "", "IPv4 address (should be used with --interface)")
-	systemEditCmd.Flags().String("ipv6-address", "", "IPv6 address (should be used with --interface)")
-	systemEditCmd.Flags().String("ipv6-default-gateway", "", "IPv6 Default Gateway (should be used with --interface)")
-	systemEditCmd.Flags().String("ipv6-mtu", "", "IPv6 MTU")
-	systemEditCmd.Flags().String("ipv6-prefix", "", "IPv6 Prefix (should be used with --interface)")
-	systemEditCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
-	systemEditCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
-	systemEditCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a random MAC Address.)")
-	systemEditCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
-	systemEditCmd.Flags().String("mtu", "", "MTU")
-	systemEditCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
-	systemEditCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
-	systemEditCmd.Flags().String("static-routes", "", "static routes (should be used with --interface)")
 	systemEditCmd.Flags().String("interface", "", "the interface to operate on")
 
 	// local flags for system find
-	systemFindCmd.Flags().String("name", "", "the system name")
+	addCommonArgs(systemFindCmd)
+	addStringFlags(systemFindCmd, systemStringFlagMetadata)
+	addStringFlags(systemFindCmd, systemPowerStringFlagMetadata)
+	addBoolFlags(systemFindCmd, systemBoolFlagMetadata)
+	addIntFlags(systemFindCmd, systemIntFlagMetadata)
+	addFloatFlags(systemFindCmd, systemFloatFlagMetadata)
+	addStringSliceFlags(systemFindCmd, systemStringSliceFlagMetadata)
+	addMapFlags(systemFindCmd, systemMapFlagMetadata)
+	// Network interface flags
+	addStringFlags(systemFindCmd, interfaceStringFlagMetadata)
+	addBoolFlags(systemFindCmd, interfaceBoolFlagMetadata)
+	addStringSliceFlags(systemFindCmd, interfaceStringSliceFlagMetadata)
+	// Other
 	systemFindCmd.Flags().String("ctime", "", "")
 	systemFindCmd.Flags().String("depth", "", "")
 	systemFindCmd.Flags().String("mtime", "", "")
 	systemFindCmd.Flags().String("uid", "", "UID")
-	systemFindCmd.Flags().String("autoinstall", "", "path to automatic installation template")
-	systemFindCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
-	systemFindCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	systemFindCmd.Flags().String("boot-loaders", "", "boot loader space delimited list (network installation boot loaders). Valid options for list items are: <<inherit>>,grub,pxe,ipxe")
-	systemFindCmd.Flags().String("comment", "", "free form text description")
-	systemFindCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	systemFindCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	systemFindCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	systemFindCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	systemFindCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	systemFindCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	systemFindCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
-	systemFindCmd.Flags().String("dhcp-tag", "", "DHCP tag (see manpage or leave blank)")
-	systemFindCmd.Flags().Bool("enable-ipxe", false, "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)")
-	systemFindCmd.Flags().Bool("enable-menu", false, "enable PXE Menu? (show this system in the PXE menu?)")
-	systemFindCmd.Flags().String("mgmt-parameters", "", "Parameters which will be handed to your management application (must be a valid YAML dictionary))")
-	systemFindCmd.Flags().String("name-servers", "", "name servers (space delimited)")
-	systemFindCmd.Flags().String("name-servers-search", "", "name servers search path (space delimited)")
-	systemFindCmd.Flags().String("next-server-v4", "", "next server (IPv4) override (see manpage or leave blank)")
-	systemFindCmd.Flags().String("next-server-v6", "", "next server (IPv6) override (see manpage or leave blank)")
-	systemFindCmd.Flags().String("filename", "", "DHCP filename override (used to boot non-default bootloaders)")
-	systemFindCmd.Flags().String("parent", "", "parent system")
-	systemFindCmd.Flags().String("proxy", "", "proxy server URL")
-	systemFindCmd.Flags().String("server", "", "server override")
-	systemFindCmd.Flags().String("menu", "", "parent boot menu")
-	systemFindCmd.Flags().Bool("virt-auto-boot", false, "auto boot this VM?")
-	systemFindCmd.Flags().String("virt-bridge", "", "virt bridge")
-	systemFindCmd.Flags().String("virt-cpus", "", "virt CPUs")
-	systemFindCmd.Flags().String("virt-disk-driver", "", "the on-disk format for the virtualization disk. Valid options: <<inherit>>,raw,qcow2,qed,vdi,vdmk")
-	systemFindCmd.Flags().String("virt-file-size", "", "virt file size in GB")
-	systemFindCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
-	systemFindCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
-	systemFindCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemFindCmd.Flags().Bool("ipv6-autoconfiguration", false, "IPv6 auto configuration")
-	systemFindCmd.Flags().Bool("repos-enabled", false, "(re)configure local repos on this machine at next config update?")
-	systemFindCmd.Flags().String("gateway", "", "gateway")
-	systemFindCmd.Flags().String("hostname", "", "hostname")
-	systemFindCmd.Flags().String("image", "", "parent image (if not a profile)")
-	systemFindCmd.Flags().String("ipv6-default-device", "", "IPv6 default device")
-	systemFindCmd.Flags().Bool("netboot-enabled", false, "PXE (re)install this machine at next boot?")
-	systemFindCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
-	systemFindCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
-	systemFindCmd.Flags().String("power-pass", "", "power management password")
-	systemFindCmd.Flags().String("power-type", "", "power management script to use")
-	systemFindCmd.Flags().String("power-user", "", "power management username")
-	systemFindCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
-	systemFindCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
-	systemFindCmd.Flags().String("profile", "", "Parent profile")
-	systemFindCmd.Flags().String("status", "", "system status. Valid options: development,testing,acceptance,production")
-	systemFindCmd.Flags().Bool("virt-pxe-boot", false, "use PXE to build this VM?")
-	systemFindCmd.Flags().String("serial-device", "", "serial device number")
-	systemFindCmd.Flags().String("serial-baud-rate", "", "serial Baud Rate. Valid options: 2400,4800,9600,19200,38400,57600,115200")
-	systemFindCmd.Flags().String("bonding-opts", "", "bonding opts (should be used with --interface)")
-	systemFindCmd.Flags().String("ridge-opts", "", "bridge opts (should be used with --interface")
-	systemFindCmd.Flags().String("cnames", "", "Cannonical Name Records, should be used with	--interface (in quotes, space delimited)")
-	systemFindCmd.Flags().String("connected-mode", "", "InfiniBand connected mode (should be used with --interface)")
-	systemFindCmd.Flags().String("dns-name", "", "DNS name (should be used with --interface)")
-	systemFindCmd.Flags().String("if-gateway", "", "per-Interface Gateway (should be used with --interface)")
-	systemFindCmd.Flags().String("interface-master", "", "master interface (Should be used with --interface)")
-	systemFindCmd.Flags().String("interface-type", "", `interface Type. Valid options: na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,bmc,infiniband.
-	(should be used with --interface)`)
-	systemFindCmd.Flags().String("ip-address", "", "IPv4 address (should be used with --interface)")
-	systemFindCmd.Flags().String("ipv6-address", "", "IPv6 address (should be used with --interface)")
-	systemFindCmd.Flags().String("ipv6-default-gateway", "", "IPv6 Default Gateway (should be used with --interface)")
-	systemFindCmd.Flags().String("ipv6-mtu", "", "IPv6 MTU")
-	systemFindCmd.Flags().String("ipv6-prefix", "", "IPv6 Prefix")
-	systemFindCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries (should be used with --interface)")
-	systemFindCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes (should be used with --interface)")
-	systemFindCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a random MAC Address.)")
-	systemFindCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
-	systemFindCmd.Flags().String("mtu", "", "MTU")
-	systemFindCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
-	systemFindCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
-	systemFindCmd.Flags().String("static-routes", "", "static routes (should be used with --interface)")
 	systemFindCmd.Flags().String("interface", "", "the interface to operate on")
-	systemFindCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
-	systemFindCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
 
 	// local flags for system get-autoinstall
 	systemGetAutoinstallCmd.Flags().String("name", "", "the system name")
@@ -819,81 +1216,21 @@ func init() {
 	systemRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
 
 	// local flags for system rename
-	systemRenameCmd.Flags().String("name", "", "the system name")
+	addCommonArgs(systemRenameCmd)
+	addStringFlags(systemRenameCmd, systemStringFlagMetadata)
+	addStringFlags(systemRenameCmd, systemPowerStringFlagMetadata)
+	addBoolFlags(systemRenameCmd, systemBoolFlagMetadata)
+	addIntFlags(systemRenameCmd, systemIntFlagMetadata)
+	addFloatFlags(systemRenameCmd, systemFloatFlagMetadata)
+	addStringSliceFlags(systemRenameCmd, systemStringSliceFlagMetadata)
+	addMapFlags(systemRenameCmd, systemMapFlagMetadata)
+	// Network interface flags
+	addStringFlags(systemRenameCmd, interfaceStringFlagMetadata)
+	addBoolFlags(systemRenameCmd, interfaceBoolFlagMetadata)
+	addStringSliceFlags(systemRenameCmd, interfaceStringSliceFlagMetadata)
+	// Other
 	systemRenameCmd.Flags().String("newname", "", "the new system name")
-	systemRenameCmd.Flags().String("autoinstall", "", "path to automatic installation template")
-	systemRenameCmd.Flags().String("autoinstall-meta", "", "automatic installation metadata")
-	systemRenameCmd.Flags().String("boot-files", "", "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)")
-	systemRenameCmd.Flags().String("boot-loaders", "", "boot loader space delimited list (network installation boot loaders). Valid options for list items are: <<inherit>>,grub,pxe,ipxe")
-	systemRenameCmd.Flags().String("comment", "", "free form text description")
-	systemRenameCmd.Flags().String("fetchable-files", "", "fetchable files (templates for tftp, wget or curl)")
-	systemRenameCmd.Flags().String("kernel-options", "", "kernel options (e.g. selinux=permissive)")
-	systemRenameCmd.Flags().String("kernel-options-post", "", "post install kernel options (e.g. clocksource=pit noapic)")
-	systemRenameCmd.Flags().String("mgmt-classes", "", "management classes (for external config management)")
-	systemRenameCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	systemRenameCmd.Flags().String("redhat-management-key", "", "RedHat management key (registration key for RHN, Spacewalk, or Satellite)")
-	systemRenameCmd.Flags().String("template-files", "", "template files (file mappings for built-in config management)")
 	systemRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	systemRenameCmd.Flags().String("dhcp-tag", "", "DHCP tag (see manpage or leave blank)")
-	systemRenameCmd.Flags().Bool("enable-ipxe", false, "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)")
-	systemRenameCmd.Flags().Bool("enable-menu", false, "enable PXE Menu? (show this system in the PXE menu?)")
-	systemRenameCmd.Flags().String("mgmt-parameters", "", "Parameters which will be handed to your management application (must be a valid YAML dictionary))")
-	systemRenameCmd.Flags().String("name-servers", "", "name servers (space delimited)")
-	systemRenameCmd.Flags().String("name-servers-search", "", "name servers search path (space delimited)")
-	systemRenameCmd.Flags().String("next-server-v4", "", "next server (IPv4) override (see manpage or leave blank)")
-	systemRenameCmd.Flags().String("next-server-v6", "", "next server (IPv6) override (see manpage or leave blank)")
-	systemRenameCmd.Flags().String("filename", "", "DHCP filename override (used to boot non-default bootloaders)")
-	systemRenameCmd.Flags().String("parent", "", "parent system")
-	systemRenameCmd.Flags().String("proxy", "", "proxy server URL")
-	systemRenameCmd.Flags().String("server", "", "server override")
-	systemRenameCmd.Flags().String("menu", "", "parent boot menu")
-	systemRenameCmd.Flags().Bool("virt-auto-boot", false, "auto boot this VM?")
-	systemRenameCmd.Flags().String("virt-bridge", "", "virt bridge")
-	systemRenameCmd.Flags().String("virt-cpus", "", "virt CPUs")
-	systemRenameCmd.Flags().String("virt-disk-driver", "", "the on-disk format for the virtualization disk. Valid options: <<inherit>>,raw,qcow2,qed,vdi,vdmk")
-	systemRenameCmd.Flags().String("virt-file-size", "", "virt file size in GB")
-	systemRenameCmd.Flags().String("virt-path", "", "virt Path (e.g. /directory or VolGroup00)")
-	systemRenameCmd.Flags().String("virt-ram", "", "virt RAM size in MB")
-	systemRenameCmd.Flags().String("virt-type", "", "virtualization technology to use. Valid options: <<inherit>>,qemu,kvm,xenpv,xenfv,vmware,vmwarew,openvz,auto)")
-	systemRenameCmd.Flags().String("gateway", "", "gateway")
-	systemRenameCmd.Flags().String("hostname", "", "hostname")
-	systemRenameCmd.Flags().String("image", "", "parent image (if not a profile)")
-	systemRenameCmd.Flags().String("ipv6-default-device", "", "IPv6 default device")
-	systemRenameCmd.Flags().Bool("netboot-enabled", false, "PXE (re)install this machine at next boot?")
-	systemRenameCmd.Flags().String("power-address", "", "power management address (e.g. power-device.example.org)")
-	systemRenameCmd.Flags().String("power-id", "", "power management ID (usually a plug number or blade name, if power type requires it)")
-	systemRenameCmd.Flags().String("power-pass", "", "power management password")
-	systemRenameCmd.Flags().String("power-type", "", "power management script to use")
-	systemRenameCmd.Flags().String("power-user", "", "power management username")
-	systemRenameCmd.Flags().String("power-options", "", "additional options, to be passed to the fencing agent")
-	systemRenameCmd.Flags().String("power-identity-file", "", "identity file to be passed to the fencing agent (SSH key)")
-	systemRenameCmd.Flags().String("profile", "", "Parent profile")
-	systemRenameCmd.Flags().String("status", "", "system status. Valid options: development,testing,acceptance,production")
-	systemRenameCmd.Flags().Bool("virt-pxe-boot", false, "use PXE to build this VM?")
-	systemRenameCmd.Flags().String("serial-device", "", "serial device number")
-	systemRenameCmd.Flags().String("serial-baud-rate", "", "serial Baud Rate. Valid options: 2400,4800,9600,19200,38400,57600,115200")
-	systemRenameCmd.Flags().String("bonding-opts", "", "bonding opts (should be used with --interface)")
-	systemRenameCmd.Flags().String("ridge-opts", "", "bridge opts (should be used with --interface")
-	systemRenameCmd.Flags().String("cnames", "", "Cannonical Name Records, should be used with	--interface (in quotes, space delimited)")
-	systemRenameCmd.Flags().String("connected-mode", "", "InfiniBand connected mode (should be used with --interface)")
-	systemRenameCmd.Flags().String("dns-name", "", "DNS name (should be used with --interface)")
-	systemRenameCmd.Flags().String("if-gateway", "", "per-Interface Gateway (should be used with --interface)")
-	systemRenameCmd.Flags().String("interface-master", "", "master interface (Should be used with --interface)")
-	systemRenameCmd.Flags().String("interface-type", "", `interface Type. Valid options: na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,bmc,infiniband.
-	(should be used with --interface)`)
-	systemRenameCmd.Flags().String("ip-address", "", "IPv4 address (should be used with --interface)")
-	systemRenameCmd.Flags().String("ipv6-address", "", "IPv6 address (should be used with --interface)")
-	systemRenameCmd.Flags().String("ipv6-default-gateway", "", "IPv6 Default Gateway")
-	systemRenameCmd.Flags().String("ipv6-mtu", "", "IPv6 MTU")
-	systemRenameCmd.Flags().String("ipv6-prefix", "", "IPv6 Prefix")
-	systemRenameCmd.Flags().String("ipv6-secondaries", "", "IPv6 Secondaries")
-	systemRenameCmd.Flags().String("ipv6-static-routes", "", "IPv6 Static Routes")
-	systemRenameCmd.Flags().String("mac-address", "", "MAC Address (place 'random' in this field for a	random MAC Address.)")
-	systemRenameCmd.Flags().Bool("management", false, "declares the interface as management interface (should be used with --interface) ")
-	systemRenameCmd.Flags().String("mtu", "", "MTU")
-	systemRenameCmd.Flags().String("netmask", "", "subnet mask (should be used with --interface)")
-	systemRenameCmd.Flags().Bool("static", false, "Is this interface static? (should be used with --interface)")
-	systemRenameCmd.Flags().String("static-routes", "", "static routes (should be used with --interface)")
 	systemRenameCmd.Flags().String("interface", "", "the interface to operate on")
 
 	// local flags for system report

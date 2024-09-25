@@ -5,8 +5,115 @@
 package cmd
 
 import (
+	"fmt"
+	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+func updateFileFromFlags(cmd *cobra.Command, file *cobbler.File) error {
+	// TODO: in-place flag
+	// var inPlace bool
+	var err error
+	if cmd.Flags().Lookup("in-place") != nil {
+		// inPlace, err := cmd.Flags().GetBool("in-place")
+		_, err = cmd.Flags().GetBool("in-place")
+		if err != nil {
+			return err
+		}
+	}
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		if err != nil {
+			// If one of the previous flags has had an error just directly return.
+			return
+		}
+		switch flag.Name {
+		// The rename & copy operations are special operations as such we cannot blindly set this inside here.
+		// Any rename & copy operation must be handled outside of this method.
+		case "comment":
+			var fileNewComment string
+			fileNewComment, err = cmd.Flags().GetString("comment")
+			if err != nil {
+				return
+			}
+			file.Comment = fileNewComment
+		case "owners":
+			fallthrough
+		case "owners-inherit":
+			var fileNewOwners []string
+			fileNewOwners, err = cmd.Flags().GetStringSlice("owners")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("owners-inherit").Changed {
+				file.Owners.Data = []string{}
+				file.Owners.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				file.Owners.IsInherited = false
+				file.Owners.Data = fileNewOwners
+			}
+		case "action":
+			var fileNewAction string
+			fileNewAction, err = cmd.Flags().GetString("action")
+			if err != nil {
+				return
+			}
+			file.Action = fileNewAction
+		case "mode":
+			var fileNewMode string
+			fileNewMode, err = cmd.Flags().GetString("mode")
+			if err != nil {
+				return
+			}
+			file.Mode = fileNewMode
+		case "template":
+			var fileNewTemplate string
+			fileNewTemplate, err = cmd.Flags().GetString("template")
+			if err != nil {
+				return
+			}
+			file.Template = fileNewTemplate
+		case "path":
+			var fileNewPath string
+			fileNewPath, err = cmd.Flags().GetString("path")
+			if err != nil {
+				return
+			}
+			file.Path = fileNewPath
+		case "group":
+			var fileNewGroup string
+			fileNewGroup, err = cmd.Flags().GetString("group")
+			if err != nil {
+				return
+			}
+			file.Group = fileNewGroup
+		case "owner":
+			if cmd.Flags().Lookup("owners-inherit").Changed {
+				file.Owners.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				file.Owners.Data, err = cmd.Flags().GetStringSlice("owners")
+				if err != nil {
+					return
+				}
+			}
+		case "is-dir":
+			var fileNewIsDir bool
+			fileNewIsDir, err = cmd.Flags().GetBool("is-dir")
+			if err != nil {
+				return
+			}
+			file.IsDir = fileNewIsDir
+		}
+	})
+	// Don't blindly return nil because maybe one of the flags had an issue retrieving an argument.
+	return err
+}
 
 // fileCmd represents the file command
 var fileCmd = &cobra.Command{
@@ -15,7 +122,7 @@ var fileCmd = &cobra.Command{
 	Long: `Let you manage files.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-file for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -23,11 +130,28 @@ var fileAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add file",
 	Long:  `Adds a file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		newFile := cobbler.NewFile()
+		var err error
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get special name flag
+		newFile.Name, err = cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		// Update with the rest of the flags
+		err = updateFileFromFlags(cmd, &newFile)
+		if err != nil {
+			return err
+		}
+		// Now create the file via XML-RPC
+		file, err := Client.CreateFile(newFile)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("File %s created\n", file.Name)
+		return nil
 	},
 }
 
@@ -35,11 +159,37 @@ var fileCopyCmd = &cobra.Command{
 	Use:   "copy",
 	Short: "copy file",
 	Long:  `Copies a file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get special name and newname flags
+		fileName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		fileNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
+
+		// Now copy the file
+		fileHandle, err := Client.GetFileHandle(fileName)
+		if err != nil {
+			return err
+		}
+		err = Client.CopyFile(fileHandle, fileNewName)
+		if err != nil {
+			return err
+		}
+		newFile, err := Client.GetFile(fileNewName, false, false)
+		if err != nil {
+			return err
+		}
+		err = updateFileFromFlags(cmd, newFile)
+		if err != nil {
+			return err
+		}
+		return Client.UpdateFile(newFile)
 	},
 }
 
@@ -47,11 +197,27 @@ var fileEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "edit file",
 	Long:  `Edits a file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get the file name
+		fileName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+
+		// Now get the file from the API
+		newFile, err := Client.GetFile(fileName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update the file in-memory
+		err = updateFileFromFlags(cmd, newFile)
+		if err != nil {
+			return err
+		}
+		// Now update the file via XML-RPC
+		return Client.UpdateFile(newFile)
 	},
 }
 
@@ -59,11 +225,9 @@ var fileFindCmd = &cobra.Command{
 	Use:   "find",
 	Short: "find file",
 	Long:  `Finds a given file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return FindItemNames(cmd, args, "file")
 	},
 }
 
@@ -73,9 +237,11 @@ var fileListCmd = &cobra.Command{
 	Long:  `Lists all available files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		fileNames, err := Client.ListFileNames()
+		if err != nil {
+			fmt.Println(err)
+		}
+		listItems("files", fileNames)
 	},
 }
 
@@ -83,11 +249,9 @@ var fileRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove file",
 	Long:  `Removes a given file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return RemoveItemRecursive(cmd, args, "file")
 	},
 }
 
@@ -95,23 +259,76 @@ var fileRenameCmd = &cobra.Command{
 	Use:   "rename",
 	Short: "rename file",
 	Long:  `Renames a given file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// Get the special name and newname flags
+		fileName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		fileNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
+
+		// Get the file handle
+		fileHandle, err := Client.GetFileHandle(fileName)
+		if err != nil {
+			return err
+		}
+		// Rename the file (server-side)
+		err = Client.RenameFile(fileHandle, fileNewName)
+		if err != nil {
+			return err
+		}
+		// Get the renamed file from the API
+		newFile, err := Client.GetFile(fileNewName, false, false)
+		if err != nil {
+			return err
+		}
+		// Update the file in-memory
+		err = updateFileFromFlags(cmd, newFile)
+		if err != nil {
+			return err
+		}
+		// Update the file via XML-RPC
+		return Client.UpdateFile(newFile)
 	},
+}
+
+func reportFiles(fileNames []string) error {
+	for _, itemName := range fileNames {
+		file, err := Client.GetFile(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(file)
+		fmt.Println("")
+	}
+	return nil
 }
 
 var fileReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "list all files in detail",
 	Long:  `Shows detailed information about all files.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		itemNames := make([]string, 0)
+		if name == "" {
+			itemNames, err = Client.ListFileNames()
+			if err != nil {
+				return err
+			}
+		} else {
+			itemNames = append(itemNames, name)
+		}
+		return reportFiles(itemNames)
 	},
 }
 
@@ -127,95 +344,42 @@ func init() {
 	fileCmd.AddCommand(fileReportCmd)
 
 	// local flags for file add
-	fileAddCmd.Flags().String("name", "", "the file name")
-	fileAddCmd.Flags().String("ctime", "", "")
-	fileAddCmd.Flags().String("depth", "", "")
-	fileAddCmd.Flags().String("mtime", "", "")
-	fileAddCmd.Flags().String("uid", "", "")
-	fileAddCmd.Flags().String("comment", "", "free form text description")
-	fileAddCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	fileAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	fileAddCmd.Flags().String("action", "", "create or remove file resource")
-	fileAddCmd.Flags().String("mode", "", "file modes")
-	fileAddCmd.Flags().String("template", "", "the template for the file")
-	fileAddCmd.Flags().String("path", "", "the path of the file")
-	fileAddCmd.Flags().String("group", "", "file owner group in file system")
-	fileAddCmd.Flags().String("owner", "", "file owner user in file system")
-	fileAddCmd.Flags().Bool("is-dir", false, "treat file resource as a directory")
+	addCommonArgs(fileAddCmd)
+	addStringFlags(fileAddCmd, fileStringFlagMetadata)
+	addBoolFlags(fileAddCmd, fileBoolFlagMetadata)
 
 	// local flags for file copy
-	fileCopyCmd.Flags().String("name", "", "the file name")
+	addCommonArgs(fileCopyCmd)
+	addStringFlags(fileCopyCmd, fileStringFlagMetadata)
+	addBoolFlags(fileCopyCmd, fileBoolFlagMetadata)
 	fileCopyCmd.Flags().String("newname", "", "the new file name")
-	fileCopyCmd.Flags().String("ctime", "", "")
-	fileCopyCmd.Flags().String("depth", "", "")
-	fileCopyCmd.Flags().String("mtime", "", "")
-	fileCopyCmd.Flags().String("uid", "", "")
-	fileCopyCmd.Flags().String("comment", "", "free form text description")
-	fileCopyCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	fileCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	fileCopyCmd.Flags().String("action", "", "create or remove file resource")
-	fileCopyCmd.Flags().String("mode", "", "file modes")
-	fileCopyCmd.Flags().String("template", "", "the template for the file")
-	fileCopyCmd.Flags().String("path", "", "the path of the file")
-	fileCopyCmd.Flags().String("group", "", "file owner group in file system")
-	fileCopyCmd.Flags().String("owner", "", "file owner user in file system")
-	fileCopyCmd.Flags().Bool("is-dir", false, "treat file resource as a directory")
 
 	// local flags for file edit
-	fileEditCmd.Flags().String("name", "", "the file name")
-	fileEditCmd.Flags().String("ctime", "", "")
-	fileEditCmd.Flags().String("depth", "", "")
-	fileEditCmd.Flags().String("mtime", "", "")
-	fileEditCmd.Flags().String("uid", "", "")
-	fileEditCmd.Flags().String("comment", "", "free form text description")
-	fileEditCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
+	addCommonArgs(fileEditCmd)
+	addStringFlags(fileEditCmd, fileStringFlagMetadata)
+	addBoolFlags(fileEditCmd, fileBoolFlagMetadata)
 	fileEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	fileEditCmd.Flags().String("action", "", "create or remove file resource")
-	fileEditCmd.Flags().String("mode", "", "file modes")
-	fileEditCmd.Flags().String("template", "", "the template for the file")
-	fileEditCmd.Flags().String("path", "", "the path of the file")
-	fileEditCmd.Flags().String("group", "", "file owner group in file system")
-	fileEditCmd.Flags().String("owner", "", "file owner user in file system")
-	fileEditCmd.Flags().Bool("is-dir", false, "treat file resource as a directory")
 
 	// local flags for file find
-	fileFindCmd.Flags().String("name", "", "the file name")
+	addCommonArgs(fileFindCmd)
+	addStringFlags(fileFindCmd, fileStringFlagMetadata)
+	addBoolFlags(fileFindCmd, fileBoolFlagMetadata)
 	fileFindCmd.Flags().String("ctime", "", "")
 	fileFindCmd.Flags().String("depth", "", "")
 	fileFindCmd.Flags().String("mtime", "", "")
 	fileFindCmd.Flags().String("uid", "", "")
-	fileFindCmd.Flags().String("comment", "", "free form text description")
-	fileFindCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
-	fileFindCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	fileFindCmd.Flags().String("action", "", "create or remove file resource")
-	fileFindCmd.Flags().String("mode", "", "file modes")
-	fileFindCmd.Flags().String("template", "", "the template for the file")
-	fileFindCmd.Flags().String("path", "", "the path of the file")
-	fileFindCmd.Flags().String("group", "", "file owner group in file system")
-	fileFindCmd.Flags().String("owner", "", "file owner user in file system")
-	fileFindCmd.Flags().Bool("is-dir", false, "treat file resource as a directory")
 
 	// local flags for file remove
 	fileRemoveCmd.Flags().String("name", "", "the file name")
 	fileRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
 
 	// local flags for file rename
-	fileRenameCmd.Flags().String("name", "", "the file name")
+	addCommonArgs(fileRenameCmd)
+	addStringFlags(fileRenameCmd, fileStringFlagMetadata)
+	addBoolFlags(fileRenameCmd, fileBoolFlagMetadata)
 	fileRenameCmd.Flags().String("newname", "", "the new file name")
-	fileRenameCmd.Flags().String("ctime", "", "")
-	fileRenameCmd.Flags().String("depth", "", "")
-	fileRenameCmd.Flags().String("mtime", "", "")
-	fileRenameCmd.Flags().String("uid", "", "")
-	fileRenameCmd.Flags().String("comment", "", "free form text description")
-	fileRenameCmd.Flags().String("owners", "", "owners list for authz_ownership (space delimited))")
 	fileRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	fileRenameCmd.Flags().String("action", "", "create or remove file resource")
-	fileRenameCmd.Flags().String("mode", "", "file modes")
-	fileRenameCmd.Flags().String("template", "", "the template for the file")
-	fileRenameCmd.Flags().String("path", "", "the path of the file")
-	fileRenameCmd.Flags().String("group", "", "file owner group in file system")
-	fileRenameCmd.Flags().String("owner", "", "file owner user in file system")
-	fileRenameCmd.Flags().Bool("is-dir", false, "treat file resource as a directory")
 
 	// local flags for file report
 	fileReportCmd.Flags().String("name", "", "the file name")

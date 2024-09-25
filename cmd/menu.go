@@ -5,8 +5,59 @@
 package cmd
 
 import (
+	"fmt"
+	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+func updateMenuFromFlags(cmd *cobra.Command, menu *cobbler.Menu) error {
+	// TODO: in-place flag
+	// var inPlace bool
+	var err error
+	if cmd.Flags().Lookup("in-place") != nil {
+		// inPlace, err := cmd.Flags().GetBool("in-place")
+		_, err = cmd.Flags().GetBool("in-place")
+		if err != nil {
+			return err
+		}
+	}
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		if err != nil {
+			// If one of the previous flags has had an error just directly return.
+			return
+		}
+		switch flag.Name {
+		case "name":
+			return
+		case "newname":
+			return
+		case "comment":
+			var menuNewComment string
+			menuNewComment, err = cmd.Flags().GetString("comment")
+			if err != nil {
+				return
+			}
+			menu.Comment = menuNewComment
+		case "parent":
+			var menuNewParent string
+			menuNewParent, err = cmd.Flags().GetString("parent")
+			if err != nil {
+				return
+			}
+			menu.Parent = menuNewParent
+		case "display-name":
+			var menuNewDisplayName string
+			menuNewDisplayName, err = cmd.Flags().GetString("display-name")
+			if err != nil {
+				return
+			}
+			menu.DisplayName = menuNewDisplayName
+		}
+	})
+	// Don't blindly return nil because maybe one of the flags had an issue retrieving an argument.
+	return err
+}
 
 // menuCmd represents the menu command
 var menuCmd = &cobra.Command{
@@ -15,7 +66,7 @@ var menuCmd = &cobra.Command{
 	Long: `Let you manage menus.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-menu for more information.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -23,11 +74,28 @@ var menuAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add menu",
 	Long:  `Adds a menu.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		newMenu := cobbler.NewMenu()
+		var err error
 
-		// TODO: call cobblerclient
-		notImplemented()
+		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
+		newMenu.Name, err = cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		// Update menu in-memory
+		err = updateMenuFromFlags(cmd, &newMenu)
+		if err != nil {
+			return err
+		}
+		// Now create the menu via XML-RPC
+		menu, err := Client.CreateMenu(newMenu)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Menu %s created\n", menu.Name)
+		return nil
 	},
 }
 
@@ -35,11 +103,34 @@ var menuCopyCmd = &cobra.Command{
 	Use:   "copy",
 	Short: "copy menu",
 	Long:  `Copies a menu.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		menuName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		menuNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		menuHandle, err := Client.GetMenuHandle(menuName)
+		if err != nil {
+			return err
+		}
+		err = Client.CopyMenu(menuHandle, menuNewName)
+		if err != nil {
+			return err
+		}
+		newMenu, err := Client.GetMenu(menuNewName, false, false)
+		if err != nil {
+			return err
+		}
+		err = updateMenuFromFlags(cmd, newMenu)
+		if err != nil {
+			return err
+		}
+		return Client.UpdateMenu(newMenu)
 	},
 }
 
@@ -47,11 +138,22 @@ var menuEditCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "edit menu",
 	Long:  `Edits a menu.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		menuName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		menuToEdit, err := Client.GetMenu(menuName, false, false)
+		if err != nil {
+			return err
+		}
+		err = updateMenuFromFlags(cmd, menuToEdit)
+		if err != nil {
+			return err
+		}
+		return Client.UpdateMenu(menuToEdit)
 	},
 }
 
@@ -59,11 +161,9 @@ var menuFindCmd = &cobra.Command{
 	Use:   "find",
 	Short: "find menu",
 	Long:  `Finds a given menu.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return FindItemNames(cmd, args, "menu")
 	},
 }
 
@@ -71,11 +171,14 @@ var menuListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list all menus",
 	Long:  `Lists all available menus.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		menuNames, err := Client.ListMenuNames()
+		if err != nil {
+			return err
+		}
+		listItems("menus", menuNames)
+		return nil
 	},
 }
 
@@ -83,11 +186,9 @@ var menuRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove menu",
 	Long:  `Removes a given menu.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		return RemoveItemRecursive(cmd, args, "menu")
 	},
 }
 
@@ -95,23 +196,69 @@ var menuRenameCmd = &cobra.Command{
 	Use:   "rename",
 	Short: "rename menu",
 	Long:  `Renames a given menu.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
+		menuName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		menuNewName, err := cmd.Flags().GetString("newname")
+		if err != nil {
+			return err
+		}
 
-		// TODO: call cobblerclient
-		notImplemented()
+		menuHandle, err := Client.GetMenuHandle(menuName)
+		if err != nil {
+			return err
+		}
+		err = Client.RenameMenu(menuHandle, menuNewName)
+		if err != nil {
+			return err
+		}
+		newMenu, err := Client.GetMenu(menuNewName, false, false)
+		if err != nil {
+			return err
+		}
+		err = updateMenuFromFlags(cmd, newMenu)
+		if err != nil {
+			return err
+		}
+		return Client.UpdateMenu(newMenu)
 	},
+}
+
+func reportMenus(menuNames []string) error {
+	for _, itemName := range menuNames {
+		menu, err := Client.GetMenu(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(menu)
+		fmt.Println("")
+	}
+	return nil
 }
 
 var menuReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "list all menus in detail",
 	Long:  `Shows detailed information about all menus.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
-		notImplemented()
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return err
+		}
+		itemNames := make([]string, 0)
+		if name == "" {
+			itemNames, err = Client.ListMenuNames()
+			if err != nil {
+				return err
+			}
+		} else {
+			itemNames = append(itemNames, name)
+		}
+		return reportMenus(itemNames)
 	},
 }
 
@@ -127,63 +274,35 @@ func init() {
 	menuCmd.AddCommand(menuReportCmd)
 
 	// local flags for menu add
-	menuAddCmd.Flags().String("name", "", "the menu name")
-	menuAddCmd.Flags().String("ctime", "", "")
-	menuAddCmd.Flags().String("depth", "", "")
-	menuAddCmd.Flags().String("mtime", "", "")
-	menuAddCmd.Flags().String("uid", "", "")
-	menuAddCmd.Flags().String("comment", "", "free form text description")
-	menuAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	menuAddCmd.Flags().String("parent", "", "parent menu")
-	menuAddCmd.Flags().String("display-name", "", "display name")
+	addCommonArgs(menuAddCmd)
+	addStringFlags(menuAddCmd, menuStringFlagMetadata)
 
 	// local flags for menu copy
-	menuCopyCmd.Flags().String("name", "", "the menu name")
-	menuCopyCmd.Flags().String("ctime", "", "")
-	menuCopyCmd.Flags().String("depth", "", "")
-	menuCopyCmd.Flags().String("mtime", "", "")
-	menuCopyCmd.Flags().String("uid", "", "")
-	menuCopyCmd.Flags().String("comment", "", "free form text description")
+	addCommonArgs(menuCopyCmd)
+	addStringFlags(menuCopyCmd, menuStringFlagMetadata)
 	menuCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	menuCopyCmd.Flags().String("parent", "", "parent menu")
-	menuCopyCmd.Flags().String("display-name", "", "display name")
 
 	// local flags for menu edit
-	menuEditCmd.Flags().String("name", "", "the menu name")
-	menuEditCmd.Flags().String("ctime", "", "")
-	menuEditCmd.Flags().String("depth", "", "")
-	menuEditCmd.Flags().String("mtime", "", "")
-	menuEditCmd.Flags().String("uid", "", "")
-	menuEditCmd.Flags().String("comment", "", "free form text description")
+	addCommonArgs(menuEditCmd)
+	addStringFlags(menuEditCmd, menuStringFlagMetadata)
 	menuEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	menuEditCmd.Flags().String("parent", "", "parent menu")
-	menuEditCmd.Flags().String("display-name", "", "display name")
 
 	// local flags for menu find
-	menuFindCmd.Flags().String("name", "", "the menu name")
+	addCommonArgs(menuFindCmd)
+	addStringFlags(menuFindCmd, menuStringFlagMetadata)
 	menuFindCmd.Flags().String("ctime", "", "")
 	menuFindCmd.Flags().String("depth", "", "")
 	menuFindCmd.Flags().String("mtime", "", "")
 	menuFindCmd.Flags().String("uid", "", "")
-	menuFindCmd.Flags().String("comment", "", "free form text description")
-	menuFindCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	menuFindCmd.Flags().String("parent", "", "parent menu")
-	menuFindCmd.Flags().String("display-name", "", "display name")
 
 	// local flags for menu remove
 	menuRemoveCmd.Flags().String("name", "", "the menu name")
 	menuRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
 
 	// local flags for menu rename
-	menuRenameCmd.Flags().String("name", "", "the menu name")
-	menuRenameCmd.Flags().String("ctime", "", "")
-	menuRenameCmd.Flags().String("depth", "", "")
-	menuRenameCmd.Flags().String("mtime", "", "")
-	menuRenameCmd.Flags().String("uid", "", "")
-	menuRenameCmd.Flags().String("comment", "", "free form text description")
+	addCommonArgs(menuRenameCmd)
+	addStringFlags(menuRenameCmd, menuStringFlagMetadata)
 	menuRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	menuRenameCmd.Flags().String("parent", "", "parent menu")
-	menuRenameCmd.Flags().String("display-name", "", "display name")
 
 	// local flags for menu report
 	menuReportCmd.Flags().String("name", "", "the menu name")

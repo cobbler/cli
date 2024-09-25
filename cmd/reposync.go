@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 )
 
@@ -16,10 +18,32 @@ var reposyncCmd = &cobra.Command{
 
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-reposync for more information.`,
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
-
-		// TODO: call cobblerclient
+		noFailOption, err := cmd.Flags().GetBool("no-fail")
+		if err != nil {
+			return err
+		}
+		onlyOption, err := cmd.Flags().GetString("only")
+		if err != nil {
+			return err
+		}
+		triesOption, err := cmd.Flags().GetInt("tries")
+		if err != nil {
+			return err
+		}
+		var reposyncOptions = cobblerclient.BackgroundReposyncOptions{
+			Repos:  make([]string, 0),
+			Only:   onlyOption,
+			Nofail: noFailOption,
+			Tries:  triesOption,
+		}
+		eventId, err := Client.BackgroundReposync(reposyncOptions)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Event ID: %s\n", eventId)
+		return nil
 	},
 }
 
@@ -29,5 +53,5 @@ func init() {
 	//local flags
 	reposyncCmd.Flags().Bool("no-fail", false, "do not stop reposyncing if a failure occurs")
 	reposyncCmd.Flags().String("only", "", "update only this repository name")
-	reposyncCmd.Flags().String("tries", "", "try each repo this many times")
+	reposyncCmd.Flags().Int("tries", 3, "try each repo this many times")
 }
