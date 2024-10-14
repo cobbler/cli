@@ -12,9 +12,7 @@ import (
 )
 
 func updateMgmtClassFromFlags(cmd *cobra.Command, mgmtClass *cobbler.MgmtClass) error {
-	// TODO: in-place flag
-	// inPlace, err := cmd.Flags().GetBool("in-place")
-	_, err := cmd.Flags().GetBool("in-place")
+	inPlace, err := cmd.Flags().GetBool("in-place")
 	if err != nil {
 		return err
 	}
@@ -71,7 +69,19 @@ func updateMgmtClassFromFlags(cmd *cobra.Command, mgmtClass *cobbler.MgmtClass) 
 			if err != nil {
 				return
 			}
-			mgmtClass.Params = mgmtClassNewParams
+			if inPlace {
+				err = Client.ModifyItemInPlace(
+					"mgmtclass",
+					mgmtClass.Name,
+					"params",
+					convertMapStringToMapInterface(mgmtClassNewParams),
+				)
+				if err != nil {
+					return
+				}
+			} else {
+				mgmtClass.Params = mgmtClassNewParams
+			}
 		case "class-name":
 			var mgmtClassNewClassName string
 			mgmtClassNewClassName, err = cmd.Flags().GetString("class-name")
@@ -330,12 +340,14 @@ func init() {
 	addStringFlags(mgmtclassAddCmd, mgmtclassStringFlagMetadata)
 	addBoolFlags(mgmtclassAddCmd, mgmtclassBoolFlagMetadata)
 	addStringSliceFlags(mgmtclassAddCmd, mgmtclassStringSliceFlagMetadata)
+	addMapFlags(mgmtclassAddCmd, mgmtclassStringMapFlagMetadata)
 
 	// local flags for mgmtclass copy
 	addCommonArgs(mgmtclassCopyCmd)
 	addStringFlags(mgmtclassCopyCmd, mgmtclassStringFlagMetadata)
 	addBoolFlags(mgmtclassCopyCmd, mgmtclassBoolFlagMetadata)
 	addStringSliceFlags(mgmtclassCopyCmd, mgmtclassStringSliceFlagMetadata)
+	addMapFlags(mgmtclassCopyCmd, mgmtclassStringMapFlagMetadata)
 	mgmtclassCopyCmd.Flags().String("newname", "", "the new mgmtclass name")
 	mgmtclassCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
@@ -344,6 +356,7 @@ func init() {
 	addStringFlags(mgmtclassEditCmd, mgmtclassStringFlagMetadata)
 	addBoolFlags(mgmtclassEditCmd, mgmtclassBoolFlagMetadata)
 	addStringSliceFlags(mgmtclassEditCmd, mgmtclassStringSliceFlagMetadata)
+	addMapFlags(mgmtclassEditCmd, mgmtclassStringMapFlagMetadata)
 	mgmtclassEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for mgmtclass find
@@ -351,8 +364,10 @@ func init() {
 	addStringFlags(mgmtclassFindCmd, mgmtclassStringFlagMetadata)
 	addBoolFlags(mgmtclassFindCmd, mgmtclassBoolFlagMetadata)
 	addStringSliceFlags(mgmtclassFindCmd, mgmtclassStringSliceFlagMetadata)
-	mgmtclassFindCmd.Flags().String("uid", "", "")
-	// TODO: ctime, mtime, depth
+	addMapFlags(mgmtclassFindCmd, mgmtclassStringMapFlagMetadata)
+	addStringFlags(mgmtclassFindCmd, findStringFlagMetadata)
+	addIntFlags(mgmtclassFindCmd, findIntFlagMetadata)
+	addFloatFlags(mgmtclassFindCmd, findFloatFlagMetadata)
 
 	// local flags for mgmtclass remove
 	mgmtclassRemoveCmd.Flags().String("name", "", "the mgmtclass name")
@@ -363,6 +378,7 @@ func init() {
 	addStringFlags(mgmtclassRenameCmd, mgmtclassStringFlagMetadata)
 	addBoolFlags(mgmtclassRenameCmd, mgmtclassBoolFlagMetadata)
 	addStringSliceFlags(mgmtclassRenameCmd, mgmtclassStringSliceFlagMetadata)
+	addMapFlags(mgmtclassRenameCmd, mgmtclassStringMapFlagMetadata)
 	mgmtclassRenameCmd.Flags().String("newname", "", "the new mgmtclass name")
 	mgmtclassRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 

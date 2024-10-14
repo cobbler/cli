@@ -5,19 +5,15 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"os"
-	"reflect"
 )
 
 func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error {
-	// TODO: in-place flag
-	// inPlace, err := cmd.Flags().GetBool("in-place")
-	_, err := cmd.Flags().GetBool("in-place")
+	inPlace, err := cmd.Flags().GetBool("in-place")
 	if err != nil {
 		return err
 	}
@@ -60,8 +56,20 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
-				profile.AutoinstallMeta.IsInherited = false
-				profile.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"profile",
+						profile.Name,
+						"autoinstall_meta",
+						convertMapStringToMapInterface(profileNewAutoinstallMeta),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					profile.AutoinstallMeta.IsInherited = false
+					profile.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+				}
 			}
 		case "boot-files":
 			fallthrough
@@ -128,8 +136,20 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
-				profile.FetchableFiles.IsInherited = false
-				profile.FetchableFiles.Data = convertMapStringToMapInterface(profileNewFetchableFiles)
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"profile",
+						profile.Name,
+						"fetchable_files",
+						convertMapStringToMapInterface(profileNewFetchableFiles),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					profile.FetchableFiles.IsInherited = false
+					profile.FetchableFiles.Data = convertMapStringToMapInterface(profileNewFetchableFiles)
+				}
 			}
 		case "kernel-options":
 			fallthrough
@@ -146,8 +166,20 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
-				profile.KernelOptions.IsInherited = false
-				profile.KernelOptions.Data = convertMapStringToMapInterface(profileNewKernelOptions)
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"profile",
+						profile.Name,
+						"kernel_options",
+						convertMapStringToMapInterface(profileNewKernelOptions),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					profile.KernelOptions.IsInherited = false
+					profile.KernelOptions.Data = convertMapStringToMapInterface(profileNewKernelOptions)
+				}
 			}
 		case "kernel-options-post":
 			fallthrough
@@ -164,8 +196,20 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
-				profile.KernelOptionsPost.IsInherited = false
-				profile.KernelOptionsPost.Data = convertMapStringToMapInterface(profileNewKernelOptionsPost)
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"profile",
+						profile.Name,
+						"kernel_options_post",
+						convertMapStringToMapInterface(profileNewKernelOptionsPost),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					profile.KernelOptionsPost.IsInherited = false
+					profile.KernelOptionsPost.Data = convertMapStringToMapInterface(profileNewKernelOptionsPost)
+				}
 			}
 		case "mgmt-classes":
 			fallthrough
@@ -225,8 +269,20 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
-				profile.TemplateFiles.IsInherited = false
-				profile.TemplateFiles.Data = convertMapStringToMapInterface(profileNewTemplateFiles)
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"profile",
+						profile.Name,
+						"template_files",
+						convertMapStringToMapInterface(profileNewTemplateFiles),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					profile.TemplateFiles.IsInherited = false
+					profile.TemplateFiles.Data = convertMapStringToMapInterface(profileNewTemplateFiles)
+				}
 			}
 		case "dhcp-tag":
 			var profileNewDhcpTag string
@@ -542,48 +598,7 @@ var profileDumpVarsCmd = &cobra.Command{
 			return err
 		}
 		// Print data
-		// TODO: Deduplicate with system
-		for key, value := range blendedData {
-			if value == nil {
-				fmt.Printf("%s:\n", key)
-				continue
-			}
-			valueType := reflect.TypeOf(value).Kind()
-			switch valueType {
-			case reflect.Bool:
-				fmt.Printf("%s: %t\n", key, value.(bool))
-			case reflect.Int64:
-				fmt.Printf("%s: %d\n", key, value.(int64))
-			case reflect.Int32:
-				fmt.Printf("%s: %d\n", key, value.(int32))
-			case reflect.Int16:
-				fmt.Printf("%s: %d\n", key, value.(int16))
-			case reflect.Int8:
-				fmt.Printf("%s: %d\n", key, value.(int8))
-			case reflect.Int:
-				fmt.Printf("%s: %d\n", key, value.(int))
-			case reflect.Float32:
-				fmt.Printf("%s: %f\n", key, value.(float32))
-			case reflect.Float64:
-				fmt.Printf("%s: %f\n", key, value.(float64))
-			case reflect.Slice, reflect.Array:
-				arr := reflect.ValueOf(value)
-				fmt.Printf("%s: [", key)
-				for i := 0; i < arr.Len(); i++ {
-					if i+1 != arr.Len() {
-						fmt.Printf("'%v', ", arr.Index(i).Interface())
-					} else {
-						fmt.Printf("'%v'", arr.Index(i).Interface())
-					}
-				}
-				fmt.Printf("]\n")
-			case reflect.Map:
-				res2B, _ := json.Marshal(value)
-				fmt.Printf("%s: %s\n", key, string(res2B))
-			default:
-				fmt.Printf("%s: %s\n", key, value)
-			}
-		}
+		printDumpVars(blendedData)
 		return err
 	},
 }
@@ -819,10 +834,9 @@ func init() {
 	addStringSliceFlags(profileFindCmd, profileStringSliceFlagMetadata)
 	addMapFlags(profileFindCmd, distroMapFlagMetadata)
 	addMapFlags(profileFindCmd, profileMapFlagMetadata)
-	profileFindCmd.Flags().String("ctime", "", "")
-	profileFindCmd.Flags().String("depth", "", "")
-	profileFindCmd.Flags().String("mtime", "", "")
-	profileFindCmd.Flags().String("uid", "", "UID")
+	addStringFlags(profileFindCmd, findStringFlagMetadata)
+	addIntFlags(profileFindCmd, findIntFlagMetadata)
+	addFloatFlags(profileFindCmd, findFloatFlagMetadata)
 
 	// local flags for profile get-autoinstall
 	profileGetAutoinstallCmd.Flags().String("name", "", "the profile name")

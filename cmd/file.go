@@ -12,16 +12,8 @@ import (
 )
 
 func updateFileFromFlags(cmd *cobra.Command, file *cobbler.File) error {
-	// TODO: in-place flag
-	// var inPlace bool
+	// This object type doesn't have the in-place flag
 	var err error
-	if cmd.Flags().Lookup("in-place") != nil {
-		// inPlace, err := cmd.Flags().GetBool("in-place")
-		_, err = cmd.Flags().GetBool("in-place")
-		if err != nil {
-			return err
-		}
-	}
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
 			// If one of the previous flags has had an error just directly return.
@@ -353,22 +345,19 @@ func init() {
 	addStringFlags(fileCopyCmd, fileStringFlagMetadata)
 	addBoolFlags(fileCopyCmd, fileBoolFlagMetadata)
 	fileCopyCmd.Flags().String("newname", "", "the new file name")
-	fileCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for file edit
 	addCommonArgs(fileEditCmd)
 	addStringFlags(fileEditCmd, fileStringFlagMetadata)
 	addBoolFlags(fileEditCmd, fileBoolFlagMetadata)
-	fileEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for file find
 	addCommonArgs(fileFindCmd)
 	addStringFlags(fileFindCmd, fileStringFlagMetadata)
 	addBoolFlags(fileFindCmd, fileBoolFlagMetadata)
-	fileFindCmd.Flags().String("ctime", "", "")
-	fileFindCmd.Flags().String("depth", "", "")
-	fileFindCmd.Flags().String("mtime", "", "")
-	fileFindCmd.Flags().String("uid", "", "")
+	addStringFlags(fileFindCmd, findStringFlagMetadata)
+	addIntFlags(fileFindCmd, findIntFlagMetadata)
+	addFloatFlags(fileFindCmd, findFloatFlagMetadata)
 
 	// local flags for file remove
 	fileRemoveCmd.Flags().String("name", "", "the file name")
@@ -379,7 +368,6 @@ func init() {
 	addStringFlags(fileRenameCmd, fileStringFlagMetadata)
 	addBoolFlags(fileRenameCmd, fileBoolFlagMetadata)
 	fileRenameCmd.Flags().String("newname", "", "the new file name")
-	fileRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 
 	// local flags for file report
 	fileReportCmd.Flags().String("name", "", "the file name")

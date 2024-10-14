@@ -311,11 +311,6 @@ var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "server override",
 	},
-	"menu": {
-		Name:         "menu",
-		DefaultValue: "",
-		Usage:        "parent boot menu",
-	},
 	"virt-bridge": {
 		Name:         "virt-bridge",
 		DefaultValue: "",
@@ -373,12 +368,6 @@ var systemBoolFlagMetadata = map[string]FlagMetadata[bool]{
 		Name:          "enable-ipxe",
 		DefaultValue:  false,
 		Usage:         "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)",
-		IsInheritable: true,
-	},
-	"enable-menu": {
-		Name:          "enable-menu",
-		DefaultValue:  false,
-		Usage:         "enable PXE Menu? (show this profile in the PXE menu?)",
 		IsInheritable: true,
 	},
 	"virt-auto-boot": {
@@ -829,11 +818,6 @@ var packageStringFlagMetadata = map[string]FlagMetadata[string]{
 }
 
 var mgmtclassStringFlagMetadata = map[string]FlagMetadata[string]{
-	"params": {
-		Name:         "params",
-		DefaultValue: "",
-		Usage:        "list of parameters/variables",
-	},
 	"class-name": {
 		Name:         "class-name",
 		DefaultValue: "",
@@ -859,6 +843,14 @@ var mgmtclassStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
 		Name:         "packages",
 		DefaultValue: []string{},
 		Usage:        "package resources",
+	},
+}
+
+var mgmtclassStringMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
+	"params": {
+		Name:         "params",
+		DefaultValue: make(map[string]string),
+		Usage:        "list of parameters/variables",
 	},
 }
 
@@ -944,5 +936,34 @@ var repoMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
 		Name:         "rpm-list",
 		DefaultValue: map[string]string{},
 		Usage:        "mirror just these RPMs (yum only)",
+	},
+}
+
+var findStringFlagMetadata = map[string]FlagMetadata[string]{
+	"uid": {
+		Name:         "uid",
+		DefaultValue: "",
+		Usage:        "",
+	},
+}
+
+var findIntFlagMetadata = map[string]FlagMetadata[int]{
+	"depth": {
+		Name:         "depth",
+		DefaultValue: 0,
+		Usage:        "",
+	},
+}
+
+var findFloatFlagMetadata = map[string]FlagMetadata[float64]{
+	"ctime": {
+		Name:         "ctime",
+		DefaultValue: 0.0,
+		Usage:        "",
+	},
+	"mtime": {
+		Name:         "mtime",
+		DefaultValue: 0.0,
+		Usage:        "",
 	},
 }

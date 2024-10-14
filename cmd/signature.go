@@ -88,8 +88,7 @@ var signatureReloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		generateCobblerClient()
 
-		// FIXME: Dependant on https://github.com/cobbler/cobbler/issues/3791
-		notImplemented()
+		fmt.Println("This functionality cannot be used in the new CLI until https://github.com/cobbler/cobbler/issues/3791 is implemented!")
 	},
 }
 

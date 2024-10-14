@@ -12,12 +12,8 @@ import (
 )
 
 func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
-	// TODO: in-place flag
-	// inPlace, err := cmd.Flags().GetBool("in-place")
-	_, err := cmd.Flags().GetBool("in-place")
-	if err != nil {
-		return err
-	}
+	// This object doesn't have the in-place flag
+	var err error
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
 			// If one of the previous flags has had an error just directly return.
@@ -447,11 +443,9 @@ func init() {
 	addIntFlags(repoFindCmd, repoIntFlagMetadata)
 	addStringSliceFlags(repoFindCmd, repoStringSliceFlagMetadata)
 	addMapFlags(repoFindCmd, repoMapFlagMetadata)
-	repoFindCmd.Flags().String("ctime", "", "")
-	repoFindCmd.Flags().String("depth", "", "")
-	repoFindCmd.Flags().String("mtime", "", "")
-	repoFindCmd.Flags().String("uid", "", "UID")
-	repoFindCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addStringFlags(repoFindCmd, findStringFlagMetadata)
+	addIntFlags(repoFindCmd, findIntFlagMetadata)
+	addFloatFlags(repoFindCmd, findFloatFlagMetadata)
 	repoFindCmd.Flags().String("parent", "", "")
 
 	// local flags for repo remove

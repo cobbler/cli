@@ -9,6 +9,7 @@ import (
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
+	"log/slog"
 	"net/http"
 	"os"
 	"reflect"
@@ -45,6 +46,11 @@ func init() {
 	// global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobbler.yaml)")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Whether or not to print debug messages from the CLI.")
+
+	// Setup logger
+	if !verbose {
+		slog.SetLogLoggerLevel(slog.LevelWarn)
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -73,7 +79,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		// TODO: Do we need the output what config file is used?
 		if verbose {
 			_, _ = fmt.Fprintln(os.Stdout, "Using config file:", viper.ConfigFileUsed())
 		}
@@ -96,12 +101,6 @@ func generateCobblerClient() {
 	}
 }
 
-// simply prints a message about functions not implemented in the cobblerclient library
-func notImplemented() {
-	_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf(`error! Not yet implemented in the cobblerclient library
-See https://github.com/cobbler/cobblerclient/issues/4`))
-}
-
 func printStructured(dataStruct interface{}) {
 	s := reflect.ValueOf(dataStruct).Elem()
 	typeOfT := s.Type()
@@ -121,8 +120,7 @@ func printStructured(dataStruct interface{}) {
 			continue
 		}
 		if fieldName == "Interfaces" {
-			baseItem := f.Interface().(map[string]interface{})
-			printNetworkInterface(baseItem)
+			// Skip and print at the end
 			continue
 		}
 		if fieldName == "Client" {
@@ -132,6 +130,13 @@ func printStructured(dataStruct interface{}) {
 			continue
 		}
 		printField(f.Kind(), mapstructureTag, f.Interface())
+	}
+
+	// Print interfaces at the end of the output
+	networkInterfacesField := s.FieldByName("Interfaces")
+	if networkInterfacesField != (reflect.Value{}) {
+		networkInterfaces := networkInterfacesField.Interface().(cobbler.Interfaces)
+		printNetworkInterface(networkInterfaces)
 	}
 }
 
@@ -146,20 +151,10 @@ func printValueStructured(name string, value reflect.Value) {
 	}
 }
 
-func printInterfaceStructured(data interface{}) {
-	v, ok := data.(map[string]interface{})
-	if !ok {
-		panic("Cast of interface to map unsuccessful during structured fmt.Printf!")
-	}
-	for key, value := range v {
-		printField(reflect.ValueOf(value).Kind(), key, value)
-	}
-}
-
-func printNetworkInterface(networkInterface map[string]interface{}) {
+func printNetworkInterface(networkInterface cobbler.Interfaces) {
 	for interfaceName, interfaceStruct := range networkInterface {
 		fmt.Printf("%-40s: %s\n", "Interface =====", interfaceName)
-		printInterfaceStructured(interfaceStruct)
+		printStructured(&interfaceStruct)
 	}
 }
 

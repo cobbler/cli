@@ -1,9 +1,9 @@
 module github.com/cobbler/cli
 
-go 1.19
+go 1.22
 
 require (
-	github.com/cobbler/cobblerclient v0.5.1
+	github.com/cobbler/cobblerclient v0.5.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
@@ -12,6 +12,7 @@ require (
 require (
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/go-test/deep v1.1.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

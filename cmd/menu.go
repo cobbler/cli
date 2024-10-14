@@ -12,16 +12,8 @@ import (
 )
 
 func updateMenuFromFlags(cmd *cobra.Command, menu *cobbler.Menu) error {
-	// TODO: in-place flag
-	// var inPlace bool
+	// This object doesn't have the in-place flag
 	var err error
-	if cmd.Flags().Lookup("in-place") != nil {
-		// inPlace, err := cmd.Flags().GetBool("in-place")
-		_, err = cmd.Flags().GetBool("in-place")
-		if err != nil {
-			return err
-		}
-	}
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
 			// If one of the previous flags has had an error just directly return.
@@ -290,10 +282,9 @@ func init() {
 	// local flags for menu find
 	addCommonArgs(menuFindCmd)
 	addStringFlags(menuFindCmd, menuStringFlagMetadata)
-	menuFindCmd.Flags().String("ctime", "", "")
-	menuFindCmd.Flags().String("depth", "", "")
-	menuFindCmd.Flags().String("mtime", "", "")
-	menuFindCmd.Flags().String("uid", "", "")
+	addStringFlags(menuFindCmd, findStringFlagMetadata)
+	addIntFlags(menuFindCmd, findIntFlagMetadata)
+	addFloatFlags(menuFindCmd, findFloatFlagMetadata)
 
 	// local flags for menu remove
 	menuRemoveCmd.Flags().String("name", "", "the menu name")
