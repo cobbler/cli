@@ -12,12 +12,8 @@ import (
 )
 
 func updatePackageFromFlags(cmd *cobra.Command, p *cobbler.Package) error {
-	// TODO: in-place flag
-	// inPlace, err := cmd.Flags().GetBool("in-place")
-	_, err := cmd.Flags().GetBool("in-place")
-	if err != nil {
-		return err
-	}
+	// This object type doesn't have the in-place flag
+	var err error
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
 			// If one of the previous flags has had an error just directly return.
@@ -322,8 +318,9 @@ func init() {
 	// local flags for package find
 	addCommonArgs(packageFindCmd)
 	addStringFlags(packageFindCmd, packageStringFlagMetadata)
-	// TODO: ctime, mtime, depth, uid
-	packageFindCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addStringFlags(packageFindCmd, findStringFlagMetadata)
+	addIntFlags(packageFindCmd, findIntFlagMetadata)
+	addFloatFlags(packageFindCmd, findFloatFlagMetadata)
 
 	// local flags for package remove
 	packageRemoveCmd.Flags().String("name", "", "the package name")

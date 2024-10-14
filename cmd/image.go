@@ -12,9 +12,7 @@ import (
 )
 
 func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
-	// TODO: in-place flag
-	// inPlace, err := cmd.Flags().GetBool("in-place")
-	_, err := cmd.Flags().GetBool("in-place")
+	inPlace, err := cmd.Flags().GetBool("in-place")
 	if err != nil {
 		return err
 	}
@@ -22,6 +20,162 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 		switch flag.Name {
 		// The rename & copy operations are special operations as such we cannot blindly set this inside here.
 		// Any rename & copy operation must be handled outside of this method.
+		case "kernel-options":
+			fallthrough
+		case "kernel-options-inherit":
+			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
+				image.KernelOptions.Data = make(map[string]interface{})
+				image.KernelOptions.IsInherited, err = cmd.Flags().GetBool("kernel-options-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var newKernelOptions map[string]string
+				newKernelOptions, err = cmd.Flags().GetStringToString("kernel-options")
+				if err != nil {
+					return
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"image",
+						image.Name,
+						"kernel_options",
+						convertMapStringToMapInterface(newKernelOptions),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					image.KernelOptions.IsInherited = false
+					image.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptions)
+				}
+			}
+		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-inherit":
+			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
+				image.KernelOptionsPost.Data = make(map[string]interface{})
+				image.KernelOptionsPost.IsInherited, err = cmd.Flags().GetBool("kernel-options-post-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var newKernelOptionsPost map[string]string
+				newKernelOptionsPost, err = cmd.Flags().GetStringToString("kernel-options-post")
+				if err != nil {
+					return
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"image",
+						image.Name,
+						"kernel_options_post",
+						convertMapStringToMapInterface(newKernelOptionsPost),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					image.KernelOptionsPost.IsInherited = false
+					image.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptionsPost)
+				}
+			}
+		case "autoinstall-meta":
+			fallthrough
+		case "autoinstall-meta-inherit":
+			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+				image.AutoinstallMeta.Data = make(map[string]interface{})
+				image.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var profileNewAutoinstallMeta map[string]string
+				profileNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
+				if err != nil {
+					return
+				}
+				image.AutoinstallMeta.IsInherited = false
+				image.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+			}
+		case "template-files":
+			fallthrough
+		case "template-files-inherit":
+			if cmd.Flags().Lookup("template-files-inherit").Changed {
+				image.TemplateFiles.Data = make(map[string]interface{})
+				image.TemplateFiles.IsInherited, err = cmd.Flags().GetBool("template-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				var newTemplateFiles map[string]string
+				newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
+				if err != nil {
+					return
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"image",
+						image.Name,
+						"template_files",
+						convertMapStringToMapInterface(newTemplateFiles),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					image.TemplateFiles.IsInherited = false
+					image.TemplateFiles.Data = convertMapStringToMapInterface(newTemplateFiles)
+				}
+			}
+		case "boot-files":
+			fallthrough
+		case "boot-files-inherit":
+			var distroNewBootFiles map[string]string
+			distroNewBootFiles, err = cmd.Flags().GetStringToString("boot-files")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("boot-files-inherit").Changed {
+				image.BootFiles.Data = make(map[string]interface{})
+				image.BootFiles.IsInherited, err = cmd.Flags().GetBool("boot-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				image.BootFiles.IsInherited = false
+				image.BootFiles.Data = convertMapStringToMapInterface(distroNewBootFiles)
+			}
+		case "fetchable-files":
+			fallthrough
+		case "fetchable-files-inherit":
+			var newFetchableFiles map[string]string
+			newFetchableFiles, err = cmd.Flags().GetStringToString("fetchable-files")
+			if err != nil {
+				return
+			}
+			if cmd.Flags().Lookup("fetchable-files-inherit").Changed {
+				image.FetchableFiles.Data = make(map[string]interface{})
+				image.FetchableFiles.IsInherited, err = cmd.Flags().GetBool("fetchable-files-inherit")
+				if err != nil {
+					return
+				}
+			} else {
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"image",
+						image.Name,
+						"fetchable_files",
+						convertMapStringToMapInterface(newFetchableFiles),
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					image.FetchableFiles.IsInherited = false
+					image.FetchableFiles.Data = convertMapStringToMapInterface(newFetchableFiles)
+				}
+			}
 		case "comment":
 			var imageNewComment string
 			imageNewComment, err = cmd.Flags().GetString("comment")
@@ -445,11 +599,9 @@ func init() {
 	addFloatFlags(imageFindCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageFindCmd, imageBoolFlagMetadata)
 	addStringSliceFlags(imageFindCmd, imageStringSliceFlagMetadata)
-	imageFindCmd.Flags().String("ctime", "", "")
-	imageFindCmd.Flags().String("depth", "", "")
-	imageFindCmd.Flags().String("mtime", "", "")
-	imageFindCmd.Flags().String("uid", "", "UID")
-	imageFindCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addStringFlags(imageFindCmd, findStringFlagMetadata)
+	addIntFlags(imageFindCmd, findIntFlagMetadata)
+	addFloatFlags(imageFindCmd, findFloatFlagMetadata)
 
 	// local flags for image remove
 	imageRemoveCmd.Flags().String("name", "", "the image name")

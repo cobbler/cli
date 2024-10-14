@@ -592,12 +592,11 @@ func init() {
 	addStringFlags(distroFindCmd, distroStringFlagMetadata)
 	addStringSliceFlags(distroFindCmd, distroStringSliceFlagMetadata)
 	addMapFlags(distroFindCmd, distroMapFlagMetadata)
-	distroFindCmd.Flags().String("ctime", "", "")
-	distroFindCmd.Flags().String("depth", "", "")
-	distroFindCmd.Flags().String("mtime", "", "")
+	addStringFlags(distroFindCmd, findStringFlagMetadata)
+	addIntFlags(distroFindCmd, findIntFlagMetadata)
+	addFloatFlags(distroFindCmd, findFloatFlagMetadata)
 	distroFindCmd.Flags().String("source-repos", "", "source repositories")
 	distroFindCmd.Flags().String("tree-build-time", "", "tree build time")
-	distroFindCmd.Flags().String("uid", "", "UID")
 
 	// local flags for distro remove
 	distroRemoveCmd.Flags().String("name", "", "the distro name")
