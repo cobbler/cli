@@ -1,0 +1,20 @@
+<services>
+  <service name="obs_scm" mode="manual">
+    <param name="url">https://github.com/cobbler/cli.git</param>
+    <param name="filename">cobbler-cli</param>
+    <param name="scm">git</param>
+    <param name="exclude">.git</param>
+    <param name="revision">main</param>
+    <param name="version">v0.0.1</param>
+    <!-- <param name="versionformat">@PARENT_TAG@</param> -->
+    <param name="changesgenerate">enable</param>
+    <param name="versionrewrite-pattern">v(.*)</param>
+  </service>
+  <service name="set_version" mode="manual"/>
+  <service name="go_modules" mode="manual"/>
+  <service mode="buildtime" name="tar"/>
+  <service name="recompress" mode="buildtime">
+    <param name="file">*.tar</param>
+    <param name="compression">gz</param>
+  </service>
+</services>
