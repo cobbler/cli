@@ -27,4 +27,5 @@ docs/*.gz
 docs/*.html
 docs/_build
 
+# goreleaser
 dist/

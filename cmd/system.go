@@ -5,14 +5,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
+	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"os"
-	"reflect"
-
-	cobbler "github.com/cobbler/cobblerclient"
 )
 
 func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
@@ -22,12 +19,27 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 	if err != nil {
 		return err
 	}
+	deleteInterfaceFlag := cmd.Flags().Lookup("delete-interface")
+	renameInterfaceFlag := cmd.Flags().Lookup("rename-interface")
+	deleteInterface := deleteInterfaceFlag != nil && deleteInterfaceFlag.Changed
+	renameInterface := renameInterfaceFlag != nil && renameInterfaceFlag.Changed
 	systemInterface, keyInMap := system.Interfaces[systemNewInterface]
 	if !keyInMap {
 		// Interface doesn't exist, so add a new one.
 		// We cannot call CreateInterface because the system might not exist.
 		system.Interfaces[systemNewInterface] = cobbler.Interface{}
 		systemInterface = system.Interfaces[systemNewInterface]
+	}
+	if renameInterface {
+		var systemNewInterfaceName string
+		systemNewInterfaceName, err = cmd.Flags().GetString("rename-interface")
+		if err != nil {
+			return err
+		}
+		err = system.RenameInterface(systemNewInterface, systemNewInterfaceName)
+		if err != nil {
+			return err
+		}
 	}
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
@@ -220,13 +232,6 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				system.TemplateFiles.IsInherited = false
 				system.TemplateFiles.Data = convertMapStringToMapInterface(systemNewTemplateFiles)
 			}
-		case "dhcp-tag":
-			var systemNewDhcpTag string
-			systemNewDhcpTag, err = cmd.Flags().GetString("dhcp-tag")
-			if err != nil {
-				return
-			}
-			systemInterface.DHCPTag = systemNewDhcpTag
 		case "enable-ipxe":
 			fallthrough
 		case "enable-ipxe-inherit":
@@ -244,24 +249,6 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				}
 				system.EnableIPXE.IsInherited = false
 				system.EnableIPXE.Data = systemNewEnableIpxe
-			}
-		case "enable-menu":
-			fallthrough
-		case "enable-menu-inherit":
-			if cmd.Flags().Lookup("enable-menu-inherit").Changed {
-				system.EnableMenu.Data = false
-				system.EnableMenu.IsInherited, err = cmd.Flags().GetBool("enable-menu-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				var systemNewEnableMenu bool
-				systemNewEnableMenu, err = cmd.Flags().GetBool("enable-menu")
-				if err != nil {
-					return
-				}
-				system.EnableMenu.IsInherited = false
-				system.EnableMenu.Data = systemNewEnableMenu
 			}
 		case "mgmt-parameters":
 			fallthrough
@@ -337,13 +324,6 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				return
 			}
 			system.Server = systemNewServer
-		case "menu":
-			var systemNewMenu string
-			systemNewMenu, err = cmd.Flags().GetString("menu")
-			if err != nil {
-				return
-			}
-			system.Menu = systemNewMenu
 		case "virt-auto-boot":
 			fallthrough
 		case "virt-auto-boot-inherit":
@@ -431,7 +411,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			system.Gateway = systemNewGateway
 		case "hostname":
 			var systemNewHostname string
-			systemNewHostname, err := cmd.Flags().GetString("hostname")
+			systemNewHostname, err = cmd.Flags().GetString("hostname")
 			if err != nil {
 				return
 			}
@@ -542,6 +522,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			system.SerialBaudRate = systemNewSerialBaudRate
 		case "bonding-opts":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewBondingOpts string
 			systemNewBondingOpts, err = cmd.Flags().GetString("bonding-opts")
 			if err != nil {
@@ -549,6 +532,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.BondingOpts = systemNewBondingOpts
 		case "bridge-opts":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewBridgeOpts string
 			systemNewBridgeOpts, err = cmd.Flags().GetString("bridge-opts")
 			if err != nil {
@@ -556,6 +542,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.BridgeOpts = systemNewBridgeOpts
 		case "cnames":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewCNames []string
 			systemNewCNames, err = cmd.Flags().GetStringSlice("cnames")
 			if err != nil {
@@ -563,13 +552,29 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.CNAMEs = systemNewCNames
 		case "connected-mode":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewConnectedMode bool
 			systemNewConnectedMode, err = cmd.Flags().GetBool("connected-mode")
 			if err != nil {
 				return
 			}
 			systemInterface.ConnectedMode = systemNewConnectedMode
+		case "dhcp-tag":
+			if renameInterface || deleteInterface {
+				return
+			}
+			var systemNewDhcpTag string
+			systemNewDhcpTag, err = cmd.Flags().GetString("dhcp-tag")
+			if err != nil {
+				return
+			}
+			systemInterface.DHCPTag = systemNewDhcpTag
 		case "dns-name":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewDnsName string
 			systemNewDnsName, err = cmd.Flags().GetString("dns-name")
 			if err != nil {
@@ -577,6 +582,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.DNSName = systemNewDnsName
 		case "if-gateway":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIfGateway string
 			systemNewIfGateway, err = cmd.Flags().GetString("if-gateway")
 			if err != nil {
@@ -584,6 +592,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Gateway = systemNewIfGateway
 		case "interface-master":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewInterfaceMaster string
 			systemNewInterfaceMaster, err = cmd.Flags().GetString("interface-master")
 			if err != nil {
@@ -591,6 +602,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.InterfaceMaster = systemNewInterfaceMaster
 		case "interface-type":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewInterfaceType string
 			systemNewInterfaceType, err = cmd.Flags().GetString("interface-type")
 			if err != nil {
@@ -598,13 +612,19 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.InterfaceType = systemNewInterfaceType
 		case "ip-address":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpAddress string
-			systemNewIpAddress, err := cmd.Flags().GetString("ip-address")
+			systemNewIpAddress, err = cmd.Flags().GetString("ip-address")
 			if err != nil {
 				return
 			}
 			systemInterface.IPAddress = systemNewIpAddress
 		case "ipv6-address":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpv6Address string
 			systemNewIpv6Address, err = cmd.Flags().GetString("ipv6-address")
 			if err != nil {
@@ -612,6 +632,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6Address = systemNewIpv6Address
 		case "ipv6-default-gateway":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpv6DefaultGateway string
 			systemNewIpv6DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
 			if err != nil {
@@ -619,6 +642,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6DefaultGateway = systemNewIpv6DefaultGateway
 		case "ipv6-mtu":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpv6Mtu string
 			systemNewIpv6Mtu, err = cmd.Flags().GetString("ipv6-mtu")
 			if err != nil {
@@ -626,6 +652,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6MTU = systemNewIpv6Mtu
 		case "ipv6-prefix":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpv6Prefix string
 			systemNewIpv6Prefix, err = cmd.Flags().GetString("ipv6-prefix")
 			if err != nil {
@@ -633,6 +662,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6Prefix = systemNewIpv6Prefix
 		case "ipv6-secondaries":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpv6Secondaries []string
 			systemNewIpv6Secondaries, err = cmd.Flags().GetStringSlice("ipv6-secondaries")
 			if err != nil {
@@ -640,6 +672,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6Secondaries = systemNewIpv6Secondaries
 		case "ipv6-static-routes":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewIpv6StaticRoutes []string
 			systemNewIpv6StaticRoutes, err = cmd.Flags().GetStringSlice("ipv6-static-routes")
 			if err != nil {
@@ -647,6 +682,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6StaticRoutes = systemNewIpv6StaticRoutes
 		case "mac-address":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewMacAddress string
 			systemNewMacAddress, err = cmd.Flags().GetString("mac-address")
 			if err != nil {
@@ -654,6 +692,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.MACAddress = systemNewMacAddress
 		case "management":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewManagement bool
 			systemNewManagement, err = cmd.Flags().GetBool("management")
 			if err != nil {
@@ -661,6 +702,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Management = systemNewManagement
 		case "mtu":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewMtu string
 			systemNewMtu, err = cmd.Flags().GetString("mtu")
 			if err != nil {
@@ -668,6 +712,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.MTU = systemNewMtu
 		case "netmask":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewNetmask string
 			systemNewNetmask, err = cmd.Flags().GetString("netmask")
 			if err != nil {
@@ -675,6 +722,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Netmask = systemNewNetmask
 		case "static":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewStatic bool
 			systemNewStatic, err = cmd.Flags().GetBool("static")
 			if err != nil {
@@ -682,6 +732,9 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Static = systemNewStatic
 		case "static-routes":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewStaticRoutes []string
 			systemNewStaticRoutes, err = cmd.Flags().GetStringSlice("static-routes")
 			if err != nil {
@@ -689,12 +742,22 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.StaticRoutes = systemNewStaticRoutes
 		case "virt-bridge":
+			if renameInterface || deleteInterface {
+				return
+			}
 			var systemNewVirtBridge string
 			systemNewVirtBridge, err = cmd.Flags().GetString("virt-bridge")
 			if err != nil {
 				return
 			}
 			systemInterface.VirtBridge = systemNewVirtBridge
+		case "delete-interface":
+			err = system.DeleteInterface(systemNewInterface)
+			if err != nil {
+				return
+			}
+			delete(system.Interfaces, systemNewInterface)
+			system.Meta.IsDirty = true
 		}
 	})
 	// Don't blindly return nil because maybe one of the flags had an issue retrieving an argument.
@@ -733,7 +796,6 @@ var systemAddCmd = &cobra.Command{
 			return err
 		}
 		// No create the system via XML-RPC
-		// FIXME: Call modify_interface in the client when getting to the interfaces objects
 		system, err := Client.CreateSystem(newSystem)
 		if err != nil {
 			return err
@@ -775,8 +837,17 @@ var systemCopyCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if newSystem.Meta.IsDirty {
+			newSystem, err = Client.GetSystem(
+				newSystem.Name,
+				newSystem.Meta.IsFlattened,
+				newSystem.Meta.IsResolved,
+			)
+			if err != nil {
+				return err
+			}
+		}
 		// Update the system via XML-RPC
-		// FIXME: Call modify_interface in the client when getting to the interfaces objects
 		return Client.UpdateSystem(newSystem)
 	},
 }
@@ -800,48 +871,7 @@ var systemDumpVarsCmd = &cobra.Command{
 			return err
 		}
 		// Print data
-		// TODO: Deduplicate with profile
-		for key, value := range blendedData {
-			if value == nil {
-				fmt.Printf("%s:\n", key)
-				continue
-			}
-			valueType := reflect.TypeOf(value).Kind()
-			switch valueType {
-			case reflect.Bool:
-				fmt.Printf("%s: %t\n", key, value.(bool))
-			case reflect.Int64:
-				fmt.Printf("%s: %d\n", key, value.(int64))
-			case reflect.Int32:
-				fmt.Printf("%s: %d\n", key, value.(int32))
-			case reflect.Int16:
-				fmt.Printf("%s: %d\n", key, value.(int16))
-			case reflect.Int8:
-				fmt.Printf("%s: %d\n", key, value.(int8))
-			case reflect.Int:
-				fmt.Printf("%s: %d\n", key, value.(int))
-			case reflect.Float32:
-				fmt.Printf("%s: %f\n", key, value.(float32))
-			case reflect.Float64:
-				fmt.Printf("%s: %f\n", key, value.(float64))
-			case reflect.Slice, reflect.Array:
-				arr := reflect.ValueOf(value)
-				fmt.Printf("%s: [", key)
-				for i := 0; i < arr.Len(); i++ {
-					if i+1 != arr.Len() {
-						fmt.Printf("'%v', ", arr.Index(i).Interface())
-					} else {
-						fmt.Printf("'%v'", arr.Index(i).Interface())
-					}
-				}
-				fmt.Printf("]\n")
-			case reflect.Map:
-				res2B, _ := json.Marshal(value)
-				fmt.Printf("%s: %s\n", key, string(res2B))
-			default:
-				fmt.Printf("%s: %s\n", key, value)
-			}
-		}
+		printDumpVars(blendedData)
 		return err
 	},
 }
@@ -868,8 +898,19 @@ var systemEditCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Println(updateSystem.Interfaces)
+		if updateSystem.Meta.IsDirty {
+			updateSystem, err = Client.GetSystem(
+				updateSystem.Name,
+				updateSystem.Meta.IsFlattened,
+				updateSystem.Meta.IsResolved,
+			)
+			if err != nil {
+				return err
+			}
+		}
+		fmt.Println(updateSystem.Interfaces)
 		// Update the system via XML-RPC
-		// FIXME: Call modify_interface in the client when getting to the interfaces objects
 		return Client.UpdateSystem(updateSystem)
 	},
 }
@@ -1062,6 +1103,16 @@ var systemRenameCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if newSystem.Meta.IsDirty {
+			newSystem, err = Client.GetSystem(
+				newSystem.Name,
+				newSystem.Meta.IsFlattened,
+				newSystem.Meta.IsResolved,
+			)
+			if err != nil {
+				return err
+			}
+		}
 		return Client.UpdateSystem(newSystem)
 	},
 }
@@ -1134,8 +1185,6 @@ func init() {
 	// Other
 	systemAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 	systemAddCmd.Flags().String("interface", "", "the interface to operate on")
-	systemAddCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
-	systemAddCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
 
 	// local flags for system copy
 	addCommonArgs(systemCopyCmd)
@@ -1175,6 +1224,8 @@ func init() {
 	// Other
 	systemEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 	systemEditCmd.Flags().String("interface", "", "the interface to operate on")
+	systemEditCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
+	systemEditCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
 
 	// local flags for system find
 	addCommonArgs(systemFindCmd)
@@ -1190,10 +1241,9 @@ func init() {
 	addBoolFlags(systemFindCmd, interfaceBoolFlagMetadata)
 	addStringSliceFlags(systemFindCmd, interfaceStringSliceFlagMetadata)
 	// Other
-	systemFindCmd.Flags().String("ctime", "", "")
-	systemFindCmd.Flags().String("depth", "", "")
-	systemFindCmd.Flags().String("mtime", "", "")
-	systemFindCmd.Flags().String("uid", "", "UID")
+	addStringFlags(systemFindCmd, findStringFlagMetadata)
+	addIntFlags(systemFindCmd, findIntFlagMetadata)
+	addFloatFlags(systemFindCmd, findFloatFlagMetadata)
 	systemFindCmd.Flags().String("interface", "", "the interface to operate on")
 
 	// local flags for system get-autoinstall
@@ -1232,6 +1282,8 @@ func init() {
 	systemRenameCmd.Flags().String("newname", "", "the new system name")
 	systemRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 	systemRenameCmd.Flags().String("interface", "", "the interface to operate on")
+	systemRenameCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
+	systemRenameCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
 
 	// local flags for system report
 	systemReportCmd.Flags().String("name", "", "the system name")
