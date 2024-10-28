@@ -1,10 +1,15 @@
 BINARY_NAME=cobbler
+EXECUTOR?=docker
 
 build:
 	@echo "building package"
 	go build -o ${BINARY_NAME} main.go
 	@echo "creating shell completions"
 	make shell_completions
+
+build-docker:
+	@echo "building docker"
+	${EXECUTOR} build -t cobbler/cli:latest -f packaging/docker/Dockerfile .
 
 clean:
 	go clean

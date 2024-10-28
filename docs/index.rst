@@ -15,6 +15,7 @@ communication with a Cobbler server.
    :numbered:
 
    Quickstart Guide <quickstart-guide>
+   Installing <install>
 
 
 
