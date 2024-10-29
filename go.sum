@@ -1,5 +1,5 @@
-github.com/cobbler/cobblerclient v0.5.3 h1:43STm8izD++BqHJIpxpYrHvNXXQvCtmcmlyO2gskNmg=
-github.com/cobbler/cobblerclient v0.5.3/go.mod h1:n6b8fTUOlg7BdMl6FeifUm4Uk1JY6/tlTlOClV4x2Wc=
+github.com/cobbler/cobblerclient v0.5.4 h1:ix+z9gwfUxv28ANz7giPGt4ICufR83rUm9E2q9dCwuw=
+github.com/cobbler/cobblerclient v0.5.4/go.mod h1:n6b8fTUOlg7BdMl6FeifUm4Uk1JY6/tlTlOClV4x2Wc=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
