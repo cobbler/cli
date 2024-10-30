@@ -15,7 +15,11 @@ var validateAutoinstallsCmd = &cobra.Command{
 	Short: "Autoinstall validation",
 	Long:  `Validates the autoinstall files.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		eventId, err := Client.BackgroundValidateAutoinstallFiles()
 		if err != nil {
 			return err

@@ -331,9 +331,11 @@ var distroAddCmd = &cobra.Command{
 	Short: "add distribution",
 	Long:  `Adds a distribution.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		newDistro := cobbler.NewDistro()
-		var err error
 
 		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
 		newDistro.Name, err = cmd.Flags().GetString("name")
@@ -360,7 +362,10 @@ var distroCopyCmd = &cobra.Command{
 	Short: "copy distribution",
 	Long:  `Copies a distribution.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		dname, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -397,7 +402,10 @@ var distroEditCmd = &cobra.Command{
 	Short: "edit distribution",
 	Long:  `Edits a distribution.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// find distro through its name
 		dname, err := cmd.Flags().GetString("name")
@@ -434,7 +442,10 @@ var distroFindCmd = &cobra.Command{
 	Short: "find distribution",
 	Long:  `Finds a given distribution.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		return FindItemNames(cmd, args, "distro")
 	},
 }
@@ -444,7 +455,10 @@ var distroListCmd = &cobra.Command{
 	Short: "list all distributions",
 	Long:  `Lists all available distributions.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		distroNames, err := Client.ListDistroNames()
 		if err != nil {
 			return err
@@ -459,7 +473,10 @@ var distroRemoveCmd = &cobra.Command{
 	Short: "remove distribution",
 	Long:  `Removes a given distribution.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		dname, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -478,7 +495,10 @@ var distroRenameCmd = &cobra.Command{
 	Short: "rename distribution",
 	Long:  `Renames a given distribution.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get the name and newname flags
 		distroName, err := cmd.Flags().GetString("name")
@@ -532,7 +552,11 @@ var distroReportCmd = &cobra.Command{
 	Short: "list all distributions in detail",
 	Long:  `Shows detailed information about all distributions.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

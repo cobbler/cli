@@ -521,10 +521,12 @@ var profileAddCmd = &cobra.Command{
 	Short: "add profile",
 	Long:  `Adds a profile.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		newProfile := cobbler.NewProfile()
-		var err error
 		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
 		newProfile.Name, err = cmd.Flags().GetString("name")
 		if err != nil {
@@ -548,7 +550,11 @@ var profileCopyCmd = &cobra.Command{
 	Short: "copy profile",
 	Long:  `Copies a profile.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		profileName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -583,7 +589,10 @@ var profileDumpVarsCmd = &cobra.Command{
 	Short: "dump profile variables",
 	Long:  `Prints all profile variables to stdout.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get CLI flags
 		profileName, err := cmd.Flags().GetString("name")
@@ -607,7 +616,10 @@ var profileEditCmd = &cobra.Command{
 	Short: "edit profile",
 	Long:  `Edits a profile.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// find profile through its name
 		pname, err := cmd.Flags().GetString("name")
@@ -633,7 +645,11 @@ var profileFindCmd = &cobra.Command{
 	Short: "find profile",
 	Long:  `Finds a given profile.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "profile")
 	},
 }
@@ -643,7 +659,11 @@ var profileGetAutoinstallCmd = &cobra.Command{
 	Short: "dump autoinstall XML",
 	Long:  `Prints the autoinstall XML file of the given profile to stdout.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		profileName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -670,7 +690,11 @@ var profileListCmd = &cobra.Command{
 	Short: "list all profiles",
 	Long:  `Lists all available profiles.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		profileNames, err := Client.ListProfileNames()
 		if err != nil {
 			return err
@@ -685,7 +709,10 @@ var profileRemoveCmd = &cobra.Command{
 	Short: "remove profile",
 	Long:  `Removes a given profile.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		pname, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -704,7 +731,11 @@ var profileRenameCmd = &cobra.Command{
 	Short: "rename profile",
 	Long:  `Renames a given profile.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		profileName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -752,7 +783,11 @@ var profileReportCmd = &cobra.Command{
 	Short: "list all profiles in detail",
 	Long:  `Shows detailed information about all profiles.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

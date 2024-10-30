@@ -20,7 +20,11 @@ changed behind the scenes. It brings the filesystem up to date with the configur
 
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-sync for more information.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		dhcpOption, err := cmd.Flags().GetBool("dhcp")
 		if err != nil {
 			return err

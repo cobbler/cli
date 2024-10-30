@@ -67,9 +67,12 @@ var menuAddCmd = &cobra.Command{
 	Short: "add menu",
 	Long:  `Adds a menu.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		newMenu := cobbler.NewMenu()
-		var err error
 
 		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
 		newMenu.Name, err = cmd.Flags().GetString("name")
@@ -96,7 +99,11 @@ var menuCopyCmd = &cobra.Command{
 	Short: "copy menu",
 	Long:  `Copies a menu.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		menuName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -131,7 +138,11 @@ var menuEditCmd = &cobra.Command{
 	Short: "edit menu",
 	Long:  `Edits a menu.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		menuName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -154,7 +165,11 @@ var menuFindCmd = &cobra.Command{
 	Short: "find menu",
 	Long:  `Finds a given menu.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "menu")
 	},
 }
@@ -164,7 +179,11 @@ var menuListCmd = &cobra.Command{
 	Short: "list all menus",
 	Long:  `Lists all available menus.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		menuNames, err := Client.ListMenuNames()
 		if err != nil {
 			return err
@@ -179,7 +198,11 @@ var menuRemoveCmd = &cobra.Command{
 	Short: "remove menu",
 	Long:  `Removes a given menu.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "menu")
 	},
 }
@@ -189,7 +212,11 @@ var menuRenameCmd = &cobra.Command{
 	Short: "rename menu",
 	Long:  `Renames a given menu.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		menuName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -236,7 +263,11 @@ var menuReportCmd = &cobra.Command{
 	Short: "list all menus in detail",
 	Long:  `Shows detailed information about all menus.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

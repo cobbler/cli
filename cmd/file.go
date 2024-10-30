@@ -123,9 +123,12 @@ var fileAddCmd = &cobra.Command{
 	Short: "add file",
 	Long:  `Adds a file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		newFile := cobbler.NewFile()
-		var err error
 
 		// Get special name flag
 		newFile.Name, err = cmd.Flags().GetString("name")
@@ -152,7 +155,10 @@ var fileCopyCmd = &cobra.Command{
 	Short: "copy file",
 	Long:  `Copies a file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get special name and newname flags
 		fileName, err := cmd.Flags().GetString("name")
@@ -190,7 +196,10 @@ var fileEditCmd = &cobra.Command{
 	Short: "edit file",
 	Long:  `Edits a file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get the file name
 		fileName, err := cmd.Flags().GetString("name")
@@ -218,7 +227,11 @@ var fileFindCmd = &cobra.Command{
 	Short: "find file",
 	Long:  `Finds a given file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "file")
 	},
 }
@@ -228,7 +241,11 @@ var fileListCmd = &cobra.Command{
 	Short: "list all files",
 	Long:  `Lists all available files.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		fileNames, err := Client.ListFileNames()
 		if err != nil {
 			return err
@@ -243,7 +260,11 @@ var fileRemoveCmd = &cobra.Command{
 	Short: "remove file",
 	Long:  `Removes a given file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "file")
 	},
 }
@@ -253,7 +274,10 @@ var fileRenameCmd = &cobra.Command{
 	Short: "rename file",
 	Long:  `Renames a given file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get the special name and newname flags
 		fileName, err := cmd.Flags().GetString("name")
@@ -307,7 +331,11 @@ var fileReportCmd = &cobra.Command{
 	Short: "list all files in detail",
 	Long:  `Shows detailed information about all files.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

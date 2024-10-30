@@ -86,7 +86,7 @@ func initConfig() {
 }
 
 // basic connection to the Cobbler server
-func generateCobblerClient() {
+func generateCobblerClient() error {
 
 	// the configuration is done in .cobbler.yaml
 	conf.URL = viper.GetString("server_url")
@@ -96,9 +96,10 @@ func generateCobblerClient() {
 	Client = cobbler.NewClient(httpClient, conf)
 	login, err := Client.Login()
 
-	if !login || err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("error! Failed to login: %s", err))
+	if !login {
+		return fmt.Errorf("failed to login")
 	}
+	return err
 }
 
 func printStructured(cmd *cobra.Command, dataStruct interface{}) {

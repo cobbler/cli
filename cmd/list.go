@@ -19,7 +19,11 @@ most of the other Cobbler commands (currently: distro, profile, system, repo, im
 Identical to 'cobbler report'`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		distroNames, err := Client.ListDistroNames()
 		if err != nil {
 			return err

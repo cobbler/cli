@@ -18,7 +18,11 @@ then this also generates bootloaders for different architectures then the one of
 The options are configured in the Cobbler settings file.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		eventId, err := Client.BackgroundMkLoaders()
 		if err != nil {
 			return err

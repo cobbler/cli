@@ -17,7 +17,10 @@ var aclsetupCmd = &cobra.Command{
 	Long:  "Configures users/groups to run the Cobbler CLI as non-root.",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		addUserOption, err := cmd.Flags().GetString("adduser")
 		if err != nil {
 			return err

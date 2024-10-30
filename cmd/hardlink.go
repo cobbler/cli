@@ -15,7 +15,11 @@ var hardlinkCmd = &cobra.Command{
 	Short: "Hardlink files",
 	Long:  "Hardlink all files where it is possible to improve performance.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		eventId, err := Client.BackgroundHardlink()
 		if err != nil {
 			return err

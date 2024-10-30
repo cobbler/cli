@@ -16,7 +16,10 @@ var buildisoCmd = &cobra.Command{
 	Short: "Build an ISO",
 	Long:  "Build all profiles into a bootable CD image. All flags are optional.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		isoOption, err := cmd.Flags().GetString("iso")
 		if err != nil {
 			return err

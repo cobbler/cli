@@ -25,7 +25,10 @@ var settingEditCmd = &cobra.Command{
 	Short: "edit settings",
 	Long:  `Edits the settings.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		settings, err := Client.GetSettings()
 		if err != nil {
@@ -62,7 +65,11 @@ var settingReportCmd = &cobra.Command{
 	Short: "list settings",
 	Long:  `Prints settings to stdout.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		settings, err := Client.GetSettings()
 		if err != nil {
 			return err

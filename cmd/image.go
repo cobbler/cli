@@ -363,9 +363,12 @@ var imageAddCmd = &cobra.Command{
 	Short: "add image",
 	Long:  `Adds a image.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		newImage := cobbler.NewImage()
-		var err error
 		newImage.Name, err = cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -390,7 +393,10 @@ var imageCopyCmd = &cobra.Command{
 	Short: "copy image",
 	Long:  `Copies a image.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		imageName, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -427,7 +433,10 @@ var imageEditCmd = &cobra.Command{
 	Short: "edit image",
 	Long:  `Edits a image.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		imageName, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -452,7 +461,10 @@ var imageFindCmd = &cobra.Command{
 	Short: "find image",
 	Long:  `Finds a given image.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 		return FindItemNames(cmd, args, "image")
 	},
 }
@@ -462,7 +474,11 @@ var imageListCmd = &cobra.Command{
 	Short: "list all images",
 	Long:  `Lists all available images.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		imageNames, err := Client.ListImageNames()
 		if err != nil {
 			return err
@@ -477,7 +493,11 @@ var imageRemoveCmd = &cobra.Command{
 	Short: "remove image",
 	Long:  `Removes a given image.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "image")
 	},
 }
@@ -487,7 +507,10 @@ var imageRenameCmd = &cobra.Command{
 	Short: "rename image",
 	Long:  `Renames a given image.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		imageName, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -536,7 +559,11 @@ var imageReportCmd = &cobra.Command{
 	Short: "list all images in detail",
 	Long:  `Shows detailed information about all images.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

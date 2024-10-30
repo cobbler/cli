@@ -186,9 +186,12 @@ var repoAddCmd = &cobra.Command{
 	Short: "add repository",
 	Long:  `Adds a repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		newRepo := cobbler.NewRepo()
-		var err error
 
 		// internal fields (ctime, mtime, depth, uid, parent, tree-build-time) cannot be modified
 		newRepo.Name, err = cmd.Flags().GetString("name")
@@ -215,7 +218,11 @@ var repoAutoAddCmd = &cobra.Command{
 	Short: "add repository automatically",
 	Long:  `Automatically adds a repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return Client.AutoAddRepos()
 	},
 }
@@ -225,7 +232,10 @@ var repoCopyCmd = &cobra.Command{
 	Short: "copy repository",
 	Long:  `Copies a repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		repoName, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -261,7 +271,10 @@ var repoEditCmd = &cobra.Command{
 	Short: "edit repository",
 	Long:  `Edits a repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// find repo through its name
 		rname, err := cmd.Flags().GetString("name")
@@ -288,7 +301,11 @@ var repoFindCmd = &cobra.Command{
 	Short: "find repository",
 	Long:  `Finds a given repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "repo")
 	},
 }
@@ -298,7 +315,11 @@ var repoListCmd = &cobra.Command{
 	Short: "list all repositorys",
 	Long:  `Lists all available repositories.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		repoNames, err := Client.ListRepoNames()
 		if err != nil {
 			return err
@@ -313,7 +334,11 @@ var repoRemoveCmd = &cobra.Command{
 	Short: "remove repository",
 	Long:  `Removes a given repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "repo")
 	},
 }
@@ -323,7 +348,10 @@ var repoRenameCmd = &cobra.Command{
 	Short: "rename repository",
 	Long:  `Renames a given repository.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get special name and newname flags
 		repoName, err := cmd.Flags().GetString("name")
@@ -376,7 +404,11 @@ var repoReportCmd = &cobra.Command{
 	Short: "list all repositorys in detail",
 	Long:  `Shows detailed information about all repositories.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

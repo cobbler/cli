@@ -21,7 +21,11 @@ relevant cobbler.conf and modules.conf, as these files are not synced.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for more information.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		distrosOption, err := cmd.Flags().GetString("distros")
 		if err != nil {
 			return err

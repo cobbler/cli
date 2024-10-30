@@ -19,7 +19,11 @@ var reposyncCmd = &cobra.Command{
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-reposync for more information.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		noFailOption, err := cmd.Flags().GetBool("no-fail")
 		if err != nil {
 			return err

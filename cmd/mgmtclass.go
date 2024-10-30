@@ -118,9 +118,12 @@ var mgmtclassAddCmd = &cobra.Command{
 	Short: "add mgmtclass",
 	Long:  `Adds a mgmtclass.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		newMgmtClass := cobbler.NewMgmtClass()
-		var err error
 
 		// Get special name flag
 		newMgmtClass.Name, err = cmd.Flags().GetString("name")
@@ -147,7 +150,10 @@ var mgmtclassCopyCmd = &cobra.Command{
 	Short: "copy mgmtclass",
 	Long:  `Copies a mgmtclass.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get special name and newname flags
 		mgmtClassName, err := cmd.Flags().GetString("name")
@@ -189,7 +195,10 @@ var mgmtclassEditCmd = &cobra.Command{
 	Short: "edit mgmtclass",
 	Long:  `Edits a mgmtclass.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Collect CLI flags
 		mgmtClassName, err := cmd.Flags().GetString("name")
@@ -217,7 +226,11 @@ var mgmtclassFindCmd = &cobra.Command{
 	Short: "find mgmtclass",
 	Long:  `Finds a given mgmtclass.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "mgmtclass")
 	},
 }
@@ -227,7 +240,11 @@ var mgmtclassListCmd = &cobra.Command{
 	Short: "list all mgmtclasses",
 	Long:  `Lists all available mgmtclasses.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		mgmtclassNames, err := Client.ListMgmtClassNames()
 		if err != nil {
 			return err
@@ -242,7 +259,11 @@ var mgmtclassRemoveCmd = &cobra.Command{
 	Short: "remove mgmtclass",
 	Long:  `Removes a given mgmtclass.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "mgmtclass")
 	},
 }
@@ -252,7 +273,10 @@ var mgmtclassRenameCmd = &cobra.Command{
 	Short: "rename mgmtclass",
 	Long:  `Renames a given mgmtclass.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get the special name and newname flags
 		mgmtClassName, err := cmd.Flags().GetString("name")
@@ -306,7 +330,11 @@ var mgmtclassReportCmd = &cobra.Command{
 	Short: "list all mgmtclasses in detail",
 	Long:  `Shows detailed information about all mgmtclasses.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

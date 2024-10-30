@@ -87,9 +87,12 @@ var packageAddCmd = &cobra.Command{
 	Short: "add package",
 	Long:  `Adds a package.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		newPackage := cobbler.NewPackage()
-		var err error
 
 		// internal fields (ctime, mtime, depth, uid) cannot be modified
 		newPackage.Name, err = cmd.Flags().GetString("name")
@@ -116,7 +119,11 @@ var packageCopyCmd = &cobra.Command{
 	Short: "copy package",
 	Long:  `Copies a package.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		// Collect CLI flags
 		packageName, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -157,7 +164,11 @@ var packageEditCmd = &cobra.Command{
 	Short: "edit package",
 	Long:  `Edits a package.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		packageName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -183,7 +194,11 @@ var packageFindCmd = &cobra.Command{
 	Short: "find package",
 	Long:  `Finds a given package.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "package")
 	},
 }
@@ -193,7 +208,11 @@ var packageListCmd = &cobra.Command{
 	Short: "list all packages",
 	Long:  `Lists all available packages.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		packageNames, err := Client.ListPackageNames()
 		if err != nil {
 			return err
@@ -208,7 +227,11 @@ var packageRemoveCmd = &cobra.Command{
 	Short: "remove package",
 	Long:  `Removes a given package.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "package")
 	},
 }
@@ -218,7 +241,10 @@ var packageRenameCmd = &cobra.Command{
 	Short: "rename package",
 	Long:  `Renames a given package.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// internal fields (ctime, mtime, depth, uid) cannot be modified
 		packageName, err := cmd.Flags().GetString("name")
@@ -272,7 +298,11 @@ var packageReportCmd = &cobra.Command{
 	Short: "list all packages in detail",
 	Long:  `Shows detailed information about all packages.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err

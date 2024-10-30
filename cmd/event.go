@@ -21,7 +21,10 @@ var eventCmd = &cobra.Command{
 var eventStatusCmd = &cobra.Command{
 	Use: "status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		eventId, err := cmd.Flags().GetString("event-id")
 		if err != nil {
@@ -40,7 +43,10 @@ var eventStatusCmd = &cobra.Command{
 var eventListCmd = &cobra.Command{
 	Use: "list",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		user, err := cmd.Flags().GetString("user")
 		if err != nil {
@@ -81,7 +87,10 @@ var eventListCmd = &cobra.Command{
 var eventLogCmd = &cobra.Command{
 	Use: "log",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		eventId, err := cmd.Flags().GetString("event-id")
 		if err != nil {

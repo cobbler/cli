@@ -18,7 +18,11 @@ var importCmd = &cobra.Command{
 See https://cobbler.readthedocs.io/en/latest/quickstart-guide.html#importing-your-first-distribution for more information.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		archOption, err := cmd.Flags().GetString("arch")
 		if err != nil {
 			return err

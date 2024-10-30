@@ -26,7 +26,10 @@ var signatureReportCmd = &cobra.Command{
 	Short: "Report the loaded signatures",
 	Long:  `Report the loaded signatures`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get signatures
 		signatures, err := Client.GetSignatures()
@@ -74,10 +77,15 @@ var signatureUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update the signatures JSON file",
 	Long:  `Retrieve an up-to-date "distro_signatures.json" file from the server-side configured webservice.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		generateCobblerClient()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		eventId, _ := Client.BackgroundSignatureUpdate()
 		fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
+		return nil
 	},
 }
 
@@ -85,10 +93,14 @@ var signatureReloadCmd = &cobra.Command{
 	Use:   "reload",
 	Short: "Reloads signatures",
 	Long:  `Reloads signatures from the - on the server - local "distro_signatures.json" file.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		generateCobblerClient()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		fmt.Fprintln(cmd.OutOrStdout(), "This functionality cannot be used in the new CLI until https://github.com/cobbler/cobbler/issues/3791 is implemented!")
+		return nil
 	},
 }
 

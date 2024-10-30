@@ -779,10 +779,12 @@ var systemAddCmd = &cobra.Command{
 	Short: "add system",
 	Long:  `Adds a system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		newSystem := cobbler.NewSystem()
-		var err error
 
 		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
 		newSystem.Name, err = cmd.Flags().GetString("name")
@@ -809,7 +811,11 @@ var systemCopyCmd = &cobra.Command{
 	Short: "copy system",
 	Long:  `Copies a system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		systemName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -856,7 +862,10 @@ var systemDumpVarsCmd = &cobra.Command{
 	Short: "dump system variables",
 	Long:  `Prints all system variables to stdout.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get CLI flags
 		systemName, err := cmd.Flags().GetString("name")
@@ -880,7 +889,10 @@ var systemEditCmd = &cobra.Command{
 	Short: "edit system",
 	Long:  `Edits a system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// find profile through its name
 		systemName, err := cmd.Flags().GetString("name")
@@ -917,7 +929,11 @@ var systemFindCmd = &cobra.Command{
 	Short: "find system",
 	Long:  `Finds a given system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return FindItemNames(cmd, args, "system")
 	},
 }
@@ -927,7 +943,11 @@ var systemGetAutoinstallCmd = &cobra.Command{
 	Short: "dump autoinstall XML",
 	Long:  `Prints the autoinstall XML file of the given system to stdout.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		systemName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
@@ -954,7 +974,11 @@ var systemListCmd = &cobra.Command{
 	Short: "list all systems",
 	Long:  `Lists all available systems.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		systemNames, err := Client.ListSystemNames()
 		if err != nil {
 			return err
@@ -969,7 +993,10 @@ var systemPowerOffCmd = &cobra.Command{
 	Short: "power off system",
 	Long:  `Powers off the selected system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get flags
 		systemName, err := cmd.Flags().GetString("name")
@@ -992,7 +1019,10 @@ var systemPowerOnCmd = &cobra.Command{
 	Short: "power on system",
 	Long:  `Powers on the selected system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get flags
 		systemName, err := cmd.Flags().GetString("name")
@@ -1015,7 +1045,10 @@ var systemPowerStatusCmd = &cobra.Command{
 	Short: "Power status of the system",
 	Long:  `Querys the power status of the selected system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get flags
 		systemName, err := cmd.Flags().GetString("name")
@@ -1038,7 +1071,10 @@ var systemRebootCmd = &cobra.Command{
 	Short: "reboot system",
 	Long:  `Reboots the selected system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get flags
 		systemName, err := cmd.Flags().GetString("name")
@@ -1061,7 +1097,11 @@ var systemRemoveCmd = &cobra.Command{
 	Short: "remove system",
 	Long:  `Removes a given system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		return RemoveItemRecursive(cmd, args, "system")
 	},
 }
@@ -1071,7 +1111,10 @@ var systemRenameCmd = &cobra.Command{
 	Short: "rename system",
 	Long:  `Renames a given system.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
 
 		// Get flags
 		systemName, err := cmd.Flags().GetString("name")
@@ -1131,7 +1174,11 @@ var systemReportCmd = &cobra.Command{
 	Short: "list all systems in detail",
 	Long:  `Shows detailed information about all systems.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
+		err := generateCobblerClient()
+		if err != nil {
+			return err
+		}
+
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return err
