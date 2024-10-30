@@ -315,224 +315,325 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 	return err
 }
 
-// distroCmd represents the distro command
-var distroCmd = &cobra.Command{
-	Use:   "distro",
-	Short: "Distribution management",
-	Long: `Let you manage distributions.
+// NewDistroCmd builds a new command that represents the distro action
+func NewDistroCmd() (*cobra.Command, error) {
+	distroCmd := &cobra.Command{
+		Use:   "distro",
+		Short: "Distribution management",
+		Long: `Let you manage distributions.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-distro for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
+	}
+	distroAddCmd, err := NewDistroAddCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroAddCmd)
+	distroCopyCmd, err := NewDistroCopyCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroCopyCmd)
+	distroEditCmd, err := NewDistroEditCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroEditCmd)
+	distroFindCmd, err := NewDistroFindCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroFindCmd)
+	distroListCmd, err := NewDistroListCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroListCmd)
+	distroRemoveCmd, err := NewDistroRemoveCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroRemoveCmd)
+	distroRenameCmd, err := NewDistroRenameCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroRenameCmd)
+	distroReportCmd, err := NewDistroReportCmd()
+	if err != nil {
+		return nil, err
+	}
+	distroCmd.AddCommand(distroReportCmd)
+	return distroCmd, nil
 }
 
-var distroAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add distribution",
-	Long:  `Adds a distribution.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-		newDistro := cobbler.NewDistro()
-
-		// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
-		newDistro.Name, err = cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Update distro in-memory
-		err = updateDistroFromFlags(cmd, &newDistro)
-		if err != nil {
-			return err
-		}
-		// Now create the distro via XML-RPC
-		distro, err := Client.CreateDistro(newDistro)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Distro %s created\n", distro.Name)
-		return nil
-	},
-}
-
-var distroCopyCmd = &cobra.Command{
-	Use:   "copy",
-	Short: "copy distribution",
-	Long:  `Copies a distribution.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-		dname, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		distroNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-
-		dhandle, err := Client.GetDistroHandle(dname)
-		if err != nil {
-			return err
-		}
-		err = Client.CopyDistro(dhandle, distroNewName)
-		if err != nil {
-			return err
-		}
-		newDistro, err := Client.GetDistro(distroNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update distro in-memory
-		err = updateDistroFromFlags(cmd, newDistro)
-		if err != nil {
-			return err
-		}
-		// Update the distro via XML-RPC
-		return Client.UpdateDistro(newDistro)
-	},
-}
-
-var distroEditCmd = &cobra.Command{
-	Use:   "edit",
-	Short: "edit distribution",
-	Long:  `Edits a distribution.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// find distro through its name
-		dname, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Get distro from the API
-		updateDistro, err := Client.GetDistro(dname, false, false)
-		if err != nil {
-			return err
-		}
-		// Update distro in-memory
-		err = updateDistroFromFlags(cmd, updateDistro)
-		if err != nil {
-			return err
-		}
-		if updateDistro.Meta.IsDirty {
-			updateDistro, err = Client.GetDistro(
-				updateDistro.Name,
-				updateDistro.Meta.IsFlattened,
-				updateDistro.Meta.IsResolved,
-			)
+func NewDistroAddCmd() (*cobra.Command, error) {
+	distroAddCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add distribution",
+		Long:  `Adds a distribution.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		}
-		// Now update distro via XML-RPC
-		return Client.UpdateDistro(updateDistro)
-	},
+			newDistro := cobbler.NewDistro()
+
+			// internal fields (ctime, mtime, depth, uid, source-repos, tree-build-time) cannot be modified
+			newDistro.Name, err = cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Update distro in-memory
+			err = updateDistroFromFlags(cmd, &newDistro)
+			if err != nil {
+				return err
+			}
+			// Now create the distro via XML-RPC
+			distro, err := Client.CreateDistro(newDistro)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Distro %s created\n", distro.Name)
+			return nil
+		},
+	}
+	addCommonArgs(distroAddCmd)
+	addStringFlags(distroAddCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroAddCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroAddCmd, distroMapFlagMetadata)
+	// Required Flags
+	err := distroAddCmd.MarkFlagRequired("name")
+	if err != nil {
+		return nil, err
+	}
+	return distroAddCmd, nil
 }
 
-var distroFindCmd = &cobra.Command{
-	Use:   "find",
-	Short: "find distribution",
-	Long:  `Finds a given distribution.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-		return FindItemNames(cmd, args, "distro")
-	},
+func NewDistroCopyCmd() (*cobra.Command, error) {
+	distroCopyCmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy distribution",
+		Long:  `Copies a distribution.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+			dname, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			distroNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			dhandle, err := Client.GetDistroHandle(dname)
+			if err != nil {
+				return err
+			}
+			err = Client.CopyDistro(dhandle, distroNewName)
+			if err != nil {
+				return err
+			}
+			newDistro, err := Client.GetDistro(distroNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update distro in-memory
+			err = updateDistroFromFlags(cmd, newDistro)
+			if err != nil {
+				return err
+			}
+			// Update the distro via XML-RPC
+			return Client.UpdateDistro(newDistro)
+		},
+	}
+	addCommonArgs(distroCopyCmd)
+	addStringFlags(distroCopyCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroCopyCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroCopyCmd, distroMapFlagMetadata)
+	distroCopyCmd.Flags().String("newname", "", "the new distro name")
+	distroCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return distroCopyCmd, nil
 }
 
-var distroListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list all distributions",
-	Long:  `Lists all available distributions.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-		distroNames, err := Client.ListDistroNames()
-		if err != nil {
-			return err
-		}
-		listItems(cmd, "distros", distroNames)
-		return nil
-	},
+func NewDistroEditCmd() (*cobra.Command, error) {
+	distroEditCmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit distribution",
+		Long:  `Edits a distribution.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// find distro through its name
+			dname, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Get distro from the API
+			updateDistro, err := Client.GetDistro(dname, false, false)
+			if err != nil {
+				return err
+			}
+			// Update distro in-memory
+			err = updateDistroFromFlags(cmd, updateDistro)
+			if err != nil {
+				return err
+			}
+			if updateDistro.Meta.IsDirty {
+				updateDistro, err = Client.GetDistro(
+					updateDistro.Name,
+					updateDistro.Meta.IsFlattened,
+					updateDistro.Meta.IsResolved,
+				)
+				if err != nil {
+					return err
+				}
+			}
+			// Now update distro via XML-RPC
+			return Client.UpdateDistro(updateDistro)
+		},
+	}
+	addCommonArgs(distroEditCmd)
+	addStringFlags(distroEditCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroEditCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroEditCmd, distroMapFlagMetadata)
+	distroEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return distroEditCmd, nil
 }
 
-var distroRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "remove distribution",
-	Long:  `Removes a given distribution.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		dname, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		recursiveDelete, err := cmd.Flags().GetBool("recursive")
-		if err != nil {
-			return err
-		}
-		return Client.DeleteDistroRecursive(dname, recursiveDelete)
-	},
+func NewDistroFindCmd() (*cobra.Command, error) {
+	distroFindCmd := &cobra.Command{
+		Use:   "find",
+		Short: "find distribution",
+		Long:  `Finds a given distribution.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+			return FindItemNames(cmd, args, "distro")
+		},
+	}
+	addCommonArgs(distroFindCmd)
+	addStringFlags(distroFindCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroFindCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroFindCmd, distroMapFlagMetadata)
+	addStringFlags(distroFindCmd, findStringFlagMetadata)
+	addIntFlags(distroFindCmd, findIntFlagMetadata)
+	addFloatFlags(distroFindCmd, findFloatFlagMetadata)
+	distroFindCmd.Flags().String("source-repos", "", "source repositories")
+	distroFindCmd.Flags().String("tree-build-time", "", "tree build time")
+	return distroFindCmd, nil
 }
 
-var distroRenameCmd = &cobra.Command{
-	Use:   "rename",
-	Short: "rename distribution",
-	Long:  `Renames a given distribution.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewDistroListCmd() (*cobra.Command, error) {
+	distroListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list all distributions",
+		Long:  `Lists all available distributions.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+			distroNames, err := Client.ListDistroNames()
+			if err != nil {
+				return err
+			}
+			listItems(cmd, "distros", distroNames)
+			return nil
+		},
+	}
+	return distroListCmd, nil
+}
 
-		// Get the name and newname flags
-		distroName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		distroNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
+func NewDistroRemoveCmd() (*cobra.Command, error) {
+	distroRemoveCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove distribution",
+		Long:  `Removes a given distribution.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		// Get the distro API handle
-		distroHandle, err := Client.GetDistroHandle(distroName)
-		if err != nil {
-			return err
-		}
-		// Perform the rename operation server-side
-		err = Client.RenameDistro(distroHandle, distroNewName)
-		if err != nil {
-			return err
-		}
-		// Retrieve the renamed distro from the API
-		newDistro, err := Client.GetDistro(distroNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Now edit the distro in-memory
-		err = updateDistroFromFlags(cmd, newDistro)
-		if err != nil {
-			return err
-		}
-		// Now update the distro via XML-RPC
-		return Client.UpdateDistro(newDistro)
-	},
+			dname, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			recursiveDelete, err := cmd.Flags().GetBool("recursive")
+			if err != nil {
+				return err
+			}
+			return Client.DeleteDistroRecursive(dname, recursiveDelete)
+		},
+	}
+	distroRemoveCmd.Flags().String("name", "", "the distro name")
+	distroRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	return distroRemoveCmd, nil
+}
+
+func NewDistroRenameCmd() (*cobra.Command, error) {
+	distroRenameCmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename distribution",
+		Long:  `Renames a given distribution.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get the name and newname flags
+			distroName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			distroNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			// Get the distro API handle
+			distroHandle, err := Client.GetDistroHandle(distroName)
+			if err != nil {
+				return err
+			}
+			// Perform the rename operation server-side
+			err = Client.RenameDistro(distroHandle, distroNewName)
+			if err != nil {
+				return err
+			}
+			// Retrieve the renamed distro from the API
+			newDistro, err := Client.GetDistro(distroNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Now edit the distro in-memory
+			err = updateDistroFromFlags(cmd, newDistro)
+			if err != nil {
+				return err
+			}
+			// Now update the distro via XML-RPC
+			return Client.UpdateDistro(newDistro)
+		},
+	}
+	addCommonArgs(distroRenameCmd)
+	addStringFlags(distroRenameCmd, distroStringFlagMetadata)
+	addStringSliceFlags(distroRenameCmd, distroStringSliceFlagMetadata)
+	addMapFlags(distroRenameCmd, distroMapFlagMetadata)
+	distroRenameCmd.Flags().String("newname", "", "the new distro name")
+	distroRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return distroRenameCmd, nil
 }
 
 func reportDistros(cmd *cobra.Command, distroNames []string) error {
@@ -547,93 +648,33 @@ func reportDistros(cmd *cobra.Command, distroNames []string) error {
 	return nil
 }
 
-var distroReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "list all distributions in detail",
-	Long:  `Shows detailed information about all distributions.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		itemNames := make([]string, 0)
-		if name == "" {
-			itemNames, err = Client.ListDistroNames()
+func NewDistroReportCmd() (*cobra.Command, error) {
+	distroReportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "list all distributions in detail",
+		Long:  `Shows detailed information about all distributions.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		} else {
-			itemNames = append(itemNames, name)
-		}
-		return reportDistros(cmd, itemNames)
-	},
-}
 
-func init() {
-	rootCmd.AddCommand(distroCmd)
-	distroCmd.AddCommand(distroAddCmd)
-	distroCmd.AddCommand(distroCopyCmd)
-	distroCmd.AddCommand(distroEditCmd)
-	distroCmd.AddCommand(distroFindCmd)
-	distroCmd.AddCommand(distroListCmd)
-	distroCmd.AddCommand(distroRemoveCmd)
-	distroCmd.AddCommand(distroRenameCmd)
-	distroCmd.AddCommand(distroReportCmd)
-
-	// local flags for distro add
-	addCommonArgs(distroAddCmd)
-	addStringFlags(distroAddCmd, distroStringFlagMetadata)
-	addStringSliceFlags(distroAddCmd, distroStringSliceFlagMetadata)
-	addMapFlags(distroAddCmd, distroMapFlagMetadata)
-	// Required Flags
-	err := distroAddCmd.MarkFlagRequired("name")
-	if err != nil {
-		panic(err)
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListDistroNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+			return reportDistros(cmd, itemNames)
+		},
 	}
-
-	// local flags for distro copy
-	addCommonArgs(distroCopyCmd)
-	addStringFlags(distroCopyCmd, distroStringFlagMetadata)
-	addStringSliceFlags(distroCopyCmd, distroStringSliceFlagMetadata)
-	addMapFlags(distroCopyCmd, distroMapFlagMetadata)
-	distroCopyCmd.Flags().String("newname", "", "the new distro name")
-	distroCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for distro edit
-	addCommonArgs(distroEditCmd)
-	addStringFlags(distroEditCmd, distroStringFlagMetadata)
-	addStringSliceFlags(distroEditCmd, distroStringSliceFlagMetadata)
-	addMapFlags(distroEditCmd, distroMapFlagMetadata)
-	distroEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for distro find
-	addCommonArgs(distroFindCmd)
-	addStringFlags(distroFindCmd, distroStringFlagMetadata)
-	addStringSliceFlags(distroFindCmd, distroStringSliceFlagMetadata)
-	addMapFlags(distroFindCmd, distroMapFlagMetadata)
-	addStringFlags(distroFindCmd, findStringFlagMetadata)
-	addIntFlags(distroFindCmd, findIntFlagMetadata)
-	addFloatFlags(distroFindCmd, findFloatFlagMetadata)
-	distroFindCmd.Flags().String("source-repos", "", "source repositories")
-	distroFindCmd.Flags().String("tree-build-time", "", "tree build time")
-
-	// local flags for distro remove
-	distroRemoveCmd.Flags().String("name", "", "the distro name")
-	distroRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
-
-	// local flags for distro rename
-	addCommonArgs(distroRenameCmd)
-	addStringFlags(distroRenameCmd, distroStringFlagMetadata)
-	addStringSliceFlags(distroRenameCmd, distroStringSliceFlagMetadata)
-	addMapFlags(distroRenameCmd, distroMapFlagMetadata)
-	distroRenameCmd.Flags().String("newname", "", "the new distro name")
-	distroRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for distro report
 	distroReportCmd.Flags().String("name", "", "the distro name")
+	return distroReportCmd, nil
 }

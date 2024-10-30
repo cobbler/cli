@@ -24,30 +24,62 @@ var conf cobbler.ClientConfig
 var httpClient = &http.Client{}
 var verbose bool
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "cobbler",
-	Short: "Cobbler CLI client",
-	Long:  "An independent CLI to manage a Cobbler server.",
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
-}
-
-func init() {
-	cobra.OnInitialize(initConfig)
+// NewRootCmd builds a new command that represents the base action when called without any subcommands
+func NewRootCmd() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "cobbler",
+		Short: "Cobbler CLI client",
+		Long:  "An independent CLI to manage a Cobbler server.",
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
+	}
 
 	// global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobbler.yaml)")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Whether or not to print debug messages from the CLI.")
 
-	// Setup logger
+	// Add sub commands
+	rootCmd.AddCommand(NewAclSetupCmd())
+	rootCmd.AddCommand(NewBuildisoCmd())
+	distroCmd, err := NewDistroCmd()
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(distroCmd)
+	rootCmd.AddCommand(NewEventCmd())
+	rootCmd.AddCommand(NewFileCmd())
+	rootCmd.AddCommand(NewHardlinkCmd())
+	rootCmd.AddCommand(NewImageCmd())
+	rootCmd.AddCommand(NewImportCmd())
+	rootCmd.AddCommand(NewListCmd())
+	rootCmd.AddCommand(NewMenuCmd())
+	rootCmd.AddCommand(NewMgmtClassCmd())
+	rootCmd.AddCommand(NewMkLoadersCmd())
+	rootCmd.AddCommand(NewPackageCmd())
+	rootCmd.AddCommand(NewProfileCmd())
+	rootCmd.AddCommand(NewReplicateCmd())
+	rootCmd.AddCommand(NewRepoCmd())
+	rootCmd.AddCommand(NewReportCmd())
+	rootCmd.AddCommand(NewRepoSyncCmd())
+	rootCmd.AddCommand(NewSettingCmd())
+	rootCmd.AddCommand(NewSignatureCmd())
+	rootCmd.AddCommand(NewSyncCmd())
+	rootCmd.AddCommand(NewSystemCmd())
+	rootCmd.AddCommand(NewValidateAutoinstallsCmd())
+	rootCmd.AddCommand(NewVersionCmd())
+	return rootCmd
+}
+
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
+func Execute() {
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+
+	// Execute root command
+	cobra.CheckErr(rootCmd.Execute())
+}
+
+func setupLogger() {
 	if !verbose {
 		slog.SetLogLoggerLevel(slog.LevelWarn)
 	}

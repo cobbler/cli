@@ -10,52 +10,49 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// reposyncCmd represents the reposync command
-var reposyncCmd = &cobra.Command{
-	Use:   "reposync",
-	Short: "Sync repositories",
-	Long: `Update and sync Cobbler repositories. The repositories have to be added beforehand via 'cobbler repo add'.
+// NewRepoSyncCmd builds a new command that represents the reposync action
+func NewRepoSyncCmd() *cobra.Command {
+	reposyncCmd := &cobra.Command{
+		Use:   "reposync",
+		Short: "Sync repositories",
+		Long: `Update and sync Cobbler repositories. The repositories have to be added beforehand via 'cobbler repo add'.
 
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-reposync for more information.`,
 
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		noFailOption, err := cmd.Flags().GetBool("no-fail")
-		if err != nil {
-			return err
-		}
-		onlyOption, err := cmd.Flags().GetString("only")
-		if err != nil {
-			return err
-		}
-		triesOption, err := cmd.Flags().GetInt("tries")
-		if err != nil {
-			return err
-		}
-		var reposyncOptions = cobblerclient.BackgroundReposyncOptions{
-			Repos:  make([]string, 0),
-			Only:   onlyOption,
-			Nofail: noFailOption,
-			Tries:  triesOption,
-		}
-		eventId, err := Client.BackgroundReposync(reposyncOptions)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
-		return nil
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(reposyncCmd)
-
-	//local flags
+			noFailOption, err := cmd.Flags().GetBool("no-fail")
+			if err != nil {
+				return err
+			}
+			onlyOption, err := cmd.Flags().GetString("only")
+			if err != nil {
+				return err
+			}
+			triesOption, err := cmd.Flags().GetInt("tries")
+			if err != nil {
+				return err
+			}
+			var reposyncOptions = cobblerclient.BackgroundReposyncOptions{
+				Repos:  make([]string, 0),
+				Only:   onlyOption,
+				Nofail: noFailOption,
+				Tries:  triesOption,
+			}
+			eventId, err := Client.BackgroundReposync(reposyncOptions)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
+			return nil
+		},
+	}
 	reposyncCmd.Flags().Bool("no-fail", false, "do not stop reposyncing if a failure occurs")
 	reposyncCmd.Flags().String("only", "", "update only this repository name")
 	reposyncCmd.Flags().Int("tries", 3, "try each repo this many times")
+	return reposyncCmd
 }

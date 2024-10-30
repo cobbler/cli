@@ -505,265 +505,363 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 	return nil
 }
 
-// profileCmd represents the profile command
-var profileCmd = &cobra.Command{
-	Use:   "profile",
-	Short: "Profile management",
-	Long: `Let you manage profiles.
+// NewProfileCmd builds a new command that represents the profile action
+func NewProfileCmd() *cobra.Command {
+	profileCmd := &cobra.Command{
+		Use:   "profile",
+		Short: "Profile management",
+		Long: `Let you manage profiles.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-profile for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
+	}
+	profileCmd.AddCommand(NewProfileAddCmd())
+	profileCmd.AddCommand(NewProfileCopyCmd())
+	profileCmd.AddCommand(NewProfileDumpVars())
+	profileCmd.AddCommand(NewProfileEditCmd())
+	profileCmd.AddCommand(NewProfileFindCmd())
+	profileCmd.AddCommand(NewProfileGetAutoinstallCmd())
+	profileCmd.AddCommand(NewProfileListCmd())
+	profileCmd.AddCommand(NewProfileRemoveCmd())
+	profileCmd.AddCommand(NewProfileRenameCmd())
+	profileCmd.AddCommand(NewProfileReportCmd())
+	return profileCmd
 }
 
-var profileAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add profile",
-	Long:  `Adds a profile.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileAddCmd() *cobra.Command {
+	profileAddCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add profile",
+		Long:  `Adds a profile.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		newProfile := cobbler.NewProfile()
-		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
-		newProfile.Name, err = cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		err = updateProfileFromFlags(cmd, &newProfile)
-		if err != nil {
-			return err
-		}
-		profile, err := Client.CreateProfile(newProfile)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Profile %s created\n", profile.Name)
-		return nil
-	},
+			newProfile := cobbler.NewProfile()
+			// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
+			newProfile.Name, err = cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			err = updateProfileFromFlags(cmd, &newProfile)
+			if err != nil {
+				return err
+			}
+			profile, err := Client.CreateProfile(newProfile)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Profile %s created\n", profile.Name)
+			return nil
+		},
+	}
+	addCommonArgs(profileAddCmd)
+	addStringFlags(profileAddCmd, profileStringFlagMetadata)
+	addBoolFlags(profileAddCmd, profileBoolFlagMetadata)
+	addIntFlags(profileAddCmd, profileIntFlagMetadata)
+	addFloatFlags(profileAddCmd, profileFloatFlagMetadata)
+	addStringSliceFlags(profileAddCmd, distroStringSliceFlagMetadata)
+	addStringSliceFlags(profileAddCmd, profileStringSliceFlagMetadata)
+	addMapFlags(profileAddCmd, distroMapFlagMetadata)
+	addMapFlags(profileAddCmd, profileMapFlagMetadata)
+	profileAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return profileAddCmd
 }
 
-var profileCopyCmd = &cobra.Command{
-	Use:   "copy",
-	Short: "copy profile",
-	Long:  `Copies a profile.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileCopyCmd() *cobra.Command {
+	profileCopyCmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy profile",
+		Long:  `Copies a profile.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		profileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		profileNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
+			profileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			profileNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
 
-		profileHandle, err := Client.GetProfileHandle(profileName)
-		if err != nil {
-			return err
-		}
-		err = Client.CopyDistro(profileHandle, profileNewName)
-		if err != nil {
-			return err
-		}
-		newProfile, err := Client.GetProfile(profileNewName, false, false)
-		if err != nil {
-			return err
-		}
-		err = updateProfileFromFlags(cmd, newProfile)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateProfile(newProfile)
-	},
+			profileHandle, err := Client.GetProfileHandle(profileName)
+			if err != nil {
+				return err
+			}
+			err = Client.CopyDistro(profileHandle, profileNewName)
+			if err != nil {
+				return err
+			}
+			newProfile, err := Client.GetProfile(profileNewName, false, false)
+			if err != nil {
+				return err
+			}
+			err = updateProfileFromFlags(cmd, newProfile)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateProfile(newProfile)
+		},
+	}
+	addCommonArgs(profileCopyCmd)
+	addStringFlags(profileCopyCmd, profileStringFlagMetadata)
+	addBoolFlags(profileCopyCmd, profileBoolFlagMetadata)
+	addIntFlags(profileCopyCmd, profileIntFlagMetadata)
+	addFloatFlags(profileCopyCmd, profileFloatFlagMetadata)
+	addStringSliceFlags(profileCopyCmd, distroStringSliceFlagMetadata)
+	addStringSliceFlags(profileCopyCmd, profileStringSliceFlagMetadata)
+	addMapFlags(profileCopyCmd, distroMapFlagMetadata)
+	addMapFlags(profileCopyCmd, profileMapFlagMetadata)
+	profileCopyCmd.Flags().String("newname", "", "the new profile name")
+	profileCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return profileCopyCmd
 }
 
-var profileDumpVarsCmd = &cobra.Command{
-	Use:   "dumpvars",
-	Short: "dump profile variables",
-	Long:  `Prints all profile variables to stdout.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileDumpVars() *cobra.Command {
+	profileDumpVarsCmd := &cobra.Command{
+		Use:   "dumpvars",
+		Short: "dump profile variables",
+		Long:  `Prints all profile variables to stdout.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		// Get CLI flags
-		profileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
+			// Get CLI flags
+			profileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
 
-		// Now retrieve data
-		blendedData, err := Client.GetBlendedData(profileName, "")
-		if err != nil {
+			// Now retrieve data
+			blendedData, err := Client.GetBlendedData(profileName, "")
+			if err != nil {
+				return err
+			}
+			// Print data
+			printDumpVars(cmd, blendedData)
 			return err
-		}
-		// Print data
-		printDumpVars(cmd, blendedData)
-		return err
-	},
+		},
+	}
+	profileDumpVarsCmd.Flags().String("name", "", "the profile name")
+	return profileDumpVarsCmd
 }
 
-var profileEditCmd = &cobra.Command{
-	Use:   "edit",
-	Short: "edit profile",
-	Long:  `Edits a profile.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileEditCmd() *cobra.Command {
+	profileEditCmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit profile",
+		Long:  `Edits a profile.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		// find profile through its name
-		pname, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		updateProfile, err := Client.GetProfile(pname, false, false)
-		if err != nil {
-			return err
-		}
+			// find profile through its name
+			pname, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			updateProfile, err := Client.GetProfile(pname, false, false)
+			if err != nil {
+				return err
+			}
 
-		// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
-		err = updateProfileFromFlags(cmd, updateProfile)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateProfile(updateProfile)
-	},
+			// internal fields (ctime, mtime, uid, depth, repos-enabled) cannot be modified
+			err = updateProfileFromFlags(cmd, updateProfile)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateProfile(updateProfile)
+		},
+	}
+	addCommonArgs(profileEditCmd)
+	addStringFlags(profileEditCmd, profileStringFlagMetadata)
+	addBoolFlags(profileEditCmd, profileBoolFlagMetadata)
+	addIntFlags(profileEditCmd, profileIntFlagMetadata)
+	addFloatFlags(profileEditCmd, profileFloatFlagMetadata)
+	addStringSliceFlags(profileEditCmd, distroStringSliceFlagMetadata)
+	addStringSliceFlags(profileEditCmd, profileStringSliceFlagMetadata)
+	addMapFlags(profileEditCmd, distroMapFlagMetadata)
+	addMapFlags(profileEditCmd, profileMapFlagMetadata)
+	profileEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return profileEditCmd
 }
 
-var profileFindCmd = &cobra.Command{
-	Use:   "find",
-	Short: "find profile",
-	Long:  `Finds a given profile.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileFindCmd() *cobra.Command {
+	profileFindCmd := &cobra.Command{
+		Use:   "find",
+		Short: "find profile",
+		Long:  `Finds a given profile.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		return FindItemNames(cmd, args, "profile")
-	},
+			return FindItemNames(cmd, args, "profile")
+		},
+	}
+	addCommonArgs(profileFindCmd)
+	addStringFlags(profileFindCmd, profileStringFlagMetadata)
+	addBoolFlags(profileFindCmd, profileBoolFlagMetadata)
+	addIntFlags(profileFindCmd, profileIntFlagMetadata)
+	addFloatFlags(profileFindCmd, profileFloatFlagMetadata)
+	addStringSliceFlags(profileFindCmd, distroStringSliceFlagMetadata)
+	addStringSliceFlags(profileFindCmd, profileStringSliceFlagMetadata)
+	addMapFlags(profileFindCmd, distroMapFlagMetadata)
+	addMapFlags(profileFindCmd, profileMapFlagMetadata)
+	addStringFlags(profileFindCmd, findStringFlagMetadata)
+	addIntFlags(profileFindCmd, findIntFlagMetadata)
+	addFloatFlags(profileFindCmd, findFloatFlagMetadata)
+	return profileFindCmd
 }
 
-var profileGetAutoinstallCmd = &cobra.Command{
-	Use:   "get-autoinstall",
-	Short: "dump autoinstall XML",
-	Long:  `Prints the autoinstall XML file of the given profile to stdout.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileGetAutoinstallCmd() *cobra.Command {
+	profileGetAutoinstallCmd := &cobra.Command{
+		Use:   "get-autoinstall",
+		Short: "dump autoinstall XML",
+		Long:  `Prints the autoinstall XML file of the given profile to stdout.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		profileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		profileExists, err := Client.HasItem("profile", profileName)
-		if err != nil {
-			return err
-		}
-		if !profileExists {
-			return fmt.Errorf("Profile does not exist!")
+			profileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			profileExists, err := Client.HasItem("profile", profileName)
+			if err != nil {
+				return err
+			}
+			if !profileExists {
+				return fmt.Errorf("Profile does not exist!")
 
-		}
-		autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "")
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
-		return nil
-	},
+			}
+			autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "")
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
+			return nil
+		},
+	}
+	profileGetAutoinstallCmd.Flags().String("name", "", "the profile name")
+	return profileGetAutoinstallCmd
 }
 
-var profileListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list all profiles",
-	Long:  `Lists all available profiles.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileListCmd() *cobra.Command {
+	profileListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list all profiles",
+		Long:  `Lists all available profiles.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		profileNames, err := Client.ListProfileNames()
-		if err != nil {
-			return err
-		}
-		listItems(cmd, "profiles", profileNames)
-		return nil
-	},
+			profileNames, err := Client.ListProfileNames()
+			if err != nil {
+				return err
+			}
+			listItems(cmd, "profiles", profileNames)
+			return nil
+		},
+	}
+	return profileListCmd
 }
 
-var profileRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "remove profile",
-	Long:  `Removes a given profile.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileRemoveCmd() *cobra.Command {
+	profileRemoveCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove profile",
+		Long:  `Removes a given profile.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		pname, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		recursiveDelete, err := cmd.Flags().GetBool("recursive")
-		if err != nil {
-			return err
-		}
-		return Client.DeleteProfileRecursive(pname, recursiveDelete)
-	},
+			pname, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			recursiveDelete, err := cmd.Flags().GetBool("recursive")
+			if err != nil {
+				return err
+			}
+			return Client.DeleteProfileRecursive(pname, recursiveDelete)
+		},
+	}
+	profileRemoveCmd.Flags().String("name", "", "the profile name")
+	profileRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	return profileRemoveCmd
 }
 
-var profileRenameCmd = &cobra.Command{
-	Use:   "rename",
-	Short: "rename profile",
-	Long:  `Renames a given profile.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewProfileRenameCmd() *cobra.Command {
+	profileRenameCmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename profile",
+		Long:  `Renames a given profile.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		profileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		profileNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
+			profileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			profileNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
 
-		// Now do the real edit
-		profileHandle, err := Client.GetProfileHandle(profileName)
-		if err != nil {
-			return err
-		}
-		err = Client.RenameProfile(profileHandle, profileNewName)
-		if err != nil {
-			return err
-		}
-		newProfile, err := Client.GetProfile(profileNewName, false, false)
-		if err != nil {
-			return err
-		}
-		err = updateProfileFromFlags(cmd, newProfile)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateProfile(newProfile)
-	},
+			// Now do the real edit
+			profileHandle, err := Client.GetProfileHandle(profileName)
+			if err != nil {
+				return err
+			}
+			err = Client.RenameProfile(profileHandle, profileNewName)
+			if err != nil {
+				return err
+			}
+			newProfile, err := Client.GetProfile(profileNewName, false, false)
+			if err != nil {
+				return err
+			}
+			err = updateProfileFromFlags(cmd, newProfile)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateProfile(newProfile)
+		},
+	}
+	addCommonArgs(profileRenameCmd)
+	addStringFlags(profileRenameCmd, profileStringFlagMetadata)
+	addBoolFlags(profileRenameCmd, profileBoolFlagMetadata)
+	addIntFlags(profileRenameCmd, profileIntFlagMetadata)
+	addFloatFlags(profileRenameCmd, profileFloatFlagMetadata)
+	addStringSliceFlags(profileRenameCmd, distroStringSliceFlagMetadata)
+	addStringSliceFlags(profileRenameCmd, profileStringSliceFlagMetadata)
+	addMapFlags(profileRenameCmd, distroMapFlagMetadata)
+	addMapFlags(profileRenameCmd, profileMapFlagMetadata)
+	profileRenameCmd.Flags().String("newname", "", "the new profile name")
+	profileRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return profileRenameCmd
 }
 
 func reportProfiles(cmd *cobra.Command, profileNames []string) error {
@@ -778,120 +876,33 @@ func reportProfiles(cmd *cobra.Command, profileNames []string) error {
 	return nil
 }
 
-var profileReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "list all profiles in detail",
-	Long:  `Shows detailed information about all profiles.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		itemNames := make([]string, 0)
-		if name == "" {
-			itemNames, err = Client.ListProfileNames()
+func NewProfileReportCmd() *cobra.Command {
+	profileReportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "list all profiles in detail",
+		Long:  `Shows detailed information about all profiles.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		} else {
-			itemNames = append(itemNames, name)
-		}
-		return reportProfiles(cmd, itemNames)
-	},
-}
 
-func init() {
-	rootCmd.AddCommand(profileCmd)
-	profileCmd.AddCommand(profileAddCmd)
-	profileCmd.AddCommand(profileCopyCmd)
-	profileCmd.AddCommand(profileDumpVarsCmd)
-	profileCmd.AddCommand(profileEditCmd)
-	profileCmd.AddCommand(profileFindCmd)
-	profileCmd.AddCommand(profileGetAutoinstallCmd)
-	profileCmd.AddCommand(profileListCmd)
-	profileCmd.AddCommand(profileRemoveCmd)
-	profileCmd.AddCommand(profileRenameCmd)
-	profileCmd.AddCommand(profileReportCmd)
-
-	// local flags for profile add
-	addCommonArgs(profileAddCmd)
-	addStringFlags(profileAddCmd, profileStringFlagMetadata)
-	addBoolFlags(profileAddCmd, profileBoolFlagMetadata)
-	addIntFlags(profileAddCmd, profileIntFlagMetadata)
-	addFloatFlags(profileAddCmd, profileFloatFlagMetadata)
-	addStringSliceFlags(profileAddCmd, distroStringSliceFlagMetadata)
-	addStringSliceFlags(profileAddCmd, profileStringSliceFlagMetadata)
-	addMapFlags(profileAddCmd, distroMapFlagMetadata)
-	addMapFlags(profileAddCmd, profileMapFlagMetadata)
-	profileAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for profile copy
-	addCommonArgs(profileCopyCmd)
-	addStringFlags(profileCopyCmd, profileStringFlagMetadata)
-	addBoolFlags(profileCopyCmd, profileBoolFlagMetadata)
-	addIntFlags(profileCopyCmd, profileIntFlagMetadata)
-	addFloatFlags(profileCopyCmd, profileFloatFlagMetadata)
-	addStringSliceFlags(profileCopyCmd, distroStringSliceFlagMetadata)
-	addStringSliceFlags(profileCopyCmd, profileStringSliceFlagMetadata)
-	addMapFlags(profileCopyCmd, distroMapFlagMetadata)
-	addMapFlags(profileCopyCmd, profileMapFlagMetadata)
-	profileCopyCmd.Flags().String("newname", "", "the new profile name")
-	profileCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for profile dumpvars
-	profileDumpVarsCmd.Flags().String("name", "", "the profile name")
-
-	// local flags for profile edit
-	addCommonArgs(profileEditCmd)
-	addStringFlags(profileEditCmd, profileStringFlagMetadata)
-	addBoolFlags(profileEditCmd, profileBoolFlagMetadata)
-	addIntFlags(profileEditCmd, profileIntFlagMetadata)
-	addFloatFlags(profileEditCmd, profileFloatFlagMetadata)
-	addStringSliceFlags(profileEditCmd, distroStringSliceFlagMetadata)
-	addStringSliceFlags(profileEditCmd, profileStringSliceFlagMetadata)
-	addMapFlags(profileEditCmd, distroMapFlagMetadata)
-	addMapFlags(profileEditCmd, profileMapFlagMetadata)
-	profileEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for profile find
-	addCommonArgs(profileFindCmd)
-	addStringFlags(profileFindCmd, profileStringFlagMetadata)
-	addBoolFlags(profileFindCmd, profileBoolFlagMetadata)
-	addIntFlags(profileFindCmd, profileIntFlagMetadata)
-	addFloatFlags(profileFindCmd, profileFloatFlagMetadata)
-	addStringSliceFlags(profileFindCmd, distroStringSliceFlagMetadata)
-	addStringSliceFlags(profileFindCmd, profileStringSliceFlagMetadata)
-	addMapFlags(profileFindCmd, distroMapFlagMetadata)
-	addMapFlags(profileFindCmd, profileMapFlagMetadata)
-	addStringFlags(profileFindCmd, findStringFlagMetadata)
-	addIntFlags(profileFindCmd, findIntFlagMetadata)
-	addFloatFlags(profileFindCmd, findFloatFlagMetadata)
-
-	// local flags for profile get-autoinstall
-	profileGetAutoinstallCmd.Flags().String("name", "", "the profile name")
-
-	// local flags for profile remove
-	profileRemoveCmd.Flags().String("name", "", "the profile name")
-	profileRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
-
-	// local flags for profile rename
-	addCommonArgs(profileRenameCmd)
-	addStringFlags(profileRenameCmd, profileStringFlagMetadata)
-	addBoolFlags(profileRenameCmd, profileBoolFlagMetadata)
-	addIntFlags(profileRenameCmd, profileIntFlagMetadata)
-	addFloatFlags(profileRenameCmd, profileFloatFlagMetadata)
-	addStringSliceFlags(profileRenameCmd, distroStringSliceFlagMetadata)
-	addStringSliceFlags(profileRenameCmd, profileStringSliceFlagMetadata)
-	addMapFlags(profileRenameCmd, distroMapFlagMetadata)
-	addMapFlags(profileRenameCmd, profileMapFlagMetadata)
-	profileRenameCmd.Flags().String("newname", "", "the new profile name")
-	profileRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-
-	// local flags for profile report
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListProfileNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+			return reportProfiles(cmd, itemNames)
+		},
+	}
 	profileReportCmd.Flags().String("name", "", "the profile name")
+	return profileReportCmd
 }

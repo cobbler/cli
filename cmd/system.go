@@ -763,457 +763,66 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 	return err
 }
 
-// systemCmd represents the system command
-var systemCmd = &cobra.Command{
-	Use:   "system",
-	Short: "System management",
-	Long: `Let you manage systems.
+// NewSystemCmd builds a new command that represents the system action
+func NewSystemCmd() *cobra.Command {
+	systemCmd := &cobra.Command{
+		Use:   "system",
+		Short: "System management",
+		Long: `Let you manage systems.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-system for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
-}
-
-var systemAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add system",
-	Long:  `Adds a system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		newSystem := cobbler.NewSystem()
-
-		// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
-		newSystem.Name, err = cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Update system in-memory
-		err = updateSystemFromFlags(cmd, &newSystem)
-		if err != nil {
-			return err
-		}
-		// No create the system via XML-RPC
-		system, err := Client.CreateSystem(newSystem)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
-		return nil
-	},
-}
-
-var systemCopyCmd = &cobra.Command{
-	Use:   "copy",
-	Short: "copy system",
-	Long:  `Copies a system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		systemNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-
-		systemHandle, err := Client.GetSystemHandle(systemName)
-		if err != nil {
-			return err
-		}
-		err = Client.CopySystem(systemHandle, systemNewName)
-		if err != nil {
-			return err
-		}
-		newSystem, err := Client.GetSystem(systemNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update the system in-memory
-		err = updateSystemFromFlags(cmd, newSystem)
-		if err != nil {
-			return err
-		}
-		if newSystem.Meta.IsDirty {
-			newSystem, err = Client.GetSystem(
-				newSystem.Name,
-				newSystem.Meta.IsFlattened,
-				newSystem.Meta.IsResolved,
-			)
-			if err != nil {
-				return err
-			}
-		}
-		// Update the system via XML-RPC
-		return Client.UpdateSystem(newSystem)
-	},
-}
-
-var systemDumpVarsCmd = &cobra.Command{
-	Use:   "dumpvars",
-	Short: "dump system variables",
-	Long:  `Prints all system variables to stdout.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// Get CLI flags
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-
-		// Now retrieve data
-		blendedData, err := Client.GetBlendedData("", systemName)
-		if err != nil {
-			return err
-		}
-		// Print data
-		printDumpVars(cmd, blendedData)
-		return err
-	},
-}
-
-var systemEditCmd = &cobra.Command{
-	Use:   "edit",
-	Short: "edit system",
-	Long:  `Edits a system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// find profile through its name
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		updateSystem, err := Client.GetSystem(systemName, false, false)
-		if err != nil {
-			return err
-		}
-
-		// Update the system in-memory
-		err = updateSystemFromFlags(cmd, updateSystem)
-		if err != nil {
-			return err
-		}
-		if updateSystem.Meta.IsDirty {
-			updateSystem, err = Client.GetSystem(
-				updateSystem.Name,
-				updateSystem.Meta.IsFlattened,
-				updateSystem.Meta.IsResolved,
-			)
-			if err != nil {
-				return err
-			}
-		}
-		// Update the system via XML-RPC
-		return Client.UpdateSystem(updateSystem)
-	},
-}
-
-var systemFindCmd = &cobra.Command{
-	Use:   "find",
-	Short: "find system",
-	Long:  `Finds a given system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		return FindItemNames(cmd, args, "system")
-	},
-}
-
-var systemGetAutoinstallCmd = &cobra.Command{
-	Use:   "get-autoinstall",
-	Short: "dump autoinstall XML",
-	Long:  `Prints the autoinstall XML file of the given system to stdout.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		systemExists, err := Client.HasItem("system", systemName)
-		if err != nil {
-			return err
-		}
-		if !systemExists {
-			//goland:noinspection GoErrorStringFormat
-			return fmt.Errorf("System does not exist")
-		}
-		autoinstallRendered, err := Client.GenerateAutoinstall("", systemName)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
-		return nil
-	},
-}
-
-var systemListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list all systems",
-	Long:  `Lists all available systems.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		systemNames, err := Client.ListSystemNames()
-		if err != nil {
-			return err
-		}
-		listItems(cmd, "systems", systemNames)
-		return nil
-	},
-}
-
-var systemPowerOffCmd = &cobra.Command{
-	Use:   "poweroff",
-	Short: "power off system",
-	Long:  `Powers off the selected system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// Get flags
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-
-		// Perform action
-		systemHandle, err := Client.GetSystemHandle(systemName)
-		if err != nil {
-			return err
-		}
-		_, err = Client.PowerSystem(systemHandle, "off")
-		return err
-	},
-}
-
-var systemPowerOnCmd = &cobra.Command{
-	Use:   "poweron",
-	Short: "power on system",
-	Long:  `Powers on the selected system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// Get flags
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-
-		// Perform action
-		systemHandle, err := Client.GetSystemHandle(systemName)
-		if err != nil {
-			return err
-		}
-		_, err = Client.PowerSystem(systemHandle, "on")
-		return err
-	},
-}
-
-var systemPowerStatusCmd = &cobra.Command{
-	Use:   "powerstatus",
-	Short: "Power status of the system",
-	Long:  `Querys the power status of the selected system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// Get flags
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-
-		// Perform action
-		systemHandle, err := Client.GetSystemHandle(systemName)
-		if err != nil {
-			return err
-		}
-		_, err = Client.PowerSystem(systemHandle, "status")
-		return err
-	},
-}
-
-var systemRebootCmd = &cobra.Command{
-	Use:   "reboot",
-	Short: "reboot system",
-	Long:  `Reboots the selected system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// Get flags
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-
-		// Perform action
-		systemHandle, err := Client.GetSystemHandle(systemName)
-		if err != nil {
-			return err
-		}
-		_, err = Client.PowerSystem(systemHandle, "reboot")
-		return err
-	},
-}
-
-var systemRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "remove system",
-	Long:  `Removes a given system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		return RemoveItemRecursive(cmd, args, "system")
-	},
-}
-
-var systemRenameCmd = &cobra.Command{
-	Use:   "rename",
-	Short: "rename system",
-	Long:  `Renames a given system.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		// Get flags
-		systemName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		systemNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-
-		// Perform action
-		systemHandle, err := Client.GetSystemHandle(systemName)
-		if err != nil {
-			return err
-		}
-		err = Client.RenameSystem(systemHandle, systemNewName)
-		if err != nil {
-			return err
-		}
-		newSystem, err := Client.GetSystem(systemNewName, false, false)
-		if err != nil {
-			return err
-		}
-		err = updateSystemFromFlags(cmd, newSystem)
-		if err != nil {
-			return err
-		}
-		if newSystem.Meta.IsDirty {
-			newSystem, err = Client.GetSystem(
-				newSystem.Name,
-				newSystem.Meta.IsFlattened,
-				newSystem.Meta.IsResolved,
-			)
-			if err != nil {
-				return err
-			}
-		}
-		return Client.UpdateSystem(newSystem)
-	},
-}
-
-func reportSystems(cmd *cobra.Command, systemNames []string) error {
-	for _, itemName := range systemNames {
-		system, err := Client.GetSystem(itemName, false, false)
-		if err != nil {
-			return err
-		}
-		printStructured(cmd, system)
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
 	}
-	return nil
+	systemCmd.AddCommand(NewSystemAddCmd())
+	systemCmd.AddCommand(NewSystemCopyCmd())
+	systemCmd.AddCommand(NewSystemDumpVarsCmd())
+	systemCmd.AddCommand(NewSystemEditCmd())
+	systemCmd.AddCommand(NewSystemFindCmd())
+	systemCmd.AddCommand(NewSystemGetAutoinstallCmd())
+	systemCmd.AddCommand(NewSystemListCmd())
+	systemCmd.AddCommand(NewSystemPowerOffCmd())
+	systemCmd.AddCommand(NewSystemPowerOnCmd())
+	systemCmd.AddCommand(NewSystemPowerStatusCmd())
+	systemCmd.AddCommand(NewSystemRebootCmd())
+	systemCmd.AddCommand(NewSystemRemoveCmd())
+	systemCmd.AddCommand(NewSystemRenameCmd())
+	systemCmd.AddCommand(NewSystemReportCmd())
+	return systemCmd
 }
 
-var systemReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "list all systems in detail",
-	Long:  `Shows detailed information about all systems.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		itemNames := make([]string, 0)
-		if name == "" {
-			itemNames, err = Client.ListSystemNames()
+func NewSystemAddCmd() *cobra.Command {
+	systemAddCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add system",
+		Long:  `Adds a system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		} else {
-			itemNames = append(itemNames, name)
-		}
-		return reportSystems(cmd, itemNames)
-	},
-}
 
-func init() {
-	rootCmd.AddCommand(systemCmd)
-	systemCmd.AddCommand(systemAddCmd)
-	systemCmd.AddCommand(systemCopyCmd)
-	systemCmd.AddCommand(systemDumpVarsCmd)
-	systemCmd.AddCommand(systemEditCmd)
-	systemCmd.AddCommand(systemFindCmd)
-	systemCmd.AddCommand(systemGetAutoinstallCmd)
-	systemCmd.AddCommand(systemListCmd)
-	systemCmd.AddCommand(systemPowerOffCmd)
-	systemCmd.AddCommand(systemPowerOnCmd)
-	systemCmd.AddCommand(systemPowerStatusCmd)
-	systemCmd.AddCommand(systemRebootCmd)
-	systemCmd.AddCommand(systemRemoveCmd)
-	systemCmd.AddCommand(systemRenameCmd)
-	systemCmd.AddCommand(systemReportCmd)
+			newSystem := cobbler.NewSystem()
 
-	// local flags for system add
+			// internal fields (ctime, mtime, depth, uid, repos-enabled, ipv6-autoconfiguration) cannot be modified
+			newSystem.Name, err = cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Update system in-memory
+			err = updateSystemFromFlags(cmd, &newSystem)
+			if err != nil {
+				return err
+			}
+			// Now create the system via XML-RPC
+			system, err := Client.CreateSystem(newSystem)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
+			return nil
+		},
+	}
 	addCommonArgs(systemAddCmd)
 	addStringFlags(systemAddCmd, systemStringFlagMetadata)
 	addStringFlags(systemAddCmd, systemPowerStringFlagMetadata)
@@ -1229,8 +838,60 @@ func init() {
 	// Other
 	systemAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 	systemAddCmd.Flags().String("interface", "", "the interface to operate on")
+	return systemAddCmd
+}
 
-	// local flags for system copy
+func NewSystemCopyCmd() *cobra.Command {
+	systemCopyCmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy system",
+		Long:  `Copies a system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			systemNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			systemHandle, err := Client.GetSystemHandle(systemName)
+			if err != nil {
+				return err
+			}
+			err = Client.CopySystem(systemHandle, systemNewName)
+			if err != nil {
+				return err
+			}
+			newSystem, err := Client.GetSystem(systemNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update the system in-memory
+			err = updateSystemFromFlags(cmd, newSystem)
+			if err != nil {
+				return err
+			}
+			if newSystem.Meta.IsDirty {
+				newSystem, err = Client.GetSystem(
+					newSystem.Name,
+					newSystem.Meta.IsFlattened,
+					newSystem.Meta.IsResolved,
+				)
+				if err != nil {
+					return err
+				}
+			}
+			// Update the system via XML-RPC
+			return Client.UpdateSystem(newSystem)
+		},
+	}
 	addCommonArgs(systemCopyCmd)
 	addStringFlags(systemCopyCmd, systemStringFlagMetadata)
 	addStringFlags(systemCopyCmd, systemPowerStringFlagMetadata)
@@ -1248,11 +909,80 @@ func init() {
 	systemCopyCmd.Flags().String("interface", "", "the interface to operate on")
 	systemCopyCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
 	systemCopyCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
+	return systemCopyCmd
+}
 
-	// local flags for system dumpvars
+func NewSystemDumpVarsCmd() *cobra.Command {
+	systemDumpVarsCmd := &cobra.Command{
+		Use:   "dumpvars",
+		Short: "dump system variables",
+		Long:  `Prints all system variables to stdout.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get CLI flags
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+
+			// Now retrieve data
+			blendedData, err := Client.GetBlendedData("", systemName)
+			if err != nil {
+				return err
+			}
+			// Print data
+			printDumpVars(cmd, blendedData)
+			return err
+		},
+	}
 	systemDumpVarsCmd.Flags().String("name", "", "the system name")
+	return systemDumpVarsCmd
+}
 
-	// local flags for system edit
+func NewSystemEditCmd() *cobra.Command {
+	systemEditCmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit system",
+		Long:  `Edits a system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// find profile through its name
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			updateSystem, err := Client.GetSystem(systemName, false, false)
+			if err != nil {
+				return err
+			}
+
+			// Update the system in-memory
+			err = updateSystemFromFlags(cmd, updateSystem)
+			if err != nil {
+				return err
+			}
+			if updateSystem.Meta.IsDirty {
+				updateSystem, err = Client.GetSystem(
+					updateSystem.Name,
+					updateSystem.Meta.IsFlattened,
+					updateSystem.Meta.IsResolved,
+				)
+				if err != nil {
+					return err
+				}
+			}
+			// Update the system via XML-RPC
+			return Client.UpdateSystem(updateSystem)
+		},
+	}
 	addCommonArgs(systemEditCmd)
 	addStringFlags(systemEditCmd, systemStringFlagMetadata)
 	addStringFlags(systemEditCmd, systemPowerStringFlagMetadata)
@@ -1270,8 +1000,23 @@ func init() {
 	systemEditCmd.Flags().String("interface", "", "the interface to operate on")
 	systemEditCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
 	systemEditCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
+	return systemEditCmd
+}
 
-	// local flags for system find
+func NewSystemFindCmd() *cobra.Command {
+	systemFindCmd := &cobra.Command{
+		Use:   "find",
+		Short: "find system",
+		Long:  `Finds a given system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			return FindItemNames(cmd, args, "system")
+		},
+	}
 	addCommonArgs(systemFindCmd)
 	addStringFlags(systemFindCmd, systemStringFlagMetadata)
 	addStringFlags(systemFindCmd, systemPowerStringFlagMetadata)
@@ -1289,27 +1034,256 @@ func init() {
 	addIntFlags(systemFindCmd, findIntFlagMetadata)
 	addFloatFlags(systemFindCmd, findFloatFlagMetadata)
 	systemFindCmd.Flags().String("interface", "", "the interface to operate on")
+	return systemFindCmd
+}
 
-	// local flags for system get-autoinstall
+func NewSystemGetAutoinstallCmd() *cobra.Command {
+	systemGetAutoinstallCmd := &cobra.Command{
+		Use:   "get-autoinstall",
+		Short: "dump autoinstall XML",
+		Long:  `Prints the autoinstall XML file of the given system to stdout.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			systemExists, err := Client.HasItem("system", systemName)
+			if err != nil {
+				return err
+			}
+			if !systemExists {
+				//goland:noinspection GoErrorStringFormat
+				return fmt.Errorf("System does not exist")
+			}
+			autoinstallRendered, err := Client.GenerateAutoinstall("", systemName)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
+			return nil
+		},
+	}
 	systemGetAutoinstallCmd.Flags().String("name", "", "the system name")
+	return systemGetAutoinstallCmd
+}
 
-	// local flags for system poweroff
+func NewSystemListCmd() *cobra.Command {
+	systemListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list all systems",
+		Long:  `Lists all available systems.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			systemNames, err := Client.ListSystemNames()
+			if err != nil {
+				return err
+			}
+			listItems(cmd, "systems", systemNames)
+			return nil
+		},
+	}
+	return systemListCmd
+}
+
+func NewSystemPowerOffCmd() *cobra.Command {
+	systemPowerOffCmd := &cobra.Command{
+		Use:   "poweroff",
+		Short: "power off system",
+		Long:  `Powers off the selected system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get flags
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+
+			// Perform action
+			systemHandle, err := Client.GetSystemHandle(systemName)
+			if err != nil {
+				return err
+			}
+			_, err = Client.PowerSystem(systemHandle, "off")
+			return err
+		},
+	}
 	systemPowerOffCmd.Flags().String("name", "", "the system name")
+	return systemPowerOffCmd
+}
 
-	// local flags for system poweron
+func NewSystemPowerOnCmd() *cobra.Command {
+	systemPowerOnCmd := &cobra.Command{
+		Use:   "poweron",
+		Short: "power on system",
+		Long:  `Powers on the selected system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get flags
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+
+			// Perform action
+			systemHandle, err := Client.GetSystemHandle(systemName)
+			if err != nil {
+				return err
+			}
+			_, err = Client.PowerSystem(systemHandle, "on")
+			return err
+		},
+	}
 	systemPowerOnCmd.Flags().String("name", "", "the system name")
+	return systemPowerOnCmd
+}
 
-	// local flags for system powerstatus
+func NewSystemPowerStatusCmd() *cobra.Command {
+	systemPowerStatusCmd := &cobra.Command{
+		Use:   "powerstatus",
+		Short: "Power status of the system",
+		Long:  `Querys the power status of the selected system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get flags
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+
+			// Perform action
+			systemHandle, err := Client.GetSystemHandle(systemName)
+			if err != nil {
+				return err
+			}
+			_, err = Client.PowerSystem(systemHandle, "status")
+			return err
+		},
+	}
 	systemPowerStatusCmd.Flags().String("name", "", "the system name")
+	return systemPowerStatusCmd
+}
 
-	// local flags for system reboot
+func NewSystemRebootCmd() *cobra.Command {
+	systemRebootCmd := &cobra.Command{
+		Use:   "reboot",
+		Short: "reboot system",
+		Long:  `Reboots the selected system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get flags
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+
+			// Perform action
+			systemHandle, err := Client.GetSystemHandle(systemName)
+			if err != nil {
+				return err
+			}
+			_, err = Client.PowerSystem(systemHandle, "reboot")
+			return err
+		},
+	}
 	systemRebootCmd.Flags().String("name", "", "the system name")
+	return systemRebootCmd
+}
 
-	// local flags for system remove
+func NewSystemRemoveCmd() *cobra.Command {
+	systemRemoveCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove system",
+		Long:  `Removes a given system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			return RemoveItemRecursive(cmd, args, "system")
+		},
+	}
 	systemRemoveCmd.Flags().String("name", "", "the system name")
 	systemRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	return systemRemoveCmd
+}
 
-	// local flags for system rename
+func NewSystemRenameCmd() *cobra.Command {
+	systemRenameCmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename system",
+		Long:  `Renames a given system.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get flags
+			systemName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			systemNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			// Perform action
+			systemHandle, err := Client.GetSystemHandle(systemName)
+			if err != nil {
+				return err
+			}
+			err = Client.RenameSystem(systemHandle, systemNewName)
+			if err != nil {
+				return err
+			}
+			newSystem, err := Client.GetSystem(systemNewName, false, false)
+			if err != nil {
+				return err
+			}
+			err = updateSystemFromFlags(cmd, newSystem)
+			if err != nil {
+				return err
+			}
+			if newSystem.Meta.IsDirty {
+				newSystem, err = Client.GetSystem(
+					newSystem.Name,
+					newSystem.Meta.IsFlattened,
+					newSystem.Meta.IsResolved,
+				)
+				if err != nil {
+					return err
+				}
+			}
+			return Client.UpdateSystem(newSystem)
+		},
+	}
 	addCommonArgs(systemRenameCmd)
 	addStringFlags(systemRenameCmd, systemStringFlagMetadata)
 	addStringFlags(systemRenameCmd, systemPowerStringFlagMetadata)
@@ -1328,7 +1302,48 @@ func init() {
 	systemRenameCmd.Flags().String("interface", "", "the interface to operate on")
 	systemRenameCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
 	systemRenameCmd.Flags().String("rename-interface", "", "rename the given interface (should be used with --interface)")
+	return systemRenameCmd
+}
 
-	// local flags for system report
+func reportSystems(cmd *cobra.Command, systemNames []string) error {
+	for _, itemName := range systemNames {
+		system, err := Client.GetSystem(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(cmd, system)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
+	}
+	return nil
+}
+
+func NewSystemReportCmd() *cobra.Command {
+	systemReportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "list all systems in detail",
+		Long:  `Shows detailed information about all systems.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListSystemNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+			return reportSystems(cmd, itemNames)
+		},
+	}
 	systemReportCmd.Flags().String("name", "", "the system name")
+	return systemReportCmd
 }

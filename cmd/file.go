@@ -107,211 +107,265 @@ func updateFileFromFlags(cmd *cobra.Command, file *cobbler.File) error {
 	return err
 }
 
-// fileCmd represents the file command
-var fileCmd = &cobra.Command{
-	Use:   "file",
-	Short: "File management",
-	Long: `Let you manage files.
+// NewFileCmd builds a new command that represents the file action
+func NewFileCmd() *cobra.Command {
+	fileCmd := &cobra.Command{
+		Use:   "file",
+		Short: "File management",
+		Long: `Let you manage files.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-file for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
+	}
+	fileCmd.AddCommand(NewFileAddCmd())
+	fileCmd.AddCommand(NewFileCopyCmd())
+	fileCmd.AddCommand(NewFileEditCmd())
+	fileCmd.AddCommand(NewFileFindCmd())
+	fileCmd.AddCommand(NewFileListCmd())
+	fileCmd.AddCommand(NewFileRemoveCmd())
+	fileCmd.AddCommand(NewFileRenameCmd())
+	fileCmd.AddCommand(NewFileReportCmd())
+	return fileCmd
 }
 
-var fileAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add file",
-	Long:  `Adds a file.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileAddCmd() *cobra.Command {
+	fileAddCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add file",
+		Long:  `Adds a file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		newFile := cobbler.NewFile()
+			newFile := cobbler.NewFile()
 
-		// Get special name flag
-		newFile.Name, err = cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Update with the rest of the flags
-		err = updateFileFromFlags(cmd, &newFile)
-		if err != nil {
-			return err
-		}
-		// Now create the file via XML-RPC
-		file, err := Client.CreateFile(newFile)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "File %s created\n", file.Name)
-		return nil
-	},
+			// Get special name flag
+			newFile.Name, err = cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Update with the rest of the flags
+			err = updateFileFromFlags(cmd, &newFile)
+			if err != nil {
+				return err
+			}
+			// Now create the file via XML-RPC
+			file, err := Client.CreateFile(newFile)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "File %s created\n", file.Name)
+			return nil
+		},
+	}
+	addCommonArgs(fileAddCmd)
+	addStringFlags(fileAddCmd, fileStringFlagMetadata)
+	addBoolFlags(fileAddCmd, fileBoolFlagMetadata)
+	return fileAddCmd
 }
 
-var fileCopyCmd = &cobra.Command{
-	Use:   "copy",
-	Short: "copy file",
-	Long:  `Copies a file.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileCopyCmd() *cobra.Command {
+	fileCopyCmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy file",
+		Long:  `Copies a file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		// Get special name and newname flags
-		fileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		fileNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
+			// Get special name and newname flags
+			fileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			fileNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
 
-		// Now copy the file
-		fileHandle, err := Client.GetFileHandle(fileName)
-		if err != nil {
-			return err
-		}
-		err = Client.CopyFile(fileHandle, fileNewName)
-		if err != nil {
-			return err
-		}
-		newFile, err := Client.GetFile(fileNewName, false, false)
-		if err != nil {
-			return err
-		}
-		err = updateFileFromFlags(cmd, newFile)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateFile(newFile)
-	},
+			// Now copy the file
+			fileHandle, err := Client.GetFileHandle(fileName)
+			if err != nil {
+				return err
+			}
+			err = Client.CopyFile(fileHandle, fileNewName)
+			if err != nil {
+				return err
+			}
+			newFile, err := Client.GetFile(fileNewName, false, false)
+			if err != nil {
+				return err
+			}
+			err = updateFileFromFlags(cmd, newFile)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateFile(newFile)
+		},
+	}
+	addCommonArgs(fileCopyCmd)
+	addStringFlags(fileCopyCmd, fileStringFlagMetadata)
+	addBoolFlags(fileCopyCmd, fileBoolFlagMetadata)
+	fileCopyCmd.Flags().String("newname", "", "the new file name")
+	return fileCopyCmd
 }
 
-var fileEditCmd = &cobra.Command{
-	Use:   "edit",
-	Short: "edit file",
-	Long:  `Edits a file.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileEditCmd() *cobra.Command {
+	fileEditCmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit file",
+		Long:  `Edits a file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		// Get the file name
-		fileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
+			// Get the file name
+			fileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
 
-		// Now get the file from the API
-		newFile, err := Client.GetFile(fileName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update the file in-memory
-		err = updateFileFromFlags(cmd, newFile)
-		if err != nil {
-			return err
-		}
-		// Now update the file via XML-RPC
-		return Client.UpdateFile(newFile)
-	},
+			// Now get the file from the API
+			newFile, err := Client.GetFile(fileName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update the file in-memory
+			err = updateFileFromFlags(cmd, newFile)
+			if err != nil {
+				return err
+			}
+			// Now update the file via XML-RPC
+			return Client.UpdateFile(newFile)
+		},
+	}
+	addCommonArgs(fileEditCmd)
+	addStringFlags(fileEditCmd, fileStringFlagMetadata)
+	addBoolFlags(fileEditCmd, fileBoolFlagMetadata)
+	return fileEditCmd
 }
 
-var fileFindCmd = &cobra.Command{
-	Use:   "find",
-	Short: "find file",
-	Long:  `Finds a given file.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileFindCmd() *cobra.Command {
+	fileFindCmd := &cobra.Command{
+		Use:   "find",
+		Short: "find file",
+		Long:  `Finds a given file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		return FindItemNames(cmd, args, "file")
-	},
+			return FindItemNames(cmd, args, "file")
+		},
+	}
+	addCommonArgs(fileFindCmd)
+	addStringFlags(fileFindCmd, fileStringFlagMetadata)
+	addBoolFlags(fileFindCmd, fileBoolFlagMetadata)
+	addStringFlags(fileFindCmd, findStringFlagMetadata)
+	addIntFlags(fileFindCmd, findIntFlagMetadata)
+	addFloatFlags(fileFindCmd, findFloatFlagMetadata)
+	return fileFindCmd
 }
 
-var fileListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list all files",
-	Long:  `Lists all available files.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileListCmd() *cobra.Command {
+	fileListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list all files",
+		Long:  `Lists all available files.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		fileNames, err := Client.ListFileNames()
-		if err != nil {
-			return err
-		}
-		listItems(cmd, "files", fileNames)
-		return nil
-	},
+			fileNames, err := Client.ListFileNames()
+			if err != nil {
+				return err
+			}
+			listItems(cmd, "files", fileNames)
+			return nil
+		},
+	}
+	return fileListCmd
 }
 
-var fileRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "remove file",
-	Long:  `Removes a given file.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileRemoveCmd() *cobra.Command {
+	fileRemoveCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove file",
+		Long:  `Removes a given file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		return RemoveItemRecursive(cmd, args, "file")
-	},
+			return RemoveItemRecursive(cmd, args, "file")
+		},
+	}
+	fileRemoveCmd.Flags().String("name", "", "the file name")
+	fileRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	return fileRemoveCmd
 }
 
-var fileRenameCmd = &cobra.Command{
-	Use:   "rename",
-	Short: "rename file",
-	Long:  `Renames a given file.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
+func NewFileRenameCmd() *cobra.Command {
+	fileRenameCmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename file",
+		Long:  `Renames a given file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-		// Get the special name and newname flags
-		fileName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		fileNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
+			// Get the special name and newname flags
+			fileName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			fileNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
 
-		// Get the file handle
-		fileHandle, err := Client.GetFileHandle(fileName)
-		if err != nil {
-			return err
-		}
-		// Rename the file (server-side)
-		err = Client.RenameFile(fileHandle, fileNewName)
-		if err != nil {
-			return err
-		}
-		// Get the renamed file from the API
-		newFile, err := Client.GetFile(fileNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update the file in-memory
-		err = updateFileFromFlags(cmd, newFile)
-		if err != nil {
-			return err
-		}
-		// Update the file via XML-RPC
-		return Client.UpdateFile(newFile)
-	},
+			// Get the file handle
+			fileHandle, err := Client.GetFileHandle(fileName)
+			if err != nil {
+				return err
+			}
+			// Rename the file (server-side)
+			err = Client.RenameFile(fileHandle, fileNewName)
+			if err != nil {
+				return err
+			}
+			// Get the renamed file from the API
+			newFile, err := Client.GetFile(fileNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update the file in-memory
+			err = updateFileFromFlags(cmd, newFile)
+			if err != nil {
+				return err
+			}
+			// Update the file via XML-RPC
+			return Client.UpdateFile(newFile)
+		},
+	}
+	addCommonArgs(fileRenameCmd)
+	addStringFlags(fileRenameCmd, fileStringFlagMetadata)
+	addBoolFlags(fileRenameCmd, fileBoolFlagMetadata)
+	fileRenameCmd.Flags().String("newname", "", "the new file name")
+	return fileRenameCmd
 }
 
 func reportFiles(cmd *cobra.Command, fileNames []string) error {
@@ -326,78 +380,33 @@ func reportFiles(cmd *cobra.Command, fileNames []string) error {
 	return nil
 }
 
-var fileReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "list all files in detail",
-	Long:  `Shows detailed information about all files.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := generateCobblerClient()
-		if err != nil {
-			return err
-		}
-
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		itemNames := make([]string, 0)
-		if name == "" {
-			itemNames, err = Client.ListFileNames()
+func NewFileReportCmd() *cobra.Command {
+	fileReportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "list all files in detail",
+		Long:  `Shows detailed information about all files.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		} else {
-			itemNames = append(itemNames, name)
-		}
-		return reportFiles(cmd, itemNames)
-	},
-}
 
-func init() {
-	rootCmd.AddCommand(fileCmd)
-	fileCmd.AddCommand(fileAddCmd)
-	fileCmd.AddCommand(fileCopyCmd)
-	fileCmd.AddCommand(fileEditCmd)
-	fileCmd.AddCommand(fileFindCmd)
-	fileCmd.AddCommand(fileListCmd)
-	fileCmd.AddCommand(fileRemoveCmd)
-	fileCmd.AddCommand(fileRenameCmd)
-	fileCmd.AddCommand(fileReportCmd)
-
-	// local flags for file add
-	addCommonArgs(fileAddCmd)
-	addStringFlags(fileAddCmd, fileStringFlagMetadata)
-	addBoolFlags(fileAddCmd, fileBoolFlagMetadata)
-
-	// local flags for file copy
-	addCommonArgs(fileCopyCmd)
-	addStringFlags(fileCopyCmd, fileStringFlagMetadata)
-	addBoolFlags(fileCopyCmd, fileBoolFlagMetadata)
-	fileCopyCmd.Flags().String("newname", "", "the new file name")
-
-	// local flags for file edit
-	addCommonArgs(fileEditCmd)
-	addStringFlags(fileEditCmd, fileStringFlagMetadata)
-	addBoolFlags(fileEditCmd, fileBoolFlagMetadata)
-
-	// local flags for file find
-	addCommonArgs(fileFindCmd)
-	addStringFlags(fileFindCmd, fileStringFlagMetadata)
-	addBoolFlags(fileFindCmd, fileBoolFlagMetadata)
-	addStringFlags(fileFindCmd, findStringFlagMetadata)
-	addIntFlags(fileFindCmd, findIntFlagMetadata)
-	addFloatFlags(fileFindCmd, findFloatFlagMetadata)
-
-	// local flags for file remove
-	fileRemoveCmd.Flags().String("name", "", "the file name")
-	fileRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
-
-	// local flags for file rename
-	addCommonArgs(fileRenameCmd)
-	addStringFlags(fileRenameCmd, fileStringFlagMetadata)
-	addBoolFlags(fileRenameCmd, fileBoolFlagMetadata)
-	fileRenameCmd.Flags().String("newname", "", "the new file name")
-
-	// local flags for file report
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListFileNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+			return reportFiles(cmd, itemNames)
+		},
+	}
 	fileReportCmd.Flags().String("name", "", "the file name")
+	return fileReportCmd
 }
