@@ -65,7 +65,7 @@ See https://cobbler.readthedocs.io/en/latest/quickstart-guide.html#importing-you
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Event ID: %s\n", eventId)
+		fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
 		return nil
 	},
 }

@@ -9,7 +9,6 @@ import (
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
 )
 
 func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
@@ -800,7 +799,7 @@ var systemAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("System %s created\n", system.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
 		return nil
 	},
 }
@@ -871,7 +870,7 @@ var systemDumpVarsCmd = &cobra.Command{
 			return err
 		}
 		// Print data
-		printDumpVars(blendedData)
+		printDumpVars(cmd, blendedData)
 		return err
 	},
 }
@@ -898,7 +897,6 @@ var systemEditCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println(updateSystem.Interfaces)
 		if updateSystem.Meta.IsDirty {
 			updateSystem, err = Client.GetSystem(
 				updateSystem.Name,
@@ -909,7 +907,6 @@ var systemEditCmd = &cobra.Command{
 				return err
 			}
 		}
-		fmt.Println(updateSystem.Interfaces)
 		// Update the system via XML-RPC
 		return Client.UpdateSystem(updateSystem)
 	},
@@ -940,14 +937,14 @@ var systemGetAutoinstallCmd = &cobra.Command{
 			return err
 		}
 		if !systemExists {
-			fmt.Println("System does not exist!")
-			os.Exit(1)
+			//goland:noinspection GoErrorStringFormat
+			return fmt.Errorf("System does not exist")
 		}
 		autoinstallRendered, err := Client.GenerateAutoinstall("", systemName)
 		if err != nil {
 			return err
 		}
-		fmt.Println(autoinstallRendered)
+		fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
 		return nil
 	},
 }
@@ -962,7 +959,7 @@ var systemListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		listItems("systems", systemNames)
+		listItems(cmd, "systems", systemNames)
 		return nil
 	},
 }
@@ -1117,14 +1114,14 @@ var systemRenameCmd = &cobra.Command{
 	},
 }
 
-func reportSystems(systemNames []string) error {
+func reportSystems(cmd *cobra.Command, systemNames []string) error {
 	for _, itemName := range systemNames {
 		system, err := Client.GetSystem(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(system)
-		fmt.Println("")
+		printStructured(cmd, system)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -1148,7 +1145,7 @@ var systemReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportSystems(itemNames)
+		return reportSystems(cmd, itemNames)
 	},
 }
 

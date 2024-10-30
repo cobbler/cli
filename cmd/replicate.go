@@ -98,7 +98,7 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 		if err != nil {
 			return err
 		}
-		fmt.Printf("EventID: %s\n", eventId)
+		fmt.Fprintf(cmd.OutOrStdout(), "EventID: %s\n", eventId)
 		return nil
 	},
 }

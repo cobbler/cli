@@ -32,7 +32,7 @@ var settingEditCmd = &cobra.Command{
 			return err
 		}
 		if !settings.AllowDynamicSettings {
-			fmt.Println("Dynamic settings are turned off server-side!")
+			fmt.Fprintln(cmd.OutOrStdout(), "Dynamic settings are turned off server-side!")
 			os.Exit(1)
 		}
 
@@ -49,9 +49,9 @@ var settingEditCmd = &cobra.Command{
 			return err
 		}
 		if result == 0 {
-			fmt.Println("Successfully updated!")
+			fmt.Fprintln(cmd.OutOrStdout(), "Successfully updated!")
 		} else {
-			fmt.Println("Updating settings failed!")
+			fmt.Fprintln(cmd.OutOrStdout(), "Updating settings failed!")
 		}
 		return nil
 	},
@@ -68,7 +68,7 @@ var settingReportCmd = &cobra.Command{
 			return err
 		}
 
-		printStructured(settings)
+		printStructured(cmd, settings)
 		return nil
 	},
 }

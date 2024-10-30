@@ -32,7 +32,7 @@ var eventStatusCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println(event.State)
+		fmt.Fprintln(cmd.OutOrStdout(), event.State)
 		return nil
 	},
 }
@@ -66,13 +66,13 @@ var eventListCmd = &cobra.Command{
 				stateWidth = len(event.State)
 			}
 		}
-		fmt.Printf("%*s | %*s | %*s | %*s | %s \n", idWidth, "ID", nameWidth, "Name", stateWidth, "Task State", stateTimeWidth, "Time (last transitioned)", "Read by Who")
+		fmt.Fprintf(cmd.OutOrStdout(), "%*s | %*s | %*s | %*s | %s \n", idWidth, "ID", nameWidth, "Name", stateWidth, "Task State", stateTimeWidth, "Time (last transitioned)", "Read by Who")
 		for _, event := range events {
 			stateTimeStruct, err := covertFloatToUtcTime(event.StateTime)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%*s | %*s | %*s | %*s | %s \n", idWidth, event.ID, nameWidth, event.Name, stateWidth, event.State, stateTimeWidth, stateTimeStruct.Format(time.DateTime), event.ReadByWho)
+			fmt.Fprintf(cmd.OutOrStdout(), "%*s | %*s | %*s | %*s | %s \n", idWidth, event.ID, nameWidth, event.Name, stateWidth, event.State, stateTimeWidth, stateTimeStruct.Format(time.DateTime), event.ReadByWho)
 		}
 		return nil
 	},
@@ -92,7 +92,7 @@ var eventLogCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println(eventLog)
+		fmt.Fprintln(cmd.OutOrStdout(), eventLog)
 		return nil
 	},
 }

@@ -9,7 +9,6 @@ import (
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
 )
 
 func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error {
@@ -539,7 +538,7 @@ var profileAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Profile %s created\n", profile.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Profile %s created\n", profile.Name)
 		return nil
 	},
 }
@@ -598,7 +597,7 @@ var profileDumpVarsCmd = &cobra.Command{
 			return err
 		}
 		// Print data
-		printDumpVars(blendedData)
+		printDumpVars(cmd, blendedData)
 		return err
 	},
 }
@@ -654,14 +653,14 @@ var profileGetAutoinstallCmd = &cobra.Command{
 			return err
 		}
 		if !profileExists {
-			fmt.Println("Profile does not exist!")
-			os.Exit(1)
+			return fmt.Errorf("Profile does not exist!")
+
 		}
 		autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "")
 		if err != nil {
 			return err
 		}
-		fmt.Println(autoinstallRendered)
+		fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
 		return nil
 	},
 }
@@ -676,7 +675,7 @@ var profileListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		listItems("profiles", profileNames)
+		listItems(cmd, "profiles", profileNames)
 		return nil
 	},
 }
@@ -736,14 +735,14 @@ var profileRenameCmd = &cobra.Command{
 	},
 }
 
-func reportProfiles(profileNames []string) error {
+func reportProfiles(cmd *cobra.Command, profileNames []string) error {
 	for _, itemName := range profileNames {
 		profile, err := Client.GetProfile(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(profile)
-		fmt.Println("")
+		printStructured(cmd, profile)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -767,7 +766,7 @@ var profileReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportProfiles(itemNames)
+		return reportProfiles(cmd, itemNames)
 	},
 }
 

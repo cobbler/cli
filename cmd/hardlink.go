@@ -20,7 +20,7 @@ var hardlinkCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Event ID: %s\n", eventId)
+		fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
 		return nil
 	},
 }

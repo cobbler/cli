@@ -205,7 +205,7 @@ var repoAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Repo %s created\n", repo.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Repo %s created\n", repo.Name)
 		return nil
 	},
 }
@@ -303,7 +303,7 @@ var repoListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		listItems("repos", repoNames)
+		listItems(cmd, "repos", repoNames)
 		return nil
 	},
 }
@@ -359,14 +359,14 @@ var repoRenameCmd = &cobra.Command{
 	},
 }
 
-func reportRepos(repoNames []string) error {
+func reportRepos(cmd *cobra.Command, repoNames []string) error {
 	for _, itemName := range repoNames {
 		repo, err := Client.GetRepo(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(repo)
-		fmt.Println("")
+		printStructured(cmd, repo)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -390,7 +390,7 @@ var repoReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportRepos(itemNames)
+		return reportRepos(cmd, itemNames)
 	},
 }
 

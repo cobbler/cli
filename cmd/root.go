@@ -101,7 +101,7 @@ func generateCobblerClient() {
 	}
 }
 
-func printStructured(dataStruct interface{}) {
+func printStructured(cmd *cobra.Command, dataStruct interface{}) {
 	s := reflect.ValueOf(dataStruct).Elem()
 	typeOfT := s.Type()
 
@@ -111,12 +111,12 @@ func printStructured(dataStruct interface{}) {
 		fieldName := typeOfT.Field(i).Name
 		fieldStructName := typeOfT.Field(i).Type.String()
 		if strings.HasPrefix(fieldStructName, "cobblerclient.Value") {
-			printValueStructured(mapstructureTag, f)
+			printValueStructured(cmd, mapstructureTag, f)
 			continue
 		}
 		if fieldName == "Item" {
 			baseItem := f.Interface().(cobbler.Item)
-			printStructured(&baseItem)
+			printStructured(cmd, &baseItem)
 			continue
 		}
 		if fieldName == "Interfaces" {
@@ -129,80 +129,80 @@ func printStructured(dataStruct interface{}) {
 		if fieldName == "Meta" {
 			continue
 		}
-		printField(f.Kind(), mapstructureTag, f.Interface())
+		printField(cmd, f.Kind(), mapstructureTag, f.Interface())
 	}
 
 	// Print interfaces at the end of the output
 	networkInterfacesField := s.FieldByName("Interfaces")
 	if networkInterfacesField != (reflect.Value{}) {
 		networkInterfaces := networkInterfacesField.Interface().(cobbler.Interfaces)
-		printNetworkInterface(networkInterfaces)
+		printNetworkInterface(cmd, networkInterfaces)
 	}
 }
 
-func printValueStructured(name string, value reflect.Value) {
+func printValueStructured(cmd *cobra.Command, name string, value reflect.Value) {
 	isInherited := value.FieldByName("IsInherited").Bool()
 	data := value.FieldByName("Data").Interface()
 	if isInherited {
-		printField(reflect.String, name, "<<inherit>>")
+		printField(cmd, reflect.String, name, "<<inherit>>")
 	} else {
 		dataType := value.FieldByName("Data").Kind()
-		printField(dataType, name, data)
+		printField(cmd, dataType, name, data)
 	}
 }
 
-func printNetworkInterface(networkInterface cobbler.Interfaces) {
+func printNetworkInterface(cmd *cobra.Command, networkInterface cobbler.Interfaces) {
 	for interfaceName, interfaceStruct := range networkInterface {
-		fmt.Printf("%-40s: %s\n", "Interface =====", interfaceName)
-		printStructured(&interfaceStruct)
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", "Interface =====", interfaceName)
+		printStructured(cmd, &interfaceStruct)
 	}
 }
 
-func printField(valueType reflect.Kind, name string, value interface{}) {
+func printField(cmd *cobra.Command, valueType reflect.Kind, name string, value interface{}) {
 	if name == "ctime" || name == "mtime" {
 		time, err := covertFloatToUtcTime(value.(float64))
 		if err == nil {
 			// If there is an error just show the float
-			fmt.Printf("%-40s: %s\n", name, time)
+			fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, time)
 			return
 		}
 	}
 	switch valueType {
 	case reflect.Bool:
-		fmt.Printf("%-40s: %t\n", name, value.(bool))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %t\n", name, value.(bool))
 	case reflect.Int64:
-		fmt.Printf("%-40s: %d\n", name, value.(int64))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int64))
 	case reflect.Int32:
-		fmt.Printf("%-40s: %d\n", name, value.(int32))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int32))
 	case reflect.Int16:
-		fmt.Printf("%-40s: %d\n", name, value.(int16))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int16))
 	case reflect.Int8:
-		fmt.Printf("%-40s: %d\n", name, value.(int8))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int8))
 	case reflect.Int:
-		fmt.Printf("%-40s: %d\n", name, value.(int))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int))
 	case reflect.Float32:
-		fmt.Printf("%-40s: %f\n", name, value.(float32))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %f\n", name, value.(float32))
 	case reflect.Float64:
-		fmt.Printf("%-40s: %f\n", name, value.(float64))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %f\n", name, value.(float64))
 	case reflect.Map:
 		res2B, _ := json.Marshal(value)
-		fmt.Printf("%-40s: %s\n", name, string(res2B))
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, string(res2B))
 	case reflect.Array, reflect.Slice:
 		arr := reflect.ValueOf(value)
-		fmt.Printf("%-40s: [", name)
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: [", name)
 		for i := 0; i < arr.Len(); i++ {
 			if i+1 != arr.Len() {
-				fmt.Printf("'%v', ", arr.Index(i).Interface())
+				fmt.Fprintf(cmd.OutOrStdout(), "'%v', ", arr.Index(i).Interface())
 			} else {
-				fmt.Printf("'%v'", arr.Index(i).Interface())
+				fmt.Fprintf(cmd.OutOrStdout(), "'%v'", arr.Index(i).Interface())
 			}
 		}
-		fmt.Printf("]\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "]\n")
 	default:
 		if value == nil {
 			value = ""
 		}
-		fmt.Printf("%-40s: %s\n", name, value)
-		// fmt.Printf("%d: %s %s = %v\n", i, typeOfT.Field(i).Name, f.Type(), f.Interface())
+		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, value)
+		// fmt.Fprintf(cmd.OutOrStdout(),"%d: %s %s = %v\n", i, typeOfT.Field(i).Name, f.Type(), f.Interface())
 	}
 }

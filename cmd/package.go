@@ -106,7 +106,7 @@ var packageAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Package %s created\n", linuxpackage.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Package %s created\n", linuxpackage.Name)
 		return nil
 	},
 }
@@ -192,13 +192,14 @@ var packageListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list all packages",
 	Long:  `Lists all available packages.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 		packageNames, err := Client.ListPackageNames()
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
-		listItems("packages", packageNames)
+		listItems(cmd, "packages", packageNames)
+		return nil
 	},
 }
 
@@ -254,14 +255,14 @@ var packageRenameCmd = &cobra.Command{
 	},
 }
 
-func reportPackages(packageNames []string) error {
+func reportPackages(cmd *cobra.Command, packageNames []string) error {
 	for _, itemName := range packageNames {
 		repo, err := Client.GetRepo(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(repo)
-		fmt.Println("")
+		printStructured(cmd, repo)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -285,7 +286,7 @@ var packageReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportPackages(itemNames)
+		return reportPackages(cmd, itemNames)
 	},
 }
 

@@ -142,7 +142,7 @@ var fileAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("File %s created\n", file.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "File %s created\n", file.Name)
 		return nil
 	},
 }
@@ -227,13 +227,14 @@ var fileListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list all files",
 	Long:  `Lists all available files.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 		fileNames, err := Client.ListFileNames()
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
-		listItems("files", fileNames)
+		listItems(cmd, "files", fileNames)
+		return nil
 	},
 }
 
@@ -289,14 +290,14 @@ var fileRenameCmd = &cobra.Command{
 	},
 }
 
-func reportFiles(fileNames []string) error {
+func reportFiles(cmd *cobra.Command, fileNames []string) error {
 	for _, itemName := range fileNames {
 		file, err := Client.GetFile(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(file)
-		fmt.Println("")
+		printStructured(cmd, file)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -320,7 +321,7 @@ var fileReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportFiles(itemNames)
+		return reportFiles(cmd, itemNames)
 	},
 }
 

@@ -86,7 +86,7 @@ var menuAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Menu %s created\n", menu.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Menu %s created\n", menu.Name)
 		return nil
 	},
 }
@@ -169,7 +169,7 @@ var menuListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		listItems("menus", menuNames)
+		listItems(cmd, "menus", menuNames)
 		return nil
 	},
 }
@@ -219,14 +219,14 @@ var menuRenameCmd = &cobra.Command{
 	},
 }
 
-func reportMenus(menuNames []string) error {
+func reportMenus(cmd *cobra.Command, menuNames []string) error {
 	for _, itemName := range menuNames {
 		menu, err := Client.GetMenu(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(menu)
-		fmt.Println("")
+		printStructured(cmd, menu)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -250,7 +250,7 @@ var menuReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportMenus(itemNames)
+		return reportMenus(cmd, itemNames)
 	},
 }
 

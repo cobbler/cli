@@ -27,6 +27,11 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("  build time: %s\n", version.Builddate)
 		fmt.Printf("  cli: %s\n", cliVersion)
 		fmt.Printf("  client: %s\n", clientVersion)
+		fmt.Fprintf(cmd.OutOrStdout(), "Cobbler %s\n", version.Version)
+		fmt.Fprintf(cmd.OutOrStdout(), "  source: %s, %s\n", version.Gitstamp, version.Gitdate)
+		fmt.Fprintf(cmd.OutOrStdout(), "  build time: %s\n", version.Builddate)
+		fmt.Fprintf(cmd.OutOrStdout(), "  cli: %s\n", cliVersion)
+		fmt.Fprintf(cmd.OutOrStdout(), "  client: %s\n", clientVersion)
 	},
 }
 

@@ -56,26 +56,26 @@ Identical to 'cobbler report'`,
 		if err != nil {
 			return err
 		}
-		listItems("distros", distroNames)
-		listItems("profiles", profileNames)
-		listItems("systems", systemNames)
-		listItems("repos", repoNames)
-		listItems("images", imageNames)
-		listItems("mgmtclasses", mgmtClassNames)
-		listItems("packages", packageNames)
-		listItems("files", fileNames)
-		listItems("menus", menuNames)
+		listItems(cmd, "distros", distroNames)
+		listItems(cmd, "profiles", profileNames)
+		listItems(cmd, "systems", systemNames)
+		listItems(cmd, "repos", repoNames)
+		listItems(cmd, "images", imageNames)
+		listItems(cmd, "mgmtclasses", mgmtClassNames)
+		listItems(cmd, "packages", packageNames)
+		listItems(cmd, "files", fileNames)
+		listItems(cmd, "menus", menuNames)
 		return nil
 	},
 }
 
-func listItems(what string, items []string) {
-	fmt.Printf("%s:\n", what)
+func listItems(cmd *cobra.Command, what string, items []string) {
+	fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", what)
 	sort.Strings(items)
 	for _, item := range items {
-		fmt.Printf("   %s\n", item)
+		fmt.Fprintf(cmd.OutOrStdout(), "   %s\n", item)
 	}
-	fmt.Println()
+	fmt.Fprintln(cmd.OutOrStdout(), "")
 }
 
 func init() {

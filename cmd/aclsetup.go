@@ -44,7 +44,7 @@ var aclsetupCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("Event ID: ", eventId)
+		fmt.Fprintln(cmd.OutOrStdout(), "Event ID: ", eventId)
 		return nil
 	},
 }

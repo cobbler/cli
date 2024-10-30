@@ -137,7 +137,7 @@ var mgmtclassAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Mgmtclass %s created\n", mgmtClass.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Mgmtclass %s created\n", mgmtClass.Name)
 		return nil
 	},
 }
@@ -232,7 +232,7 @@ var mgmtclassListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		listItems("mgmtclasses", mgmtclassNames)
+		listItems(cmd, "mgmtclasses", mgmtclassNames)
 		return nil
 	},
 }
@@ -289,14 +289,14 @@ var mgmtclassRenameCmd = &cobra.Command{
 	},
 }
 
-func reportMgmtClasses(mgmtClassNames []string) error {
+func reportMgmtClasses(cmd *cobra.Command, mgmtClassNames []string) error {
 	for _, itemName := range mgmtClassNames {
 		system, err := Client.GetMgmtClass(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(system)
-		fmt.Println("")
+		printStructured(cmd, system)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -320,7 +320,7 @@ var mgmtclassReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportMgmtClasses(itemNames)
+		return reportMgmtClasses(cmd, itemNames)
 	},
 }
 

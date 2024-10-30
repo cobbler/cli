@@ -380,7 +380,7 @@ var imageAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("System %s created\n", system.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
 		return nil
 	},
 }
@@ -461,13 +461,14 @@ var imageListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list all images",
 	Long:  `Lists all available images.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		generateCobblerClient()
 		imageNames, err := Client.ListImageNames()
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
-		listItems("images", imageNames)
+		listItems(cmd, "images", imageNames)
+		return nil
 	},
 }
 
@@ -518,14 +519,14 @@ var imageRenameCmd = &cobra.Command{
 	},
 }
 
-func reportImages(imageNames []string) error {
+func reportImages(cmd *cobra.Command, imageNames []string) error {
 	for _, itemName := range imageNames {
 		system, err := Client.GetImage(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(system)
-		fmt.Println("")
+		printStructured(cmd, system)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -549,7 +550,7 @@ var imageReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportImages(itemNames)
+		return reportImages(cmd, itemNames)
 	},
 }
 

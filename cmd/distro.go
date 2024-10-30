@@ -350,7 +350,7 @@ var distroAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Distro %s created\n", distro.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Distro %s created\n", distro.Name)
 		return nil
 	},
 }
@@ -449,7 +449,7 @@ var distroListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		listItems("distros", distroNames)
+		listItems(cmd, "distros", distroNames)
 		return nil
 	},
 }
@@ -515,14 +515,14 @@ var distroRenameCmd = &cobra.Command{
 	},
 }
 
-func reportDistros(distroNames []string) error {
+func reportDistros(cmd *cobra.Command, distroNames []string) error {
 	for _, itemName := range distroNames {
 		distro, err := Client.GetDistro(itemName, false, false)
 		if err != nil {
 			return err
 		}
-		printStructured(distro)
-		fmt.Println("")
+		printStructured(cmd, distro)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -546,7 +546,7 @@ var distroReportCmd = &cobra.Command{
 		} else {
 			itemNames = append(itemNames, name)
 		}
-		return reportDistros(itemNames)
+		return reportDistros(cmd, itemNames)
 	},
 }
 
