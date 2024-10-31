@@ -1,5 +1,7 @@
 BINARY_NAME=cobbler
 EXECUTOR?=docker
+COBBLER_SERVER_URL=http://localhost:8081/cobbler_api
+TEST?=$$(go list ./... |grep -v 'vendor')
 
 build:
 	@echo "building package"
@@ -27,6 +29,10 @@ doc:
 run:
 	go build -o ${BINARY_NAME} main.go
 	./${BINARY_NAME}
+
+test:
+	@./testing/start.sh ${COBBLER_SERVER_URL}
+	go test -v -coverprofile="coverage.out" -covermode="atomic" $(TEST)
 
 shell_completions:
 	@mkdir -p config/completions/bash
