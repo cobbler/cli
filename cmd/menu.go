@@ -52,7 +52,7 @@ func updateMenuFromFlags(cmd *cobra.Command, menu *cobbler.Menu) error {
 }
 
 // NewMenuCmd builds a new command that represents the menu action
-func NewMenuCmd() *cobra.Command {
+func NewMenuCmd() (*cobra.Command, error) {
 	menuCmd := &cobra.Command{
 		Use:   "menu",
 		Short: "Menu management",
@@ -62,18 +62,30 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-menu for more 
 			_ = cmd.Help()
 		},
 	}
-	menuCmd.AddCommand(NewMenuAddCmd())
-	menuCmd.AddCommand(NewMenuCopyCmd())
+	menuAddCmd, err := NewMenuAddCmd()
+	if err != nil {
+		return nil, err
+	}
+	menuCmd.AddCommand(menuAddCmd)
+	menuCopyCmd, err := NewMenuCopyCmd()
+	if err != nil {
+		return nil, err
+	}
+	menuCmd.AddCommand(menuCopyCmd)
 	menuCmd.AddCommand(NewMenuEditCmd())
 	menuCmd.AddCommand(NewMenuFindCmd())
 	menuCmd.AddCommand(NewMenuListCmd())
 	menuCmd.AddCommand(NewMenuRemoveCmd())
-	menuCmd.AddCommand(NewMenuRenameCmd())
+	menuRenameCmd, err := NewMenuRenameCmd()
+	if err != nil {
+		return nil, err
+	}
+	menuCmd.AddCommand(menuRenameCmd)
 	menuCmd.AddCommand(NewMenuReportCmd())
-	return menuCmd
+	return menuCmd, nil
 }
 
-func NewMenuAddCmd() *cobra.Command {
+func NewMenuAddCmd() (*cobra.Command, error) {
 	menuAddCmd := &cobra.Command{
 		Use:   "add",
 		Short: "add menu",
@@ -107,10 +119,14 @@ func NewMenuAddCmd() *cobra.Command {
 	}
 	addCommonArgs(menuAddCmd)
 	addStringFlags(menuAddCmd, menuStringFlagMetadata)
-	return menuAddCmd
+	err := menuAddCmd.MarkFlagRequired("name")
+	if err != nil {
+		return nil, err
+	}
+	return menuAddCmd, nil
 }
 
-func NewMenuCopyCmd() *cobra.Command {
+func NewMenuCopyCmd() (*cobra.Command, error) {
 	menuCopyCmd := &cobra.Command{
 		Use:   "copy",
 		Short: "copy menu",
@@ -151,8 +167,17 @@ func NewMenuCopyCmd() *cobra.Command {
 	}
 	addCommonArgs(menuCopyCmd)
 	addStringFlags(menuCopyCmd, menuStringFlagMetadata)
+	addStringFlags(menuCopyCmd, copyRenameStringFlagMetadata)
 	menuCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	return menuCopyCmd
+	err := menuCopyCmd.MarkFlagRequired("name")
+	if err != nil {
+		return nil, err
+	}
+	err = menuCopyCmd.MarkFlagRequired("newname")
+	if err != nil {
+		return nil, err
+	}
+	return menuCopyCmd, nil
 }
 
 func NewMenuEditCmd() *cobra.Command {
@@ -251,7 +276,7 @@ func NewMenuRemoveCmd() *cobra.Command {
 	return menuRemoveCmd
 }
 
-func NewMenuRenameCmd() *cobra.Command {
+func NewMenuRenameCmd() (*cobra.Command, error) {
 	menuRenameCmd := &cobra.Command{
 		Use:   "rename",
 		Short: "rename menu",
@@ -292,8 +317,17 @@ func NewMenuRenameCmd() *cobra.Command {
 	}
 	addCommonArgs(menuRenameCmd)
 	addStringFlags(menuRenameCmd, menuStringFlagMetadata)
+	addStringFlags(menuRenameCmd, copyRenameStringFlagMetadata)
 	menuRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	return menuRenameCmd
+	err := menuRenameCmd.MarkFlagRequired("name")
+	if err != nil {
+		return nil, err
+	}
+	err = menuRenameCmd.MarkFlagRequired("newname")
+	if err != nil {
+		return nil, err
+	}
+	return menuRenameCmd, nil
 }
 
 func reportMenus(cmd *cobra.Command, menuNames []string) error {

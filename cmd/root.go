@@ -37,7 +37,7 @@ func NewRootCmd() *cobra.Command {
 
 	// global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobbler.yaml)")
-	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Whether or not to print debug messages from the CLI.")
+	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Whether or not to print debug messages from the CLI.")
 
 	// Add sub commands
 	rootCmd.AddCommand(NewAclSetupCmd())
@@ -51,7 +51,9 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.AddCommand(NewImageCmd())
 	rootCmd.AddCommand(NewImportCmd())
 	rootCmd.AddCommand(NewListCmd())
-	rootCmd.AddCommand(NewMenuCmd())
+	menuCmd, err := NewMenuCmd()
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(menuCmd)
 	rootCmd.AddCommand(NewMgmtClassCmd())
 	rootCmd.AddCommand(NewMkLoadersCmd())
 	rootCmd.AddCommand(NewPackageCmd())
