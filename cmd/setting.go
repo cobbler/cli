@@ -5,9 +5,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // NewSettingCmd builds a new command that represents the setting action
@@ -41,8 +41,7 @@ func NewSettingEditCmd() *cobra.Command {
 				return err
 			}
 			if !settings.AllowDynamicSettings {
-				fmt.Fprintln(cmd.OutOrStdout(), "Dynamic settings are turned off server-side!")
-				os.Exit(1)
+				return errors.New("dynamic settings are turned off server-side")
 			}
 
 			settingName, err := cmd.Flags().GetString("name")
