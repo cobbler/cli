@@ -12,9 +12,13 @@ import (
 )
 
 func updateMgmtClassFromFlags(cmd *cobra.Command, mgmtClass *cobbler.MgmtClass) error {
-	inPlace, err := cmd.Flags().GetBool("in-place")
-	if err != nil {
-		return err
+	var inPlace bool
+	var err error
+	if cmd.Flags().Lookup("in-place") != nil {
+		inPlace, err = cmd.Flags().GetBool("in-place")
+		if err != nil {
+			return err
+		}
 	}
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
