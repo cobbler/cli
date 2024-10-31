@@ -595,7 +595,7 @@ func NewProfileCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyDistro(profileHandle, profileNewName)
+			err = Client.CopyProfile(profileHandle, profileNewName)
 			if err != nil {
 				return err
 			}

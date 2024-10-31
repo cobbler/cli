@@ -430,7 +430,7 @@ func NewRepoRenameCmd() *cobra.Command {
 				return err
 			}
 			// Get repo handle from the API
-			repoHandle, err := Client.GetMenuHandle(repoName)
+			repoHandle, err := Client.GetRepoHandle(repoName)
 			if err != nil {
 				return err
 			}

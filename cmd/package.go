@@ -335,7 +335,7 @@ func NewPackageRenameCmd() *cobra.Command {
 
 func reportPackages(cmd *cobra.Command, packageNames []string) error {
 	for _, itemName := range packageNames {
-		repo, err := Client.GetRepo(itemName, false, false)
+		repo, err := Client.GetPackage(itemName, false, false)
 		if err != nil {
 			return err
 		}
