@@ -83,17 +83,12 @@ func updateFileFromFlags(cmd *cobra.Command, file *cobbler.File) error {
 			}
 			file.Group = fileNewGroup
 		case "owner":
-			if cmd.Flags().Lookup("owners-inherit").Changed {
-				file.Owners.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				file.Owners.Data, err = cmd.Flags().GetStringSlice("owners")
-				if err != nil {
-					return
-				}
+			var fileNewOwner string
+			fileNewOwner, err = cmd.Flags().GetString("owner")
+			if err != nil {
+				return
 			}
+			file.Owner = fileNewOwner
 		case "is-dir":
 			var fileNewIsDir bool
 			fileNewIsDir, err = cmd.Flags().GetBool("is-dir")
