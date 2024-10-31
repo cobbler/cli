@@ -905,6 +905,7 @@ func NewSystemCopyCmd() *cobra.Command {
 	addBoolFlags(systemCopyCmd, interfaceBoolFlagMetadata)
 	addStringSliceFlags(systemCopyCmd, interfaceStringSliceFlagMetadata)
 	// Other
+	addStringFlags(systemCopyCmd, copyRenameStringFlagMetadata)
 	systemCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 	systemCopyCmd.Flags().String("interface", "", "the interface to operate on")
 	systemCopyCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
@@ -1297,7 +1298,7 @@ func NewSystemRenameCmd() *cobra.Command {
 	addBoolFlags(systemRenameCmd, interfaceBoolFlagMetadata)
 	addStringSliceFlags(systemRenameCmd, interfaceStringSliceFlagMetadata)
 	// Other
-	systemRenameCmd.Flags().String("newname", "", "the new system name")
+	addStringFlags(systemRenameCmd, copyRenameStringFlagMetadata)
 	systemRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
 	systemRenameCmd.Flags().String("interface", "", "the interface to operate on")
 	systemRenameCmd.Flags().Bool("delete-interface", false, "delete the given interface (should be used with --interface)")
