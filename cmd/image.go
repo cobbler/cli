@@ -395,7 +395,7 @@ func NewImageAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Image %s created\n", system.Name)
 			return nil
 		},
 	}
