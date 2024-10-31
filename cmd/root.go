@@ -156,6 +156,11 @@ func printStructured(cmd *cobra.Command, dataStruct interface{}) {
 			printStructured(cmd, &baseItem)
 			continue
 		}
+		if fieldName == "Resource" {
+			baseResource := f.Interface().(cobbler.Resource)
+			printStructured(cmd, &baseResource)
+			continue
+		}
 		if fieldName == "Interfaces" {
 			// Skip and print at the end
 			continue
