@@ -16,7 +16,6 @@ func NewAclSetupCmd() *cobra.Command {
 		Use:   "aclsetup",
 		Short: "Adjust the access control list",
 		Long:  "Configures users/groups to run the Cobbler CLI as non-root.",
-		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := generateCobblerClient()
 			if err != nil {
@@ -56,5 +55,7 @@ func NewAclSetupCmd() *cobra.Command {
 	aclsetupCmd.Flags().String("addgroup", "", "give acls to this group")
 	aclsetupCmd.Flags().String("removeuser", "", "remove acls from this user")
 	aclsetupCmd.Flags().String("removegroup", "", "remove acls from this user")
+	aclsetupCmd.MarkFlagsMutuallyExclusive("adduser", "addgroup", "removeuser", "removegroup")
+	aclsetupCmd.MarkFlagsOneRequired("adduser", "addgroup", "removeuser", "removegroup")
 	return aclsetupCmd
 }
