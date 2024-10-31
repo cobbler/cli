@@ -23,8 +23,8 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 	deleteInterface := deleteInterfaceFlag != nil && deleteInterfaceFlag.Changed
 	renameInterface := renameInterfaceFlag != nil && renameInterfaceFlag.Changed
 	systemInterface, keyInMap := system.Interfaces[systemNewInterface]
-	if !keyInMap {
-		// Interface doesn't exist, so add a new one.
+	if systemNewInterface != "" && !keyInMap {
+		// Interface doesn't exist and non-empty string, so add a new one.
 		// We cannot call CreateInterface because the system might not exist.
 		system.Interfaces[systemNewInterface] = cobbler.Interface{}
 		systemInterface = system.Interfaces[systemNewInterface]
@@ -521,7 +521,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			system.SerialBaudRate = systemNewSerialBaudRate
 		case "bonding-opts":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewBondingOpts string
@@ -531,7 +531,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.BondingOpts = systemNewBondingOpts
 		case "bridge-opts":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewBridgeOpts string
@@ -541,7 +541,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.BridgeOpts = systemNewBridgeOpts
 		case "cnames":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewCNames []string
@@ -551,7 +551,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.CNAMEs = systemNewCNames
 		case "connected-mode":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewConnectedMode bool
@@ -561,7 +561,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.ConnectedMode = systemNewConnectedMode
 		case "dhcp-tag":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewDhcpTag string
@@ -571,7 +571,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.DHCPTag = systemNewDhcpTag
 		case "dns-name":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewDnsName string
@@ -581,7 +581,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.DNSName = systemNewDnsName
 		case "if-gateway":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIfGateway string
@@ -591,7 +591,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Gateway = systemNewIfGateway
 		case "interface-master":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewInterfaceMaster string
@@ -601,7 +601,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.InterfaceMaster = systemNewInterfaceMaster
 		case "interface-type":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewInterfaceType string
@@ -611,7 +611,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.InterfaceType = systemNewInterfaceType
 		case "ip-address":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpAddress string
@@ -621,7 +621,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPAddress = systemNewIpAddress
 		case "ipv6-address":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpv6Address string
@@ -631,7 +631,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6Address = systemNewIpv6Address
 		case "ipv6-default-gateway":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpv6DefaultGateway string
@@ -641,7 +641,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6DefaultGateway = systemNewIpv6DefaultGateway
 		case "ipv6-mtu":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpv6Mtu string
@@ -651,7 +651,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6MTU = systemNewIpv6Mtu
 		case "ipv6-prefix":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpv6Prefix string
@@ -661,7 +661,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6Prefix = systemNewIpv6Prefix
 		case "ipv6-secondaries":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpv6Secondaries []string
@@ -671,7 +671,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6Secondaries = systemNewIpv6Secondaries
 		case "ipv6-static-routes":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewIpv6StaticRoutes []string
@@ -681,7 +681,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.IPv6StaticRoutes = systemNewIpv6StaticRoutes
 		case "mac-address":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewMacAddress string
@@ -691,7 +691,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.MACAddress = systemNewMacAddress
 		case "management":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewManagement bool
@@ -701,7 +701,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Management = systemNewManagement
 		case "mtu":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewMtu string
@@ -711,7 +711,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.MTU = systemNewMtu
 		case "netmask":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewNetmask string
@@ -721,7 +721,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Netmask = systemNewNetmask
 		case "static":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewStatic bool
@@ -731,7 +731,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.Static = systemNewStatic
 		case "static-routes":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewStaticRoutes []string
@@ -741,7 +741,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			systemInterface.StaticRoutes = systemNewStaticRoutes
 		case "virt-bridge":
-			if renameInterface || deleteInterface {
+			if renameInterface || deleteInterface || systemNewInterface == "" {
 				return
 			}
 			var systemNewVirtBridge string
