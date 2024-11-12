@@ -10,24 +10,31 @@ import (
 	"runtime/debug"
 )
 
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the Cobbler version",
-	Long:  `Shows the Cobbler server version.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		generateCobblerClient()
-		version, err := Client.ExtendedVersion()
-		if err != nil {
-			fmt.Println(err)
-		}
-		clientVersion, cliVersion, _ := getClientVersion()
-		fmt.Printf("Cobbler %s\n", version.Version)
-		fmt.Printf("  source: %s, %s\n", version.Gitstamp, version.Gitdate)
-		fmt.Printf("  build time: %s\n", version.Builddate)
-		fmt.Printf("  cli: %s\n", cliVersion)
-		fmt.Printf("  client: %s\n", clientVersion)
-	},
+// NewVersionCmd builds a new command that represents the version action
+func NewVersionCmd() *cobra.Command {
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the Cobbler version",
+		Long:  `Shows the Cobbler server version.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+			version, err := Client.ExtendedVersion()
+			if err != nil {
+				return err
+			}
+			clientVersion, cliVersion, _ := getClientVersion()
+			fmt.Fprintf(cmd.OutOrStdout(), "Cobbler %s\n", version.Version)
+			fmt.Fprintf(cmd.OutOrStdout(), "  source: %s, %s\n", version.Gitstamp, version.Gitdate)
+			fmt.Fprintf(cmd.OutOrStdout(), "  build time: %s\n", version.Builddate)
+			fmt.Fprintf(cmd.OutOrStdout(), "  cli: %s\n", cliVersion)
+			fmt.Fprintf(cmd.OutOrStdout(), "  client: %s\n", clientVersion)
+			return nil
+		},
+	}
+	return versionCmd
 }
 
 func getClientVersion() (string, string, error) {
@@ -42,8 +49,4 @@ func getClientVersion() (string, string, error) {
 		}
 	}
 	return clientVersion, cliVersion, nil
-}
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
 }

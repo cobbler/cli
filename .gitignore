@@ -29,3 +29,9 @@ docs/_build
 
 # goreleaser
 dist/
+
+# Tests
+testing/cobbler_source/
+extracted_iso_image/
+*.iso
+coverage.out

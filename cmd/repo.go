@@ -170,254 +170,126 @@ func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
 	return err
 }
 
-// repoCmd represents the repo command
-var repoCmd = &cobra.Command{
-	Use:   "repo",
-	Short: "Repository management",
-	Long: `Let you manage repositories.
+// NewRepoCmd builds a new command that represents the repo action
+func NewRepoCmd() *cobra.Command {
+	repoCmd := &cobra.Command{
+		Use:   "repo",
+		Short: "Repository management",
+		Long: `Let you manage repositories.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-repo for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
-}
-
-var repoAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add repository",
-	Long:  `Adds a repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		newRepo := cobbler.NewRepo()
-		var err error
-
-		// internal fields (ctime, mtime, depth, uid, parent, tree-build-time) cannot be modified
-		newRepo.Name, err = cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Update repo in-memory
-		err = updateRepoFromFlags(cmd, &newRepo)
-		if err != nil {
-			return err
-		}
-		// Now create via XML-RPC
-		repo, err := Client.CreateRepo(newRepo)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Repo %s created\n", repo.Name)
-		return nil
-	},
-}
-
-var repoAutoAddCmd = &cobra.Command{
-	Use:   "autoadd",
-	Short: "add repository automatically",
-	Long:  `Automatically adds a repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		return Client.AutoAddRepos()
-	},
-}
-
-var repoCopyCmd = &cobra.Command{
-	Use:   "copy",
-	Short: "copy repository",
-	Long:  `Copies a repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-
-		repoName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		repoNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-
-		repoHandle, err := Client.GetRepoHandle(repoName)
-		if err != nil {
-			return err
-		}
-		err = Client.CopyRepo(repoHandle, repoNewName)
-		if err != nil {
-			return err
-		}
-		copiedRepo, err := Client.GetRepo(repoNewName, false, false)
-		if err != nil {
-			return err
-		}
-		err = updateRepoFromFlags(cmd, copiedRepo)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateRepo(copiedRepo)
-	},
-}
-
-var repoEditCmd = &cobra.Command{
-	Use:   "edit",
-	Short: "edit repository",
-	Long:  `Edits a repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-
-		// find repo through its name
-		rname, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Get repo from API
-		updateRepo, err := Client.GetRepo(rname, false, false)
-		if err != nil {
-			return err
-		}
-		// Update repo in-memory
-		err = updateRepoFromFlags(cmd, updateRepo)
-		if err != nil {
-			return err
-		}
-		// Update repo via XML-RPC
-		return Client.UpdateRepo(updateRepo)
-	},
-}
-
-var repoFindCmd = &cobra.Command{
-	Use:   "find",
-	Short: "find repository",
-	Long:  `Finds a given repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		return FindItemNames(cmd, args, "repo")
-	},
-}
-
-var repoListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list all repositorys",
-	Long:  `Lists all available repositories.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		repoNames, err := Client.ListRepoNames()
-		if err != nil {
-			return err
-		}
-		listItems("repos", repoNames)
-		return nil
-	},
-}
-
-var repoRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "remove repository",
-	Long:  `Removes a given repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		return RemoveItemRecursive(cmd, args, "repo")
-	},
-}
-
-var repoRenameCmd = &cobra.Command{
-	Use:   "rename",
-	Short: "rename repository",
-	Long:  `Renames a given repository.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-
-		// Get special name and newname flags
-		repoName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		repoNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-		// Get repo handle from the API
-		repoHandle, err := Client.GetMenuHandle(repoName)
-		if err != nil {
-			return err
-		}
-		// Rename the repo server side
-		err = Client.RenameRepo(repoHandle, repoNewName)
-		if err != nil {
-			return err
-		}
-		// Get the renamed repository from the API
-		newRepository, err := Client.GetRepo(repoNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update the repo in-memory
-		err = updateRepoFromFlags(cmd, newRepository)
-		if err != nil {
-			return err
-		}
-		// Update the repo via XML-RPC
-		return Client.UpdateRepo(newRepository)
-	},
-}
-
-func reportRepos(repoNames []string) error {
-	for _, itemName := range repoNames {
-		repo, err := Client.GetRepo(itemName, false, false)
-		if err != nil {
-			return err
-		}
-		printStructured(repo)
-		fmt.Println("")
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
 	}
-	return nil
+	repoCmd.AddCommand(NewRepoAddCmd())
+	repoCmd.AddCommand(NewRepoAutoAddCmd())
+	repoCmd.AddCommand(NewRepoCopyCmd())
+	repoCmd.AddCommand(NewRepoEditCmd())
+	repoCmd.AddCommand(NewRepoFindCmd())
+	repoCmd.AddCommand(NewRepoListCmd())
+	repoCmd.AddCommand(NewRepoRemoveCmd())
+	repoCmd.AddCommand(NewRepoRenameCmd())
+	repoCmd.AddCommand(NewRepoReportCmd())
+	return repoCmd
 }
 
-var repoReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "list all repositorys in detail",
-	Long:  `Shows detailed information about all repositories.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		itemNames := make([]string, 0)
-		if name == "" {
-			itemNames, err = Client.ListRepoNames()
+func NewRepoAddCmd() *cobra.Command {
+	repoAddCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add repository",
+		Long:  `Adds a repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		} else {
-			itemNames = append(itemNames, name)
-		}
-		return reportRepos(itemNames)
-	},
-}
 
-func init() {
-	rootCmd.AddCommand(repoCmd)
-	repoCmd.AddCommand(repoAddCmd)
-	repoCmd.AddCommand(repoAutoAddCmd)
-	repoCmd.AddCommand(repoCopyCmd)
-	repoCmd.AddCommand(repoEditCmd)
-	repoCmd.AddCommand(repoFindCmd)
-	repoCmd.AddCommand(repoListCmd)
-	repoCmd.AddCommand(repoRemoveCmd)
-	repoCmd.AddCommand(repoRenameCmd)
-	repoCmd.AddCommand(repoReportCmd)
+			newRepo := cobbler.NewRepo()
 
-	// local flags for repo add
+			// internal fields (ctime, mtime, depth, uid, parent, tree-build-time) cannot be modified
+			newRepo.Name, err = cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Update repo in-memory
+			err = updateRepoFromFlags(cmd, &newRepo)
+			if err != nil {
+				return err
+			}
+			// Now create via XML-RPC
+			repo, err := Client.CreateRepo(newRepo)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Repo %s created\n", repo.Name)
+			return nil
+		},
+	}
 	addCommonArgs(repoAddCmd)
 	addStringFlags(repoAddCmd, repoStringFlagMetadata)
 	addBoolFlags(repoAddCmd, repoBoolFlagMetadata)
 	addIntFlags(repoAddCmd, repoIntFlagMetadata)
 	addStringSliceFlags(repoAddCmd, repoStringSliceFlagMetadata)
 	addMapFlags(repoAddCmd, repoMapFlagMetadata)
+	return repoAddCmd
+}
 
-	// local flags for repo autoadd
-	// no flags
+func NewRepoAutoAddCmd() *cobra.Command {
+	repoAutoAddCmd := &cobra.Command{
+		Use:   "autoadd",
+		Short: "add repository automatically",
+		Long:  `Automatically adds a repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-	// local flags for repo copy
+			return Client.AutoAddRepos()
+		},
+	}
+	return repoAutoAddCmd
+}
+
+func NewRepoCopyCmd() *cobra.Command {
+	repoCopyCmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy repository",
+		Long:  `Copies a repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			repoName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			repoNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			repoHandle, err := Client.GetRepoHandle(repoName)
+			if err != nil {
+				return err
+			}
+			err = Client.CopyRepo(repoHandle, repoNewName)
+			if err != nil {
+				return err
+			}
+			copiedRepo, err := Client.GetRepo(repoNewName, false, false)
+			if err != nil {
+				return err
+			}
+			err = updateRepoFromFlags(cmd, copiedRepo)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateRepo(copiedRepo)
+		},
+	}
 	addCommonArgs(repoCopyCmd)
 	addStringFlags(repoCopyCmd, repoStringFlagMetadata)
 	addBoolFlags(repoCopyCmd, repoBoolFlagMetadata)
@@ -426,8 +298,39 @@ func init() {
 	addMapFlags(repoCopyCmd, repoMapFlagMetadata)
 	repoCopyCmd.Flags().String("newname", "", "the new repo name")
 	repoCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return repoCopyCmd
+}
 
-	// local flags for repo edit
+func NewRepoEditCmd() *cobra.Command {
+	repoEditCmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit repository",
+		Long:  `Edits a repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// find repo through its name
+			rname, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Get repo from API
+			updateRepo, err := Client.GetRepo(rname, false, false)
+			if err != nil {
+				return err
+			}
+			// Update repo in-memory
+			err = updateRepoFromFlags(cmd, updateRepo)
+			if err != nil {
+				return err
+			}
+			// Update repo via XML-RPC
+			return Client.UpdateRepo(updateRepo)
+		},
+	}
 	addCommonArgs(repoEditCmd)
 	addStringFlags(repoEditCmd, repoStringFlagMetadata)
 	addBoolFlags(repoEditCmd, repoBoolFlagMetadata)
@@ -435,8 +338,23 @@ func init() {
 	addStringSliceFlags(repoEditCmd, repoStringSliceFlagMetadata)
 	addMapFlags(repoEditCmd, repoMapFlagMetadata)
 	repoEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return repoEditCmd
+}
 
-	// local flags for repo find
+func NewRepoFindCmd() *cobra.Command {
+	repoFindCmd := &cobra.Command{
+		Use:   "find",
+		Short: "find repository",
+		Long:  `Finds a given repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			return FindItemNames(cmd, args, "repo")
+		},
+	}
 	addCommonArgs(repoFindCmd)
 	addStringFlags(repoFindCmd, repoStringFlagMetadata)
 	addBoolFlags(repoFindCmd, repoBoolFlagMetadata)
@@ -447,12 +365,94 @@ func init() {
 	addIntFlags(repoFindCmd, findIntFlagMetadata)
 	addFloatFlags(repoFindCmd, findFloatFlagMetadata)
 	repoFindCmd.Flags().String("parent", "", "")
+	return repoFindCmd
+}
 
-	// local flags for repo remove
+func NewRepoListCmd() *cobra.Command {
+	repoListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list all repositorys",
+		Long:  `Lists all available repositories.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			repoNames, err := Client.ListRepoNames()
+			if err != nil {
+				return err
+			}
+			listItems(cmd, "repos", repoNames)
+			return nil
+		},
+	}
+	return repoListCmd
+}
+
+func NewRepoRemoveCmd() *cobra.Command {
+	repoRemoveCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove repository",
+		Long:  `Removes a given repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			return RemoveItemRecursive(cmd, args, "repo")
+		},
+	}
 	repoRemoveCmd.Flags().String("name", "", "the repo name")
 	repoRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	return repoRemoveCmd
+}
 
-	// local flags for repo rename
+func NewRepoRenameCmd() *cobra.Command {
+	repoRenameCmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename repository",
+		Long:  `Renames a given repository.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			// Get special name and newname flags
+			repoName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			repoNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+			// Get repo handle from the API
+			repoHandle, err := Client.GetRepoHandle(repoName)
+			if err != nil {
+				return err
+			}
+			// Rename the repo server side
+			err = Client.RenameRepo(repoHandle, repoNewName)
+			if err != nil {
+				return err
+			}
+			// Get the renamed repository from the API
+			newRepository, err := Client.GetRepo(repoNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update the repo in-memory
+			err = updateRepoFromFlags(cmd, newRepository)
+			if err != nil {
+				return err
+			}
+			// Update the repo via XML-RPC
+			return Client.UpdateRepo(newRepository)
+		},
+	}
 	addCommonArgs(repoRenameCmd)
 	addStringFlags(repoRenameCmd, repoStringFlagMetadata)
 	addBoolFlags(repoRenameCmd, repoBoolFlagMetadata)
@@ -461,7 +461,48 @@ func init() {
 	addMapFlags(repoRenameCmd, repoMapFlagMetadata)
 	repoRenameCmd.Flags().String("newname", "", "the new repo name")
 	repoRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return repoRenameCmd
+}
 
-	// local flags for repo report
+func reportRepos(cmd *cobra.Command, repoNames []string) error {
+	for _, itemName := range repoNames {
+		repo, err := Client.GetRepo(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(cmd, repo)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
+	}
+	return nil
+}
+
+func NewRepoReportCmd() *cobra.Command {
+	repoReportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "list all repositorys in detail",
+		Long:  `Shows detailed information about all repositories.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListRepoNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+			return reportRepos(cmd, itemNames)
+		},
+	}
 	repoReportCmd.Flags().String("name", "", "the repo name")
+	return repoReportCmd
 }

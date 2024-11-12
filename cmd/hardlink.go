@@ -9,22 +9,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// hardlinkCmd represents the hardlink command
-var hardlinkCmd = &cobra.Command{
-	Use:   "hardlink",
-	Short: "Hardlink files",
-	Long:  "Hardlink all files where it is possible to improve performance.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		eventId, err := Client.BackgroundHardlink()
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Event ID: %s\n", eventId)
-		return nil
-	},
-}
+// NewHardlinkCmd builds a new commdand that represents the hardlink action
+func NewHardlinkCmd() *cobra.Command {
+	hardlinkCmd := &cobra.Command{
+		Use:   "hardlink",
+		Short: "Hardlink files",
+		Long:  "Hardlink all files where it is possible to improve performance.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
 
-func init() {
-	rootCmd.AddCommand(hardlinkCmd)
+			eventId, err := Client.BackgroundHardlink()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
+			return nil
+		},
+	}
+	return hardlinkCmd
 }

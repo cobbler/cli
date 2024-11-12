@@ -29,6 +29,14 @@ var commonStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
 	},
 }
 
+var copyRenameStringFlagMetadata = map[string]FlagMetadata[string]{
+	"newname": {
+		Name:         "newname",
+		DefaultValue: "",
+		Usage:        "the new item name",
+	},
+}
+
 var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 	"kernel": {
 		Name:         "kernel",

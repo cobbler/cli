@@ -134,7 +134,7 @@ func FindItemNames(cmd *cobra.Command, args []string, what string) error {
 		return err
 	}
 	for _, distroName := range itemNames {
-		fmt.Println(distroName)
+		fmt.Fprintln(cmd.OutOrStdout(), distroName)
 	}
 	return nil
 }

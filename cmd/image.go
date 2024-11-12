@@ -347,224 +347,58 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 	return err
 }
 
-// imageCmd represents the image command
-var imageCmd = &cobra.Command{
-	Use:   "image",
-	Short: "Image management",
-	Long: `Let you manage images.
+// NewImageCmd builds a new command that represents the image action
+func NewImageCmd() *cobra.Command {
+	imageCmd := &cobra.Command{
+		Use:   "image",
+		Short: "Image management",
+		Long: `Let you manage images.
 See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-image for more information.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Help()
-	},
-}
-
-var imageAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add image",
-	Long:  `Adds a image.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		newImage := cobbler.NewImage()
-		var err error
-		newImage.Name, err = cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		// Update image in-memory
-		err = updateImageFromFlags(cmd, &newImage)
-		if err != nil {
-			return err
-		}
-		// Now create the image via XML-RPC
-		system, err := Client.CreateImage(newImage)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("System %s created\n", system.Name)
-		return nil
-	},
-}
-
-var imageCopyCmd = &cobra.Command{
-	Use:   "copy",
-	Short: "copy image",
-	Long:  `Copies a image.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-
-		imageName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		imageNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-
-		imageHandle, err := Client.GetImageHandle(imageName)
-		if err != nil {
-			return err
-		}
-		err = Client.CopyImage(imageHandle, imageNewName)
-		if err != nil {
-			return err
-		}
-		copiedImage, err := Client.GetImage(imageNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update image in-memory
-		err = updateImageFromFlags(cmd, copiedImage)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateImage(copiedImage)
-	},
-}
-
-var imageEditCmd = &cobra.Command{
-	Use:   "edit",
-	Short: "edit image",
-	Long:  `Edits a image.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-
-		imageName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-
-		imageToEdit, err := Client.GetImage(imageName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update image in-memory
-		err = updateImageFromFlags(cmd, imageToEdit)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateImage(imageToEdit)
-	},
-}
-
-var imageFindCmd = &cobra.Command{
-	Use:   "find",
-	Short: "find image",
-	Long:  `Finds a given image.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		return FindItemNames(cmd, args, "image")
-	},
-}
-
-var imageListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list all images",
-	Long:  `Lists all available images.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		generateCobblerClient()
-		imageNames, err := Client.ListImageNames()
-		if err != nil {
-			fmt.Println(err)
-		}
-		listItems("images", imageNames)
-	},
-}
-
-var imageRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "remove image",
-	Long:  `Removes a given image.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		return RemoveItemRecursive(cmd, args, "image")
-	},
-}
-
-var imageRenameCmd = &cobra.Command{
-	Use:   "rename",
-	Short: "rename image",
-	Long:  `Renames a given image.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-
-		imageName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		imageNewName, err := cmd.Flags().GetString("newname")
-		if err != nil {
-			return err
-		}
-
-		imageHandle, err := Client.GetImageHandle(imageName)
-		if err != nil {
-			return err
-		}
-		err = Client.RenameImage(imageHandle, imageNewName)
-		if err != nil {
-			return err
-		}
-		renamedImage, err := Client.GetImage(imageNewName, false, false)
-		if err != nil {
-			return err
-		}
-		// Update image in-memory
-		err = updateImageFromFlags(cmd, renamedImage)
-		if err != nil {
-			return err
-		}
-		return Client.UpdateImage(renamedImage)
-	},
-}
-
-func reportImages(imageNames []string) error {
-	for _, itemName := range imageNames {
-		system, err := Client.GetImage(itemName, false, false)
-		if err != nil {
-			return err
-		}
-		printStructured(system)
-		fmt.Println("")
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
 	}
-	return nil
+	imageCmd.AddCommand(NewImageAddCmd())
+	imageCmd.AddCommand(NewImageCopyCmd())
+	imageCmd.AddCommand(NewImageEditCmd())
+	imageCmd.AddCommand(NewImageFindCmd())
+	imageCmd.AddCommand(NewImageListCmd())
+	imageCmd.AddCommand(NewImageRemoveCmd())
+	imageCmd.AddCommand(NewImageRenameCmd())
+	imageCmd.AddCommand(NewImageReportCmd())
+	return imageCmd
 }
 
-var imageReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "list all images in detail",
-	Long:  `Shows detailed information about all images.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		generateCobblerClient()
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		itemNames := make([]string, 0)
-		if name == "" {
-			itemNames, err = Client.ListImageNames()
+func NewImageAddCmd() *cobra.Command {
+	imageAddCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add image",
+		Long:  `Adds a image.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
 			if err != nil {
 				return err
 			}
-		} else {
-			itemNames = append(itemNames, name)
-		}
-		return reportImages(itemNames)
-	},
-}
 
-func init() {
-	rootCmd.AddCommand(imageCmd)
-	imageCmd.AddCommand(imageAddCmd)
-	imageCmd.AddCommand(imageCopyCmd)
-	imageCmd.AddCommand(imageEditCmd)
-	imageCmd.AddCommand(imageFindCmd)
-	imageCmd.AddCommand(imageListCmd)
-	imageCmd.AddCommand(imageRemoveCmd)
-	imageCmd.AddCommand(imageRenameCmd)
-	imageCmd.AddCommand(imageReportCmd)
-
-	// local flags for image add
+			newImage := cobbler.NewImage()
+			newImage.Name, err = cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			// Update image in-memory
+			err = updateImageFromFlags(cmd, &newImage)
+			if err != nil {
+				return err
+			}
+			// Now create the image via XML-RPC
+			system, err := Client.CreateImage(newImage)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Image %s created\n", system.Name)
+			return nil
+		},
+	}
 	addCommonArgs(imageAddCmd)
 	addStringFlags(imageAddCmd, imageStringFlagMetadata)
 	addIntFlags(imageAddCmd, imageIntFlagMetadata)
@@ -572,8 +406,49 @@ func init() {
 	addBoolFlags(imageAddCmd, imageBoolFlagMetadata)
 	addStringSliceFlags(imageAddCmd, imageStringSliceFlagMetadata)
 	imageAddCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return imageAddCmd
+}
 
-	// local flags for image copy
+func NewImageCopyCmd() *cobra.Command {
+	imageCopyCmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy image",
+		Long:  `Copies a image.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			imageName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			imageNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			imageHandle, err := Client.GetImageHandle(imageName)
+			if err != nil {
+				return err
+			}
+			err = Client.CopyImage(imageHandle, imageNewName)
+			if err != nil {
+				return err
+			}
+			copiedImage, err := Client.GetImage(imageNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update image in-memory
+			err = updateImageFromFlags(cmd, copiedImage)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateImage(copiedImage)
+		},
+	}
 	addCommonArgs(imageCopyCmd)
 	addStringFlags(imageCopyCmd, imageStringFlagMetadata)
 	addIntFlags(imageCopyCmd, imageIntFlagMetadata)
@@ -582,8 +457,37 @@ func init() {
 	addStringSliceFlags(imageCopyCmd, imageStringSliceFlagMetadata)
 	imageCopyCmd.Flags().String("newname", "", "the new image name")
 	imageCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return imageCopyCmd
+}
 
-	// local flags for image edit
+func NewImageEditCmd() *cobra.Command {
+	imageEditCmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit image",
+		Long:  `Edits a image.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			imageName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+
+			imageToEdit, err := Client.GetImage(imageName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update image in-memory
+			err = updateImageFromFlags(cmd, imageToEdit)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateImage(imageToEdit)
+		},
+	}
 	addCommonArgs(imageEditCmd)
 	addStringFlags(imageEditCmd, imageStringFlagMetadata)
 	addIntFlags(imageEditCmd, imageIntFlagMetadata)
@@ -591,8 +495,22 @@ func init() {
 	addBoolFlags(imageEditCmd, imageBoolFlagMetadata)
 	addStringSliceFlags(imageEditCmd, imageStringSliceFlagMetadata)
 	imageEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return imageEditCmd
+}
 
-	// local flags for image find
+func NewImageFindCmd() *cobra.Command {
+	imageFindCmd := &cobra.Command{
+		Use:   "find",
+		Short: "find image",
+		Long:  `Finds a given image.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+			return FindItemNames(cmd, args, "image")
+		},
+	}
 	addCommonArgs(imageFindCmd)
 	addStringFlags(imageFindCmd, imageStringFlagMetadata)
 	addIntFlags(imageFindCmd, imageIntFlagMetadata)
@@ -602,12 +520,90 @@ func init() {
 	addStringFlags(imageFindCmd, findStringFlagMetadata)
 	addIntFlags(imageFindCmd, findIntFlagMetadata)
 	addFloatFlags(imageFindCmd, findFloatFlagMetadata)
+	return imageFindCmd
+}
 
-	// local flags for image remove
+func NewImageListCmd() *cobra.Command {
+	imageListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list all images",
+		Long:  `Lists all available images.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			imageNames, err := Client.ListImageNames()
+			if err != nil {
+				return err
+			}
+			listItems(cmd, "images", imageNames)
+			return nil
+		},
+	}
+	return imageListCmd
+}
+
+func NewImageRemoveCmd() *cobra.Command {
+	imageRemoveCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove image",
+		Long:  `Removes a given image.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			return RemoveItemRecursive(cmd, args, "image")
+		},
+	}
 	imageRemoveCmd.Flags().String("name", "", "the image name")
 	imageRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	return imageRemoveCmd
+}
 
-	// local flags for image rename
+func NewImageRenameCmd() *cobra.Command {
+	imageRenameCmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename image",
+		Long:  `Renames a given image.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			imageName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			imageNewName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+
+			imageHandle, err := Client.GetImageHandle(imageName)
+			if err != nil {
+				return err
+			}
+			err = Client.RenameImage(imageHandle, imageNewName)
+			if err != nil {
+				return err
+			}
+			renamedImage, err := Client.GetImage(imageNewName, false, false)
+			if err != nil {
+				return err
+			}
+			// Update image in-memory
+			err = updateImageFromFlags(cmd, renamedImage)
+			if err != nil {
+				return err
+			}
+			return Client.UpdateImage(renamedImage)
+		},
+	}
 	addCommonArgs(imageRenameCmd)
 	addStringFlags(imageRenameCmd, imageStringFlagMetadata)
 	addIntFlags(imageRenameCmd, imageIntFlagMetadata)
@@ -616,7 +612,48 @@ func init() {
 	addStringSliceFlags(imageRenameCmd, imageStringSliceFlagMetadata)
 	imageRenameCmd.Flags().String("newname", "", "the new image name")
 	imageRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	return imageRenameCmd
+}
 
-	// local flags for image report
+func reportImages(cmd *cobra.Command, imageNames []string) error {
+	for _, itemName := range imageNames {
+		system, err := Client.GetImage(itemName, false, false)
+		if err != nil {
+			return err
+		}
+		printStructured(cmd, system)
+		fmt.Fprintln(cmd.OutOrStdout(), "")
+	}
+	return nil
+}
+
+func NewImageReportCmd() *cobra.Command {
+	imageReportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "list all images in detail",
+		Long:  `Shows detailed information about all images.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListImageNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+			return reportImages(cmd, itemNames)
+		},
+	}
 	imageReportCmd.Flags().String("name", "", "the image name")
+	return imageReportCmd
 }
