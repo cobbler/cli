@@ -64,6 +64,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.AddCommand(NewRepoSyncCmd())
 	rootCmd.AddCommand(NewSettingCmd())
 	rootCmd.AddCommand(NewSignatureCmd())
+	rootCmd.AddCommand(NewStatusCmd())
 	rootCmd.AddCommand(NewSyncCmd())
 	rootCmd.AddCommand(NewSystemCmd())
 	rootCmd.AddCommand(NewValidateAutoinstallsCmd())
