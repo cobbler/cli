@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export GOPATH = $(CURDIR)/.go
+export PATH := /usr/lib/go/bin:$(PATH)
+export CGO_ENABLED = 0
+
+%:
+        dh $@ --with=bash-completion
+
+override_dh_auto_build:
+        @mv debian/vendor .
+        dh_auto_build
+
+override_dh_auto_test:
+        @echo "Integrations-Tests disabled during build"
