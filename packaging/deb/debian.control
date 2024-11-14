@@ -1,0 +1,13 @@
+Source: cobbler-cli
+Section: admin
+Priority: extra
+Maintainer: Cobbler Team <cobbler.project@gmail.com>
+Standards-Version: 3.9.6
+Build-Depends: debhelper (>= 12~), bash-completion, golang-go
+Homepage: https://github.com/cobbler/cli
+
+Package: cobbler-cli
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Description: Cobbler Golang based CLI
