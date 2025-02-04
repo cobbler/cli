@@ -16,6 +16,10 @@ communication with a Cobbler server.
 
    Quickstart Guide <quickstart-guide>
    Installing <install>
+   Configuration <configuration>
+   Concepts <concepts>
+   Commands <commands>
+   Miscellaneous <miscellaneous>
 
 
 
