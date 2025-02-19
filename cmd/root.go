@@ -50,6 +50,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.AddCommand(NewHardlinkCmd())
 	rootCmd.AddCommand(NewImageCmd())
 	rootCmd.AddCommand(NewImportCmd())
+	rootCmd.AddCommand(NewInterfaceCommand())
 	rootCmd.AddCommand(NewListCmd())
 	menuCmd, err := NewMenuCmd()
 	cobra.CheckErr(err)
