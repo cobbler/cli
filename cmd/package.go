@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updatePackageFromFlags(cmd *cobra.Command, p *cobbler.Package) error {
@@ -72,7 +74,7 @@ func updatePackageFromFlags(cmd *cobra.Command, p *cobbler.Package) error {
 }
 
 // NewPackageCmd builds a new command that represents the package action
-func NewPackageCmd() *cobra.Command {
+func NewPackageCmd() (*cobra.Command, error) {
 	packageCmd := &cobra.Command{
 		Use:   "package",
 		Short: "Package management",
@@ -90,7 +92,8 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-package for mo
 	packageCmd.AddCommand(NewPackageRemoveCmd())
 	packageCmd.AddCommand(NewPackageRenameCmd())
 	packageCmd.AddCommand(NewPackageReportCmd())
-	return packageCmd
+	packageCmd.AddCommand(NewPackageExportCmd())
+	return packageCmd, nil
 }
 
 func NewPackageAddCmd() *cobra.Command {
@@ -374,4 +377,73 @@ func NewPackageReportCmd() *cobra.Command {
 	}
 	packageReportCmd.Flags().String("name", "", "the package name")
 	return packageReportCmd
+}
+
+func NewPackageExportCmd() *cobra.Command {
+	packageExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export packages",
+		Long:  `Export packages.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListPackageNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				linuxpackage, err := Client.GetPackage(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(linuxpackage)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(linuxpackage)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	packageExportCmd.Flags().String("name", "", "the package name")
+	packageExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return packageExportCmd
 }

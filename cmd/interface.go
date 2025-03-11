@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 	"strings"
 )
 
@@ -185,7 +187,7 @@ func updateNetworkInterfaceFromFlags(cmd *cobra.Command, networkInterface *cobbl
 	return err
 }
 
-func NewInterfaceCommand() *cobra.Command {
+func NewInterfaceCommand() (*cobra.Command, error) {
 	interfaceCmd := &cobra.Command{
 		Use:   "interface",
 		Short: "Manage interfaces",
@@ -199,7 +201,8 @@ func NewInterfaceCommand() *cobra.Command {
 	interfaceCmd.AddCommand(NewInterfaceRemoveCommand())
 	interfaceCmd.AddCommand(NewInterfaceRenameCommand())
 	interfaceCmd.AddCommand(NewInterfaceReportCommand())
-	return interfaceCmd
+	interfaceCmd.AddCommand(NewInterfaceExportCmd())
+	return interfaceCmd, nil
 }
 
 func NewInterfaceAddCommand() *cobra.Command {
@@ -522,4 +525,96 @@ func reportNetworkInterfaces(cmd *cobra.Command, systemNames []string, interface
 		}
 	}
 	return nil
+}
+
+func NewInterfaceExportCmd() *cobra.Command {
+	networkInterfaceExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export network interfaces",
+		Long:  `Export network interfaces.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			systemName, err := cmd.Flags().GetString("system-name")
+			if err != nil {
+				return err
+			}
+			interfaceName, err := cmd.Flags().GetString("interface-name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if systemName == "" {
+				itemNames, err = Client.ListSystemNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, systemName)
+			}
+
+			for _, itemName := range itemNames {
+				system, err := Client.GetSystem(itemName, false, false)
+				if err != nil {
+					return err
+				}
+
+				var systemInterfaces cobbler.Interfaces
+				if interfaceName == "" {
+					systemInterfaces = system.Interfaces
+				} else {
+					systemInterfaces = make(map[string]cobbler.Interface)
+					intf, interfaceExists := system.Interfaces[interfaceName]
+					if interfaceExists {
+						systemInterfaces[interfaceName] = intf
+					}
+				}
+				exportData := struct {
+					SystemName string `json:"system_name" yaml:"system_name"`
+					Interfaces cobbler.Interfaces
+				}{
+					itemName,
+					systemInterfaces,
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(exportData)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(exportData)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	networkInterfaceExportCmd.Flags().String("interface-name", "", "the network interface name")
+	networkInterfaceExportCmd.Flags().String("system-name", "", "the system name")
+	networkInterfaceExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return networkInterfaceExportCmd
 }

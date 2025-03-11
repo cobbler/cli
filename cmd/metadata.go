@@ -975,3 +975,11 @@ var findFloatFlagMetadata = map[string]FlagMetadata[float64]{
 		Usage:        "",
 	},
 }
+
+var exportStringMetadata = map[string]FlagMetadata[string]{
+	"format": {
+		Name:         "format",
+		DefaultValue: "json",
+		Usage:        `the export format, must be one of "JSON" or "YAML"`,
+	},
+}
