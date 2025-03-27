@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error {
@@ -506,7 +508,7 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 }
 
 // NewProfileCmd builds a new command that represents the profile action
-func NewProfileCmd() *cobra.Command {
+func NewProfileCmd() (*cobra.Command, error) {
 	profileCmd := &cobra.Command{
 		Use:   "profile",
 		Short: "Profile management",
@@ -526,7 +528,8 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-profile for mo
 	profileCmd.AddCommand(NewProfileRemoveCmd())
 	profileCmd.AddCommand(NewProfileRenameCmd())
 	profileCmd.AddCommand(NewProfileReportCmd())
-	return profileCmd
+	profileCmd.AddCommand(NewProfileExportCmd())
+	return profileCmd, nil
 }
 
 func NewProfileAddCmd() *cobra.Command {
@@ -905,4 +908,73 @@ func NewProfileReportCmd() *cobra.Command {
 	}
 	profileReportCmd.Flags().String("name", "", "the profile name")
 	return profileReportCmd
+}
+
+func NewProfileExportCmd() *cobra.Command {
+	profileExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export profiles",
+		Long:  `Export profiles.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListProfileNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				profile, err := Client.GetProfile(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(profile)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(profile)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	profileExportCmd.Flags().String("name", "", "the profile name")
+	profileExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return profileExportCmd
 }

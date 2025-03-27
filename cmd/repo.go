@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
@@ -171,7 +173,7 @@ func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
 }
 
 // NewRepoCmd builds a new command that represents the repo action
-func NewRepoCmd() *cobra.Command {
+func NewRepoCmd() (*cobra.Command, error) {
 	repoCmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Repository management",
@@ -190,7 +192,8 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-repo for more 
 	repoCmd.AddCommand(NewRepoRemoveCmd())
 	repoCmd.AddCommand(NewRepoRenameCmd())
 	repoCmd.AddCommand(NewRepoReportCmd())
-	return repoCmd
+	repoCmd.AddCommand(NewRepoExportCmd())
+	return repoCmd, nil
 }
 
 func NewRepoAddCmd() *cobra.Command {
@@ -505,4 +508,73 @@ func NewRepoReportCmd() *cobra.Command {
 	}
 	repoReportCmd.Flags().String("name", "", "the repo name")
 	return repoReportCmd
+}
+
+func NewRepoExportCmd() *cobra.Command {
+	repoExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export repositories",
+		Long:  `Export repositories.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListRepoNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				repo, err := Client.GetRepo(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(repo)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(repo)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	repoExportCmd.Flags().String("name", "", "the repository name")
+	repoExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return repoExportCmd
 }

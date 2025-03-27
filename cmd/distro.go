@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
@@ -366,6 +368,7 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-distro for mor
 		return nil, err
 	}
 	distroCmd.AddCommand(distroReportCmd)
+	distroCmd.AddCommand(NewDistroExportCmd())
 	return distroCmd, nil
 }
 
@@ -677,4 +680,73 @@ func NewDistroReportCmd() (*cobra.Command, error) {
 	}
 	distroReportCmd.Flags().String("name", "", "the distro name")
 	return distroReportCmd, nil
+}
+
+func NewDistroExportCmd() *cobra.Command {
+	distroExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export distributions",
+		Long:  `Export distributions.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListDistroNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				distro, err := Client.GetDistro(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(distro)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(distro)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	distroExportCmd.Flags().String("name", "", "the distro name")
+	distroExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return distroExportCmd
 }

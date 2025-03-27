@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateMgmtClassFromFlags(cmd *cobra.Command, mgmtClass *cobbler.MgmtClass) error {
@@ -107,7 +109,7 @@ func updateMgmtClassFromFlags(cmd *cobra.Command, mgmtClass *cobbler.MgmtClass) 
 }
 
 // NewMgmtClassCmd builds a new command that represents the mgmtclass action
-func NewMgmtClassCmd() *cobra.Command {
+func NewMgmtClassCmd() (*cobra.Command, error) {
 	mgmtclassCmd := &cobra.Command{
 		Use:   "mgmtclass",
 		Short: "Mgmtclass management",
@@ -125,7 +127,8 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-mgmtclass for 
 	mgmtclassCmd.AddCommand(NewMgmtClassRemoveCmd())
 	mgmtclassCmd.AddCommand(NewMgmtClassRenameCmd())
 	mgmtclassCmd.AddCommand(NewMgmtClassReportCmd())
-	return mgmtclassCmd
+	mgmtclassCmd.AddCommand(NewMgmtClassExportCmd())
+	return mgmtclassCmd, nil
 }
 
 func NewMgmtClassAddCmd() *cobra.Command {
@@ -425,4 +428,73 @@ func NewMgmtClassReportCmd() *cobra.Command {
 	}
 	mgmtclassReportCmd.Flags().String("name", "", "the mgmtclass name")
 	return mgmtclassReportCmd
+}
+
+func NewMgmtClassExportCmd() *cobra.Command {
+	mgmtClassExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export management classes",
+		Long:  `Export management classes.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListMgmtClassNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				mgmtClass, err := Client.GetMgmtClass(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(mgmtClass)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(mgmtClass)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	mgmtClassExportCmd.Flags().String("name", "", "the management class name")
+	mgmtClassExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return mgmtClassExportCmd
 }

@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
@@ -348,7 +350,7 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 }
 
 // NewImageCmd builds a new command that represents the image action
-func NewImageCmd() *cobra.Command {
+func NewImageCmd() (*cobra.Command, error) {
 	imageCmd := &cobra.Command{
 		Use:   "image",
 		Short: "Image management",
@@ -366,7 +368,8 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-image for more
 	imageCmd.AddCommand(NewImageRemoveCmd())
 	imageCmd.AddCommand(NewImageRenameCmd())
 	imageCmd.AddCommand(NewImageReportCmd())
-	return imageCmd
+	imageCmd.AddCommand(NewImageExportCmd())
+	return imageCmd, nil
 }
 
 func NewImageAddCmd() *cobra.Command {
@@ -656,4 +659,73 @@ func NewImageReportCmd() *cobra.Command {
 	}
 	imageReportCmd.Flags().String("name", "", "the image name")
 	return imageReportCmd
+}
+
+func NewImageExportCmd() *cobra.Command {
+	imageExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export images",
+		Long:  `Export images.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListImageNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				image, err := Client.GetImage(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(image)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(image)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	imageExportCmd.Flags().String("name", "", "the image name")
+	imageExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return imageExportCmd
 }

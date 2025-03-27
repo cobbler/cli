@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
@@ -764,7 +766,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 }
 
 // NewSystemCmd builds a new command that represents the system action
-func NewSystemCmd() *cobra.Command {
+func NewSystemCmd() (*cobra.Command, error) {
 	systemCmd := &cobra.Command{
 		Use:   "system",
 		Short: "System management",
@@ -788,7 +790,8 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-system for mor
 	systemCmd.AddCommand(NewSystemRemoveCmd())
 	systemCmd.AddCommand(NewSystemRenameCmd())
 	systemCmd.AddCommand(NewSystemReportCmd())
-	return systemCmd
+	systemCmd.AddCommand(NewSystemExportCmd())
+	return systemCmd, nil
 }
 
 func NewSystemAddCmd() *cobra.Command {
@@ -1347,4 +1350,73 @@ func NewSystemReportCmd() *cobra.Command {
 	}
 	systemReportCmd.Flags().String("name", "", "the system name")
 	return systemReportCmd
+}
+
+func NewSystemExportCmd() *cobra.Command {
+	systemExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export systems",
+		Long:  `Export systems.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListSystemNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				system, err := Client.GetSystem(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(system)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(system)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	systemExportCmd.Flags().String("name", "", "the system name")
+	systemExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return systemExportCmd
 }

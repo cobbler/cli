@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func updateMenuFromFlags(cmd *cobra.Command, menu *cobbler.Menu) error {
@@ -82,6 +84,7 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-menu for more 
 	}
 	menuCmd.AddCommand(menuRenameCmd)
 	menuCmd.AddCommand(NewMenuReportCmd())
+	menuCmd.AddCommand(NewMenuExportCmd())
 	return menuCmd, nil
 }
 
@@ -371,4 +374,73 @@ func NewMenuReportCmd() *cobra.Command {
 	}
 	menuReportCmd.Flags().String("name", "", "the menu name")
 	return menuReportCmd
+}
+
+func NewMenuExportCmd() *cobra.Command {
+	menuExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export menus",
+		Long:  `Export menus.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			if formatOption != "json" && formatOption != "yaml" {
+				return fmt.Errorf("format must be json or yaml")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := generateCobblerClient()
+			if err != nil {
+				return err
+			}
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			formatOption, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			itemNames := make([]string, 0)
+			if name == "" {
+				itemNames, err = Client.ListMenuNames()
+				if err != nil {
+					return err
+				}
+			} else {
+				itemNames = append(itemNames, name)
+			}
+
+			for _, itemName := range itemNames {
+				menu, err := Client.GetMenu(itemName, false, false)
+				if err != nil {
+					return err
+				}
+				if formatOption == "json" {
+					jsonDocument, err := json.Marshal(menu)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+				}
+				if formatOption == "yaml" {
+					yamlDocument, err := yaml.Marshal(menu)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "---")
+					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+				}
+			}
+			return nil
+		},
+	}
+	menuExportCmd.Flags().String("name", "", "the menu name")
+	menuExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return menuExportCmd
 }
