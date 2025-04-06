@@ -2,6 +2,7 @@ BINARY_NAME=cobbler
 EXECUTOR?=docker
 COBBLER_SERVER_URL=http://localhost:8081/cobbler_api
 TEST?=$$(go list ./... |grep -v 'vendor')
+VERSION=0.0.1
 
 build:
 	@echo "building package"
@@ -12,6 +13,18 @@ build:
 build-docker:
 	@echo "building docker"
 	${EXECUTOR} build -t cobbler/cli:latest -f packaging/docker/production/Dockerfile .
+
+build-rpm-docker:
+	@docker build -t localhost/cobbler-cli-pkg:opensuse-tumblewed -f packaging/docker/openSUSE_Tumbleweed/Dockerfile .
+	@docker run --rm -v $(CURDIR)/rpms/openSUSE_Tumbleweed:/root/rpmbuild/RPMS -v $(CURDIR):/workspace localhost/cobbler-cli-pkg:opensuse-tumblewed
+
+build-rpm:
+	@cp packaging/rpm/cobbler-cli.spec /root/rpmbuild/SPECS/cobbler-cli.spec
+	@cd ..; tar --exclude dist --exclude ".idea" --exclude ubuntu-20.04.1-legacy-server-amd64.iso --exclude extracted_iso_image --transform="s/workspace/cobbler-cli-${VERSION}/" -zcvf "cobbler-cli-${VERSION}.tar.gz" /workspace
+	@mv ../cobbler-cli-${VERSION}.tar.gz /root/rpmbuild/SOURCES
+	@go mod vendor; tar -zcvf "vendor.tar.gz" vendor; mv vendor.tar.gz /root/rpmbuild/SOURCES
+	@rpmbuild --define "_topdir /root/rpmbuild" \
+         --bb /root/rpmbuild/SPECS/cobbler-cli.spec
 
 clean:
 	go clean
@@ -43,3 +56,5 @@ shell_completions:
 	./${BINARY_NAME} completion fish > config/completions/fish/cobbler
 	./${BINARY_NAME} completion powershell > config/completions/powershell/cobbler
 	./${BINARY_NAME} completion zsh > config/completions/zsh/cobbler
+
+.PHONY: build build-docker build-rpm-docker build-rpm clean cleandoc doc run test shell_completions

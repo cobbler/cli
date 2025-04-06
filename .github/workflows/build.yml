@@ -7,7 +7,7 @@ on:
     branches:
       - main
 jobs:
-  build:
+  native:
     strategy:
       matrix:
         go: [ '1.22', '1.23' ]
@@ -24,3 +24,20 @@ jobs:
         run: make build
       - name: Execute CLI help
         run: ./cobbler --help
+      - name: Upload binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobbler-cli-binary-${{ matrix.go }}-${{ matrix.os }}
+          path: ./cobbler
+  rpm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build RPM
+        run: make build-rpm-docker
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobbler-cli-rpm
+          path: ./rpms/**/*.rpm
