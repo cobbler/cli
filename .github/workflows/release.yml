@@ -58,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./packaging/docker/Dockerfile
+          file: ./packaging/docker/production/Dockerfile
           push: ${{ env.PUSH_IMAGE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

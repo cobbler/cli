@@ -11,7 +11,7 @@ build:
 
 build-docker:
 	@echo "building docker"
-	${EXECUTOR} build -t cobbler/cli:latest -f packaging/docker/Dockerfile .
+	${EXECUTOR} build -t cobbler/cli:latest -f packaging/docker/production/Dockerfile .
 
 clean:
 	go clean
