@@ -6,11 +6,11 @@ export PATH := /usr/lib/go/bin:$(PATH)
 export CGO_ENABLED = 0
 
 %:
-        dh $@ --with=bash-completion
+	dh $@ --with=bash-completion
 
 override_dh_auto_build:
-        @mv debian/vendor .
-        dh_auto_build
+	@mv debian/vendor .
+	dh_auto_build
 
 override_dh_auto_test:
-        @echo "Integrations-Tests disabled during build"
+	@echo "Integrations-Tests disabled during build"

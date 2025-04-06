@@ -18,6 +18,10 @@ build-rpm-docker:
 	@docker build -t localhost/cobbler-cli-pkg:opensuse-tumblewed -f packaging/docker/openSUSE_Tumbleweed/Dockerfile .
 	@docker run --rm -v $(CURDIR)/rpms/openSUSE_Tumbleweed:/root/rpmbuild/RPMS -v $(CURDIR):/workspace localhost/cobbler-cli-pkg:opensuse-tumblewed
 
+build-deb-docker:
+	@docker build -t localhost/cobbler-cli-pkg:debian-12 -f packaging/docker/Debian_12/Dockerfile .
+	@docker run --rm -v $(CURDIR)/debs/Debian_12:/usr/src/cobbler-cli/deb-build -v $(CURDIR):/workspace localhost/cobbler-cli-pkg:debian-12
+
 build-rpm:
 	@cp packaging/rpm/cobbler-cli.spec /root/rpmbuild/SPECS/cobbler-cli.spec
 	@cd ..; tar --exclude dist --exclude ".idea" --exclude ubuntu-20.04.1-legacy-server-amd64.iso --exclude extracted_iso_image --transform="s/workspace/cobbler-cli-${VERSION}/" -zcvf "cobbler-cli-${VERSION}.tar.gz" /workspace
@@ -25,6 +29,15 @@ build-rpm:
 	@go mod vendor; tar -zcvf "vendor.tar.gz" vendor; mv vendor.tar.gz /root/rpmbuild/SOURCES
 	@rpmbuild --define "_topdir /root/rpmbuild" \
          --bb /root/rpmbuild/SPECS/cobbler-cli.spec
+
+build-deb:
+	@mkdir debian; cp -r packaging/deb/* debian/
+	@cd debian; rename "s/debian\.//" *
+	@go mod vendor; tar -zcvf "vendor.tar.gz" vendor; mv vendor.tar.gz debian/; rm -r vendor
+	@cd debian; tar -xvzf vendor.tar.gz
+	@debuild -us -uc
+	@rm -r debian
+	@cp ../cobbler-cli_* /usr/src/cobbler-cli/deb-build
 
 clean:
 	go clean
