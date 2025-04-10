@@ -35,3 +35,8 @@ testing/cobbler_source/
 extracted_iso_image/
 *.iso
 coverage.out
+
+# Packaging
+/vendor/
+/rpms/
+

@@ -1,21 +1,9 @@
-# This GitHub action can publish assets for release when a tag is created.
-# Currently its setup to run on any tag that matches the pattern "v*" (ie. v0.1.0).
-#
-# This uses an action (paultyng/ghaction-import-gpg) that assumes you set your
-# private key in the `GPG_PRIVATE_KEY` secret and passphrase in the `PASSPHRASE`
-# secret. If you would rather own your own GPG handling, please fork this action
-# or use an alternative one for key handling.
-#
-# You will need to pass the `--batch` flag to `gpg` in your signing step
-# in `goreleaser` to indicate this is being used in a non-interactive mode.
-#
-
-name: release
+name: Build & Release
 on:
-  pull_request:
+  push:
     branches:
       - main
-  push:
+  pull_request:
     branches:
       - main
     tags:
@@ -25,8 +13,55 @@ permissions:
   contents: write
 
 jobs:
-  push_to_registry:
-    name: Push Docker image to GHCR
+  native:
+    strategy:
+      matrix:
+        go: [ '1.22', '1.23' ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Go ${{ matrix.go }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build project
+        run: make build
+      - name: Execute CLI help
+        run: ./cobbler --help
+      - name: Upload binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobbler-cli-binary-${{ matrix.go }}-${{ matrix.os }}
+          path: ./cobbler
+  rpm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build RPM
+        run: make build-rpm-docker
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobbler-cli-native-rpm
+          path: ./rpms/**/*.rpm
+  deb:
+    # This will fail until Debian 13 will arrive with a newer golang version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build DEB
+        continue-on-error: true
+        run: make build-deb-docker
+      - name: Upload DEB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobbler-cli-native-deb
+          path: ./debs/**/*.deb
+  docker:
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
@@ -58,7 +93,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./packaging/docker/Dockerfile
+          file: ./packaging/docker/production/Dockerfile
           push: ${{ env.PUSH_IMAGE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -71,6 +106,11 @@ jobs:
           push-to-registry: ${{ env.PUSH_IMAGE }}
   goreleaser:
     runs-on: ubuntu-latest
+    needs:
+      - native
+      - docker
+      - deb
+      - rpm
     steps:
       - name: Checkout
         # https://github.com/actions/checkout
@@ -80,6 +120,12 @@ jobs:
       - name: Set up Go
         # https://github.com/actions/setup-go
         uses: actions/setup-go@v5
+      - name: Download all artifacts
+        # https://github.com/actions/download-artifact
+        id: download-artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "cobbler-cli-native-*"
       - name: Import GPG key
         # https://github.com/crazy-max/ghaction-import-gpg
         id: import_gpg
