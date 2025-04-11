@@ -39,4 +39,4 @@ coverage.out
 # Packaging
 /vendor/
 /rpms/
-
+/cobbler-cli-native-*/
