@@ -1,9 +1,10 @@
 module github.com/cobbler/cli
 
-go 1.22
+// We need this because ReadBuildInfo() returns the correct data only starting with Go 1.24.
+go 1.24
 
 require (
-	github.com/cobbler/cobblerclient v0.5.8
+	github.com/cobbler/cobblerclient v1.0.0-rc2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
@@ -11,10 +12,9 @@ require (
 )
 
 require (
-	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-test/deep v1.1.1 // indirect
-	github.com/go-viper/mapstructure/v2 v2.0.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b // indirect

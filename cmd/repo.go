@@ -67,14 +67,14 @@ func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
 			if err != nil {
 				return
 			}
-			repo.AptComponents = repoNewAptComponents
+			repo.Apt.Components = repoNewAptComponents
 		case "apt-dists":
 			var repoNewAptDists []string
 			repoNewAptDists, err = cmd.Flags().GetStringSlice("apt-dists")
 			if err != nil {
 				return
 			}
-			repo.AptDists = repoNewAptDists
+			repo.Apt.Dists = repoNewAptDists
 		case "createrepo-flags":
 			fallthrough
 		case "createrepo-flags-inherit":
@@ -248,7 +248,8 @@ func NewRepoAutoAddCmd() *cobra.Command {
 				return err
 			}
 
-			return Client.AutoAddRepos()
+			_, err = Client.AutoAddRepos()
+			return err
 		},
 	}
 	return repoAutoAddCmd
@@ -368,6 +369,7 @@ func NewRepoFindCmd() *cobra.Command {
 	addIntFlags(repoFindCmd, findIntFlagMetadata)
 	addFloatFlags(repoFindCmd, findFloatFlagMetadata)
 	repoFindCmd.Flags().String("parent", "", "")
+	addPaginationFlags(repoFindCmd)
 	return repoFindCmd
 }
 

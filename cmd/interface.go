@@ -1,197 +1,159 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-FileCopyrightText: Copyright SUSE LLC
+
 package cmd
 
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
+
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
-	"strings"
 )
 
-func updateNetworkInterfaceFromFlags(cmd *cobra.Command, networkInterface *cobbler.Interface) error {
+// parseNetworkInterfaceType converts the CLI string form of an interface type
+// (na, bond, bond_slave, bridge, ...) to the typed enum used by cobblerclient.
+func parseNetworkInterfaceType(s string) (cobbler.NetworkInterfaceType, error) {
+	switch strings.ToLower(s) {
+	case "", "na":
+		return cobbler.NetworkInterfaceTypeNA, nil
+	case "bond":
+		return cobbler.NetworkInterfaceTypeBond, nil
+	case "bond_slave":
+		return cobbler.NetworkInterfaceTypeBondSlave, nil
+	case "bridge":
+		return cobbler.NetworkInterfaceTypeBridge, nil
+	case "bridge_slave":
+		return cobbler.NetworkInterfaceTypeBridgeSlave, nil
+	case "bonded_bridge_slave":
+		return cobbler.NetworkInterfaceTypeBondedBridgeSlave, nil
+	case "infiniband":
+		return cobbler.NetworkInterfaceTypeInfiniband, nil
+	}
+	return cobbler.NetworkInterfaceTypeNA, fmt.Errorf("unknown interface type %q", s)
+}
+
+// updateNetworkInterfaceFromFlags applies any --flags the user supplied on the
+// command line to iface. Flag names mirror NetworkInterface field names with
+// IPv4/IPv6/DNS prefixes used for the nested value objects.
+func updateNetworkInterfaceFromFlags(cmd *cobra.Command, iface *cobbler.NetworkInterface) error {
 	var err error
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
-			// If one of the previous flags has had an error just directly return.
 			return
 		}
 		switch flag.Name {
-		// The rename & copy operations are special operations as such we cannot blindly set this inside here.
-		// Any rename & copy operation must be handled outside of this method.
-		case "bonding-opts":
-			var systemNewBondingOpts string
-			systemNewBondingOpts, err = cmd.Flags().GetString("bonding-opts")
-			if err != nil {
-				return
-			}
-			networkInterface.BondingOpts = systemNewBondingOpts
-		case "bridge-opts":
-			var systemNewBridgeOpts string
-			systemNewBridgeOpts, err = cmd.Flags().GetString("bridge-opts")
-			if err != nil {
-				return
-			}
-			networkInterface.BridgeOpts = systemNewBridgeOpts
-		case "cnames":
-			var systemNewCNames []string
-			systemNewCNames, err = cmd.Flags().GetStringSlice("cnames")
-			if err != nil {
-				return
-			}
-			networkInterface.CNAMEs = systemNewCNames
-		case "connected-mode":
-			var systemNewConnectedMode bool
-			systemNewConnectedMode, err = cmd.Flags().GetBool("connected-mode")
-			if err != nil {
-				return
-			}
-			networkInterface.ConnectedMode = systemNewConnectedMode
-		case "dhcp-tag":
-			var systemNewDhcpTag string
-			systemNewDhcpTag, err = cmd.Flags().GetString("dhcp-tag")
-			if err != nil {
-				return
-			}
-			networkInterface.DHCPTag = systemNewDhcpTag
-		case "dns-name":
-			var systemNewDnsName string
-			systemNewDnsName, err = cmd.Flags().GetString("dns-name")
-			if err != nil {
-				return
-			}
-			networkInterface.DNSName = systemNewDnsName
-		case "if-gateway":
-			var systemNewIfGateway string
-			systemNewIfGateway, err = cmd.Flags().GetString("if-gateway")
-			if err != nil {
-				return
-			}
-			networkInterface.Gateway = systemNewIfGateway
-		case "interface-master":
-			var systemNewInterfaceMaster string
-			systemNewInterfaceMaster, err = cmd.Flags().GetString("interface-master")
-			if err != nil {
-				return
-			}
-			networkInterface.InterfaceMaster = systemNewInterfaceMaster
-		case "interface-type":
-			var systemNewInterfaceType string
-			systemNewInterfaceType, err = cmd.Flags().GetString("interface-type")
-			if err != nil {
-				return
-			}
-			networkInterface.InterfaceType = systemNewInterfaceType
-		case "ip-address":
-			var systemNewIpAddress string
-			systemNewIpAddress, err = cmd.Flags().GetString("ip-address")
-			if err != nil {
-				return
-			}
-			networkInterface.IPAddress = systemNewIpAddress
-		case "ipv6-address":
-			var systemNewIpv6Address string
-			systemNewIpv6Address, err = cmd.Flags().GetString("ipv6-address")
-			if err != nil {
-				return
-			}
-			networkInterface.IPv6Address = systemNewIpv6Address
-		case "ipv6-default-gateway":
-			var systemNewIpv6DefaultGateway string
-			systemNewIpv6DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
-			if err != nil {
-				return
-			}
-			networkInterface.IPv6DefaultGateway = systemNewIpv6DefaultGateway
-		case "ipv6-mtu":
-			var systemNewIpv6Mtu string
-			systemNewIpv6Mtu, err = cmd.Flags().GetString("ipv6-mtu")
-			if err != nil {
-				return
-			}
-			networkInterface.IPv6MTU = systemNewIpv6Mtu
-		case "ipv6-prefix":
-			var systemNewIpv6Prefix string
-			systemNewIpv6Prefix, err = cmd.Flags().GetString("ipv6-prefix")
-			if err != nil {
-				return
-			}
-			networkInterface.IPv6Prefix = systemNewIpv6Prefix
-		case "ipv6-secondaries":
-			var systemNewIpv6Secondaries []string
-			systemNewIpv6Secondaries, err = cmd.Flags().GetStringSlice("ipv6-secondaries")
-			if err != nil {
-				return
-			}
-			networkInterface.IPv6Secondaries = systemNewIpv6Secondaries
-		case "ipv6-static-routes":
-			var systemNewIpv6StaticRoutes []string
-			systemNewIpv6StaticRoutes, err = cmd.Flags().GetStringSlice("ipv6-static-routes")
-			if err != nil {
-				return
-			}
-			networkInterface.IPv6StaticRoutes = systemNewIpv6StaticRoutes
+		// Top-level link-layer
 		case "mac-address":
-			var systemNewMacAddress string
-			systemNewMacAddress, err = cmd.Flags().GetString("mac-address")
+			iface.MacAddress, err = cmd.Flags().GetString("mac-address")
+		case "interface-type":
+			var v string
+			v, err = cmd.Flags().GetString("interface-type")
 			if err != nil {
 				return
 			}
-			networkInterface.MACAddress = systemNewMacAddress
+			iface.InterfaceType, err = parseNetworkInterfaceType(v)
+		case "interface-master":
+			iface.InterfaceMaster, err = cmd.Flags().GetString("interface-master")
+		case "bonding-opts":
+			iface.BondingOpts, err = cmd.Flags().GetString("bonding-opts")
+		case "bridge-opts":
+			iface.BridgeOpts, err = cmd.Flags().GetString("bridge-opts")
+		case "connected-mode":
+			iface.ConnectedMode, err = cmd.Flags().GetBool("connected-mode")
 		case "management":
-			var systemNewManagement bool
-			systemNewManagement, err = cmd.Flags().GetBool("management")
-			if err != nil {
-				return
-			}
-			networkInterface.Management = systemNewManagement
-		case "mtu":
-			var systemNewMtu string
-			systemNewMtu, err = cmd.Flags().GetString("mtu")
-			if err != nil {
-				return
-			}
-			networkInterface.MTU = systemNewMtu
-		case "netmask":
-			var systemNewNetmask string
-			systemNewNetmask, err = cmd.Flags().GetString("netmask")
-			if err != nil {
-				return
-			}
-			networkInterface.Netmask = systemNewNetmask
+			iface.Management, err = cmd.Flags().GetBool("management")
 		case "static":
-			var systemNewStatic bool
-			systemNewStatic, err = cmd.Flags().GetBool("static")
-			if err != nil {
-				return
-			}
-			networkInterface.Static = systemNewStatic
-		case "static-routes":
-			var systemNewStaticRoutes []string
-			systemNewStaticRoutes, err = cmd.Flags().GetStringSlice("static-routes")
-			if err != nil {
-				return
-			}
-			networkInterface.StaticRoutes = systemNewStaticRoutes
+			iface.Static, err = cmd.Flags().GetBool("static")
+		case "dhcp-tag":
+			iface.DHCPTag, err = cmd.Flags().GetString("dhcp-tag")
+		case "mtu":
+			iface.MTU, err = cmd.Flags().GetString("mtu")
 		case "virt-bridge":
-			var systemNewVirtBridge string
-			systemNewVirtBridge, err = cmd.Flags().GetString("virt-bridge")
-			if err != nil {
-				return
+			fallthrough
+		case "virt-bridge-inherit":
+			if cmd.Flags().Lookup("virt-bridge-inherit") != nil &&
+				cmd.Flags().Lookup("virt-bridge-inherit").Changed {
+				iface.VirtBridge.Data = ""
+				iface.VirtBridge.IsInherited, err = cmd.Flags().GetBool("virt-bridge-inherit")
+			} else {
+				iface.VirtBridge.IsInherited = false
+				iface.VirtBridge.Data, err = cmd.Flags().GetString("virt-bridge")
 			}
-			networkInterface.VirtBridge = systemNewVirtBridge
+		// IPv4
+		case "ipv4-address":
+			iface.IPv4.Address, err = cmd.Flags().GetString("ipv4-address")
+		case "ipv4-netmask":
+			iface.IPv4.Netmask, err = cmd.Flags().GetString("ipv4-netmask")
+		case "ipv4-gateway":
+			iface.IfGateway, err = cmd.Flags().GetString("ipv4-gateway")
+		case "ipv4-static-routes":
+			iface.IPv4.StaticRoutes, err = cmd.Flags().GetStringSlice("ipv4-static-routes")
+		// IPv6
+		case "ipv6-address":
+			iface.IPv6.Address, err = cmd.Flags().GetString("ipv6-address")
+		case "ipv6-prefix":
+			iface.IPv6.Prefix, err = cmd.Flags().GetString("ipv6-prefix")
+		case "ipv6-secondaries":
+			iface.IPv6.Secondaries, err = cmd.Flags().GetStringSlice("ipv6-secondaries")
+		case "ipv6-mtu":
+			iface.IPv6.MTU, err = cmd.Flags().GetString("ipv6-mtu")
+		case "ipv6-static-routes":
+			iface.IPv6.StaticRoutes, err = cmd.Flags().GetStringSlice("ipv6-static-routes")
+		case "ipv6-default-gateway":
+			iface.Ipv6DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
+		// DNS
+		case "dns-name":
+			iface.DNS.Name, err = cmd.Flags().GetString("dns-name")
+		case "dns-cnames":
+			iface.DNS.CNames, err = cmd.Flags().GetStringSlice("dns-cnames")
 		}
 	})
-	// Don't blindly return nil because maybe one of the flags had an issue retrieving an argument.
 	return err
 }
 
+// addInterfaceFlagSet registers the full set of interface configuration flags
+// onto a subcommand.
+func addInterfaceFlagSet(cmd *cobra.Command) {
+	addStringFlags(cmd, interfaceStringFlagMetadata)
+	addBoolFlags(cmd, interfaceBoolFlagMetadata)
+	addStringSliceFlags(cmd, interfaceStringSliceFlagMetadata)
+}
+
+// resolveSystemUid looks up the UID of a system, given either --system-uid or
+// --system-name. Returns an error if neither is set.
+func resolveSystemUid(cmd *cobra.Command) (string, error) {
+	systemUid, err := cmd.Flags().GetString("system-uid")
+	if err != nil {
+		return "", err
+	}
+	if systemUid != "" {
+		return systemUid, nil
+	}
+	systemName, err := cmd.Flags().GetString("system-name")
+	if err != nil {
+		return "", err
+	}
+	if systemName == "" {
+		return "", fmt.Errorf("one of --system-name or --system-uid is required")
+	}
+	system, err := Client.GetSystem(systemName, false, false)
+	if err != nil {
+		return "", err
+	}
+	return system.Uid, nil
+}
+
+// NewInterfaceCommand builds the `cobbler interface` command and its subtree.
 func NewInterfaceCommand() (*cobra.Command, error) {
 	interfaceCmd := &cobra.Command{
 		Use:   "interface",
-		Short: "Manage interfaces",
-		Long:  "Let's you manage network interfaces for systems.",
+		Short: "Manage network interfaces",
+		Long:  `Manage network interfaces as first-class Cobbler 4.0.0 items.`,
 	}
 	interfaceCmd.AddCommand(NewInterfaceAddCommand())
 	interfaceCmd.AddCommand(NewInterfaceCopyCommand())
@@ -206,415 +168,342 @@ func NewInterfaceCommand() (*cobra.Command, error) {
 }
 
 func NewInterfaceAddCommand() *cobra.Command {
-	interfaceAddCmd := &cobra.Command{
-		Use: "add",
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "add a network interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-
-			systemName, err := cmd.Flags().GetString("system-name")
+			if name == "" {
+				return fmt.Errorf("--name is required")
+			}
+			systemUid, err := resolveSystemUid(cmd)
 			if err != nil {
 				return err
 			}
-			networkInterfaceName, err := cmd.Flags().GetString("interface-name")
+			iface := cobbler.NewNetworkInterface()
+			iface.Name = name
+			iface.SystemUid = systemUid
+			if err := updateNetworkInterfaceFromFlags(cmd, &iface); err != nil {
+				return err
+			}
+			created, err := Client.CreateNetworkInterface(systemUid, iface)
 			if err != nil {
 				return err
 			}
-
-			systemObject, err := Client.GetSystem(systemName, false, false)
-			if err != nil {
-				return err
-			}
-
-			networkInterface := cobbler.NewInterface()
-			err = updateNetworkInterfaceFromFlags(cmd, &networkInterface)
-			if err != nil {
-				return err
-			}
-
-			return systemObject.CreateInterface(networkInterfaceName, networkInterface)
-		},
-	}
-	interfaceAddCmd.Flags().String("interface-name", "", "the interface to operate on")
-	interfaceAddCmd.Flags().String("system-name", "", "the system to operate on")
-	addStringFlags(interfaceAddCmd, interfaceStringFlagMetadata)
-	addBoolFlags(interfaceAddCmd, interfaceBoolFlagMetadata)
-	addStringSliceFlags(interfaceAddCmd, interfaceStringSliceFlagMetadata)
-	return interfaceAddCmd
-}
-
-func NewInterfaceCopyCommand() *cobra.Command {
-	interfaceCopyCmd := &cobra.Command{
-		Use: "copy",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
-			if err != nil {
-				return err
-			}
-
-			systemName, err := cmd.Flags().GetString("system-name")
-			if err != nil {
-				return err
-			}
-			networkInterfaceName, err := cmd.Flags().GetString("interface-name")
-			if err != nil {
-				return err
-			}
-			newNetworkInterfaceName, err := cmd.Flags().GetString("new-interface-name")
-			if err != nil {
-				return err
-			}
-
-			systemObject, err := Client.GetSystem(systemName, false, false)
-			if err != nil {
-				return err
-			}
-			networkInterfaceObject, err := systemObject.GetInterface(networkInterfaceName)
-			if err != nil {
-				return err
-			}
-			networkInterfaceObject.MACAddress = ""
-			networkInterfaceObject.IPAddress = ""
-			networkInterfaceObject.IPv6Address = ""
-			err = systemObject.CreateInterface(newNetworkInterfaceName, networkInterfaceObject)
-			if err != nil {
-				return err
-			}
-
+			fmt.Fprintf(cmd.OutOrStdout(), "Network interface %s created\n", created.Name)
 			return nil
 		},
 	}
-	interfaceCopyCmd.Flags().String("interface-name", "", "the interface to operate on")
-	interfaceCopyCmd.Flags().String("system-name", "", "the system to operate on")
-	interfaceCopyCmd.Flags().String("new-interface-name", "", "the new name for the network interface")
-	return interfaceCopyCmd
+	cmd.Flags().String("name", "", "the network interface name")
+	cmd.Flags().String("system-name", "", "the parent system name (resolved to UID)")
+	cmd.Flags().String("system-uid", "", "the parent system UID")
+	addInterfaceFlagSet(cmd)
+	return cmd
 }
 
 func NewInterfaceEditCommand() *cobra.Command {
-	interfaceEditCmd := &cobra.Command{
-		Use: "edit",
+	cmd := &cobra.Command{
+		Use:   "edit",
+		Short: "edit a network interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-
-			systemName, err := cmd.Flags().GetString("system-name")
+			iface, err := Client.GetNetworkInterface(name, false, false)
 			if err != nil {
 				return err
 			}
-			networkInterfaceName, err := cmd.Flags().GetString("interface-name")
-			if err != nil {
+			if err := updateNetworkInterfaceFromFlags(cmd, iface); err != nil {
 				return err
 			}
-
-			systemHandle, err := Client.GetSystemHandle(systemName)
-			if err != nil {
-				return err
-			}
-
-			editedProperties := make(map[string]interface{})
-			cmd.Flags().Visit(func(flag *pflag.Flag) {
-				propertyName := fmt.Sprintf("%s-%s", networkInterfaceName, strings.Replace(flag.Name, "-", "_", -1))
-				editedProperties[propertyName] = flag.Value
-			})
-			err = Client.ModifyInterface(systemHandle, editedProperties)
-			if err != nil {
-				return err
-			}
-			return nil
+			return Client.UpdateNetworkInterface(iface)
 		},
 	}
-	interfaceEditCmd.Flags().String("interface-name", "", "the interface to operate on")
-	interfaceEditCmd.Flags().String("system-name", "", "the system to operate on")
-	addStringFlags(interfaceEditCmd, interfaceStringFlagMetadata)
-	addBoolFlags(interfaceEditCmd, interfaceBoolFlagMetadata)
-	addStringSliceFlags(interfaceEditCmd, interfaceStringSliceFlagMetadata)
-	return interfaceEditCmd
+	cmd.Flags().String("name", "", "the network interface name")
+	addInterfaceFlagSet(cmd)
+	return cmd
 }
 
-func NewInterfaceFindCommand() *cobra.Command {
-	interfaceFindCmd := &cobra.Command{
-		Use: "find",
+func NewInterfaceCopyCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "copy",
+		Short: "copy a network interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-
-			return FindItemNames(cmd, args, "system")
+			newName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+			handle, err := Client.GetNetworkInterfaceHandle(name)
+			if err != nil {
+				return err
+			}
+			if err := Client.CopyNetworkInterface(handle, newName); err != nil {
+				return err
+			}
+			// Clear identity-bound fields on the copy by default; users can
+			// re-set them via --mac-address / --ipv4-address / --ipv6-address.
+			fresh, err := Client.GetNetworkInterface(newName, false, false)
+			if err != nil {
+				return err
+			}
+			fresh.MacAddress = ""
+			fresh.IPv4.Address = ""
+			fresh.IPv6.Address = ""
+			if err := updateNetworkInterfaceFromFlags(cmd, fresh); err != nil {
+				return err
+			}
+			return Client.UpdateNetworkInterface(fresh)
 		},
 	}
-	// Network interface flags
-	addStringFlags(interfaceFindCmd, interfaceStringFlagMetadata)
-	addBoolFlags(interfaceFindCmd, interfaceBoolFlagMetadata)
-	addStringSliceFlags(interfaceFindCmd, interfaceStringSliceFlagMetadata)
-	interfaceFindCmd.Flags().String("name", "", "the system to operate on")
-	interfaceFindCmd.Flags().String("interface", "", "the interface to operate on")
-	return interfaceFindCmd
-}
-
-func printNetworkInterfaceNames(cmd *cobra.Command, system *cobbler.System) error {
-	networkInterfaces, err := system.GetInterfaces()
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", system.Name)
-	for interfaceName := range networkInterfaces {
-		fmt.Fprintf(cmd.OutOrStdout(), "    %s\n", interfaceName)
-	}
-	return nil
-}
-
-func NewInterfaceListCommand() *cobra.Command {
-	interfaceListCmd := &cobra.Command{
-		Use: "list",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
-			if err != nil {
-				return err
-			}
-
-			systems, err := Client.GetSystems()
-			if err != nil {
-				return err
-			}
-			for _, system := range systems {
-				err = printNetworkInterfaceNames(cmd, system)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		},
-	}
-	return interfaceListCmd
-}
-
-func NewInterfaceRemoveCommand() *cobra.Command {
-	interfaceRemoveCmd := &cobra.Command{
-		Use: "remove",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
-			if err != nil {
-				return err
-			}
-
-			systemName, err := cmd.Flags().GetString("system-name")
-			if err != nil {
-				return err
-			}
-			networkInterfaceName, err := cmd.Flags().GetString("interface-name")
-			if err != nil {
-				return err
-			}
-
-			systemHandle, err := Client.GetSystemHandle(systemName)
-			if err != nil {
-				return err
-			}
-			err = Client.DeleteNetworkInterface(systemHandle, networkInterfaceName)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		},
-	}
-	interfaceRemoveCmd.Flags().String("interface-name", "", "the interface to operate on")
-	interfaceRemoveCmd.Flags().String("system-name", "", "the system to operate on")
-	return interfaceRemoveCmd
+	cmd.Flags().String("name", "", "the network interface to copy")
+	cmd.Flags().String("newname", "", "the new interface name")
+	addInterfaceFlagSet(cmd)
+	return cmd
 }
 
 func NewInterfaceRenameCommand() *cobra.Command {
-	interfaceRenameCmd := &cobra.Command{
-		Use: "rename",
+	cmd := &cobra.Command{
+		Use:   "rename",
+		Short: "rename a network interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
+			newName, err := cmd.Flags().GetString("newname")
+			if err != nil {
+				return err
+			}
+			handle, err := Client.GetNetworkInterfaceHandle(name)
+			if err != nil {
+				return err
+			}
+			return Client.RenameNetworkInterface(handle, newName)
+		},
+	}
+	cmd.Flags().String("name", "", "the network interface to rename")
+	cmd.Flags().String("newname", "", "the new interface name")
+	return cmd
+}
 
-			systemName, err := cmd.Flags().GetString("system-name")
+func NewInterfaceRemoveCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "remove",
+		Short: "remove a network interface",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-			networkInterfaceName, err := cmd.Flags().GetString("interface-name")
-			if err != nil {
-				return err
-			}
-			newNetworkInterfaceName, err := cmd.Flags().GetString("new-interface-name")
-			if err != nil {
-				return err
-			}
+			return Client.DeleteNetworkInterface(name)
+		},
+	}
+	cmd.Flags().String("name", "", "the network interface to remove")
+	return cmd
+}
 
-			err = Client.RenameNetworkInterface(systemName, networkInterfaceName, newNetworkInterfaceName)
+func NewInterfaceFindCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "find",
+		Short: "find network interfaces",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			return FindItemNames(cmd, args, "network_interface")
+		},
+	}
+	addInterfaceFlagSet(cmd)
+	cmd.Flags().String("name", "", "match by interface name")
+	cmd.Flags().String("system-name", "", "filter by parent system name")
+	cmd.Flags().String("system-uid", "", "filter by parent system UID")
+	addPaginationFlags(cmd)
+	return cmd
+}
+
+func NewInterfaceListCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "list network interfaces grouped by system",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			interfaces, err := Client.GetNetworkInterfaces()
 			if err != nil {
 				return err
 			}
-
+			grouped := make(map[string][]string)
+			for _, iface := range interfaces {
+				grouped[iface.SystemName] = append(grouped[iface.SystemName], iface.Name)
+			}
+			systemNames := make([]string, 0, len(grouped))
+			for systemName := range grouped {
+				systemNames = append(systemNames, systemName)
+			}
+			sort.Strings(systemNames)
+			for _, systemName := range systemNames {
+				ifaceNames := grouped[systemName]
+				sort.Strings(ifaceNames)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", systemName)
+				for _, n := range ifaceNames {
+					fmt.Fprintf(cmd.OutOrStdout(), "    %s\n", n)
+				}
+			}
 			return nil
 		},
 	}
-	interfaceRenameCmd.Flags().String("interface-name", "", "the interface to operate on")
-	interfaceRenameCmd.Flags().String("system-name", "", "the system to operate on")
-	interfaceRenameCmd.Flags().String("new-interface-name", "", "the new name for the network interface")
-	return interfaceRenameCmd
+	return cmd
 }
 
 func NewInterfaceReportCommand() *cobra.Command {
-	interfaceReportCmd := &cobra.Command{
-		Use: "report",
+	cmd := &cobra.Command{
+		Use:   "report",
+		Short: "show network interface details",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-
 			systemName, err := cmd.Flags().GetString("system-name")
 			if err != nil {
 				return err
 			}
-			interfaceName, err := cmd.Flags().GetString("interface-name")
-			if err != nil {
-				return err
-			}
-			itemNames := make([]string, 0)
-			if systemName == "" {
-				itemNames, err = Client.ListSystemNames()
+
+			var interfaces []*cobbler.NetworkInterface
+			switch {
+			case name != "":
+				iface, err := Client.GetNetworkInterface(name, false, false)
 				if err != nil {
 					return err
 				}
-			} else {
-				itemNames = append(itemNames, systemName)
+				interfaces = []*cobbler.NetworkInterface{iface}
+			case systemName != "":
+				interfaces, err = Client.FindNetworkInterface(map[string]interface{}{
+					"system_name": systemName,
+				}, false)
+				if err != nil {
+					return err
+				}
+			default:
+				interfaces, err = Client.GetNetworkInterfaces()
+				if err != nil {
+					return err
+				}
 			}
-			return reportNetworkInterfaces(cmd, itemNames, interfaceName)
+			for _, iface := range interfaces {
+				printStructured(cmd, iface)
+				fmt.Fprintln(cmd.OutOrStdout(), "")
+			}
+			return nil
 		},
 	}
-	interfaceReportCmd.Flags().String("interface-name", "", "the interface to operate on")
-	interfaceReportCmd.Flags().String("system-name", "", "the system to operate on")
-	return interfaceReportCmd
-}
-
-func reportNetworkInterfaces(cmd *cobra.Command, systemNames []string, interfaceName string) error {
-	for _, itemName := range systemNames {
-		system, err := Client.GetSystem(itemName, false, false)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", itemName)
-		if interfaceName == "" {
-			networkInterfaces, err := system.GetInterfaces()
-			if err != nil {
-				return err
-			}
-			for networkInterfaceName := range networkInterfaces {
-				networkInterface := system.Interfaces[networkInterfaceName]
-				printStructured(cmd, &networkInterface)
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
-		} else {
-			networkInterface, err := system.GetInterface(interfaceName)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "    Interface %s not found on system", interfaceName)
-				continue
-			}
-			printStructured(cmd, &networkInterface)
-		}
-	}
-	return nil
+	cmd.Flags().String("name", "", "the network interface name")
+	cmd.Flags().String("system-name", "", "filter by parent system name")
+	return cmd
 }
 
 func NewInterfaceExportCmd() *cobra.Command {
-	networkInterfaceExportCmd := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "export network interfaces",
-		Long:  `Export network interfaces.`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			formatOption, err := cmd.Flags().GetString("format")
+			format, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
-			if formatOption != "json" && formatOption != "yaml" {
+			if format != "json" && format != "yaml" {
 				return fmt.Errorf("format must be json or yaml")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := generateCobblerClient()
+			if err := generateCobblerClient(); err != nil {
+				return err
+			}
+			name, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-
 			systemName, err := cmd.Flags().GetString("system-name")
 			if err != nil {
 				return err
 			}
-			interfaceName, err := cmd.Flags().GetString("interface-name")
-			if err != nil {
-				return err
-			}
-			formatOption, err := cmd.Flags().GetString("format")
+			format, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if systemName == "" {
-				itemNames, err = Client.ListSystemNames()
+			var interfaces []*cobbler.NetworkInterface
+			switch {
+			case name != "":
+				iface, err := Client.GetNetworkInterface(name, false, false)
 				if err != nil {
 					return err
 				}
-			} else {
-				itemNames = append(itemNames, systemName)
+				interfaces = []*cobbler.NetworkInterface{iface}
+			case systemName != "":
+				interfaces, err = Client.FindNetworkInterface(map[string]interface{}{
+					"system_name": systemName,
+				}, false)
+				if err != nil {
+					return err
+				}
+			default:
+				interfaces, err = Client.GetNetworkInterfaces()
+				if err != nil {
+					return err
+				}
 			}
 
-			for _, itemName := range itemNames {
-				system, err := Client.GetSystem(itemName, false, false)
-				if err != nil {
-					return err
-				}
-
-				var systemInterfaces cobbler.Interfaces
-				if interfaceName == "" {
-					systemInterfaces = system.Interfaces
-				} else {
-					systemInterfaces = make(map[string]cobbler.Interface)
-					intf, interfaceExists := system.Interfaces[interfaceName]
-					if interfaceExists {
-						systemInterfaces[interfaceName] = intf
-					}
-				}
-				exportData := struct {
-					SystemName string `json:"system_name" yaml:"system_name"`
-					Interfaces cobbler.Interfaces
-				}{
-					itemName,
-					systemInterfaces,
-				}
-				if formatOption == "json" {
-					jsonDocument, err := json.Marshal(exportData)
+			for _, iface := range interfaces {
+				switch format {
+				case "json":
+					out, err := json.Marshal(iface)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
-				}
-				if formatOption == "yaml" {
-					yamlDocument, err := yaml.Marshal(exportData)
+					fmt.Fprintln(cmd.OutOrStdout(), string(out))
+				case "yaml":
+					out, err := yaml.Marshal(iface)
 					if err != nil {
 						return err
 					}
 					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+					fmt.Fprintln(cmd.OutOrStdout(), string(out))
 				}
 			}
 			return nil
 		},
 	}
-	networkInterfaceExportCmd.Flags().String("interface-name", "", "the network interface name")
-	networkInterfaceExportCmd.Flags().String("system-name", "", "the system name")
-	networkInterfaceExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
-	return networkInterfaceExportCmd
+	cmd.Flags().String("name", "", "the network interface name")
+	cmd.Flags().String("system-name", "", "filter by parent system name")
+	cmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	return cmd
 }

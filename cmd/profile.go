@@ -72,24 +72,6 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 					profile.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
 				}
 			}
-		case "boot-files":
-			fallthrough
-		case "boot-files-inherit":
-			if cmd.Flags().Lookup("boot-files-inherit").Changed {
-				profile.BootFiles.Data = make(map[string]interface{})
-				profile.BootFiles.IsInherited, err = cmd.Flags().GetBool("boot-files-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				var profileNewBootFiles map[string]string
-				profileNewBootFiles, err = cmd.Flags().GetStringToString("boot-files")
-				if err != nil {
-					return
-				}
-				profile.BootFiles.IsInherited = false
-				profile.BootFiles.Data = convertMapStringToMapInterface(profileNewBootFiles)
-			}
 		case "boot-loaders":
 			fallthrough
 		case "boot-loaders-inherit":
@@ -122,36 +104,6 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				return
 			}
 			profile.Comment = profileNewComment
-		case "fetchable-files":
-			fallthrough
-		case "fetchable-files-inherit":
-			if cmd.Flags().Lookup("fetchable-files-inherit").Changed {
-				profile.FetchableFiles.Data = make(map[string]interface{})
-				profile.FetchableFiles.IsInherited, err = cmd.Flags().GetBool("fetchable-files-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				var profileNewFetchableFiles map[string]string
-				profileNewFetchableFiles, err = cmd.Flags().GetStringToString("fetchable-files")
-				if err != nil {
-					return
-				}
-				if inPlace {
-					err = Client.ModifyItemInPlace(
-						"profile",
-						profile.Name,
-						"fetchable_files",
-						convertMapStringToMapInterface(profileNewFetchableFiles),
-					)
-					if err != nil {
-						return
-					}
-				} else {
-					profile.FetchableFiles.IsInherited = false
-					profile.FetchableFiles.Data = convertMapStringToMapInterface(profileNewFetchableFiles)
-				}
-			}
 		case "kernel-options":
 			fallthrough
 		case "kernel-options-inherit":
@@ -212,24 +164,6 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 					profile.KernelOptionsPost.Data = convertMapStringToMapInterface(profileNewKernelOptionsPost)
 				}
 			}
-		case "mgmt-classes":
-			fallthrough
-		case "mgmt-classes-inherit":
-			if cmd.Flags().Lookup("mgmt-classes-inherit").Changed {
-				profile.MgmtClasses.Data = []string{}
-				profile.MgmtClasses.IsInherited, err = cmd.Flags().GetBool("mgmt-classes-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				var profileNewMgmtClasses []string
-				profileNewMgmtClasses, err = cmd.Flags().GetStringSlice("mgmt-classes")
-				if err != nil {
-					return
-				}
-				profile.MgmtClasses.IsInherited = false
-				profile.MgmtClasses.Data = profileNewMgmtClasses
-			}
 		case "owners":
 			fallthrough
 		case "owners-inherit":
@@ -255,35 +189,24 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				return
 			}
 			profile.RedhatManagementKey = profileNewRedhatManagementKey
-		case "template-files-post":
-			fallthrough
-		case "template-files-inherit":
-			if cmd.Flags().Lookup("template-files-inherit").Changed {
-				profile.TemplateFiles.Data = make(map[string]interface{})
-				profile.TemplateFiles.IsInherited, err = cmd.Flags().GetBool("template-files-inherit")
+		case "template-files":
+			var profileNewTemplateFiles map[string]string
+			profileNewTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
+			if err != nil {
+				return
+			}
+			if inPlace {
+				err = Client.ModifyItemInPlace(
+					"profile",
+					profile.Name,
+					"template_files",
+					convertMapStringToMapInterface(profileNewTemplateFiles),
+				)
 				if err != nil {
 					return
 				}
 			} else {
-				var profileNewTemplateFiles map[string]string
-				profileNewTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
-				if err != nil {
-					return
-				}
-				if inPlace {
-					err = Client.ModifyItemInPlace(
-						"profile",
-						profile.Name,
-						"template_files",
-						convertMapStringToMapInterface(profileNewTemplateFiles),
-					)
-					if err != nil {
-						return
-					}
-				} else {
-					profile.TemplateFiles.IsInherited = false
-					profile.TemplateFiles.Data = convertMapStringToMapInterface(profileNewTemplateFiles)
-				}
+				profile.TemplateFiles = profileNewTemplateFiles
 			}
 		case "dhcp-tag":
 			var profileNewDhcpTag string
@@ -328,68 +251,42 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				profile.EnableMenu.IsInherited = false
 				profile.EnableMenu.Data = profileNewEnableMenu
 			}
-		case "mgmt-parameters":
-			fallthrough
-		case "mgmt-parameters-inherit":
-			if cmd.Flags().Lookup("mgmt-parameters-inherit").Changed {
-				profile.MgmtParameters.Data = make(map[string]interface{})
-				profile.MgmtParameters.IsInherited, err = cmd.Flags().GetBool("mgmt-parameters-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				var profileNewMgmtParameters map[string]string
-				profileNewMgmtParameters, err = cmd.Flags().GetStringToString("mgmt-parameters")
-				if err != nil {
-					return
-				}
-				profile.MgmtParameters.IsInherited = false
-				profile.MgmtParameters.Data = convertMapStringToMapInterface(profileNewMgmtParameters)
-			}
 		case "name-servers":
 			fallthrough
 		case "name-servers-inherit":
 			if cmd.Flags().Lookup("name-servers-inherit").Changed {
-				profile.NameServers.Data = make([]string, 0)
-				profile.NameServers.IsInherited = true
+				profile.DNS.NameServers.Data = make([]string, 0)
+				profile.DNS.NameServers.IsInherited = true
 			} else {
 				var profileNewNameServers []string
 				profileNewNameServers, err = cmd.Flags().GetStringSlice("name-servers")
 				if err != nil {
 					return
 				}
-				profile.NameServers.Data = profileNewNameServers
-				profile.NameServers.IsInherited = false
+				profile.DNS.NameServers.Data = profileNewNameServers
+				profile.DNS.NameServers.IsInherited = false
 			}
 		case "name-servers-search":
-			fallthrough
-		case "name-servers-search-inherit":
-			if cmd.Flags().Lookup("name-servers-search-inherit").Changed {
-				profile.NameServersSearch.Data = make([]string, 0)
-				profile.NameServersSearch.IsInherited = true
-			} else {
-				var profileNewNameServersSearch []string
-				profileNewNameServersSearch, err = cmd.Flags().GetStringSlice("name-servers-search")
-				if err != nil {
-					return
-				}
-				profile.NameServersSearch.Data = profileNewNameServersSearch
-				profile.NameServersSearch.IsInherited = false
+			var profileNewNameServersSearch []string
+			profileNewNameServersSearch, err = cmd.Flags().GetStringSlice("name-servers-search")
+			if err != nil {
+				return
 			}
+			profile.DNS.NameServersSearch = profileNewNameServersSearch
 		case "next-server-v4":
 			var profileNewNextServerV4 string
 			profileNewNextServerV4, err = cmd.Flags().GetString("next-server-v4")
 			if err != nil {
 				return
 			}
-			profile.NextServerv4 = profileNewNextServerV4
+			profile.TFTP.NextServerV4 = profileNewNextServerV4
 		case "next-server-v6":
 			var profileNewNextServerV6 string
 			profileNewNextServerV6, err = cmd.Flags().GetString("next-server-v6")
 			if err != nil {
 				return
 			}
-			profile.NextServerv6 = profileNewNextServerV6
+			profile.TFTP.NextServerV6 = profileNewNextServerV6
 		case "filename":
 			var profileNewFilename string
 			profileNewFilename, err = cmd.Flags().GetString("filename")
@@ -429,15 +326,15 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			fallthrough
 		case "virt-auto-boot-inherit":
 			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
-				profile.VirtAutoBoot.IsInherited = true
+				profile.Virt.AutoBoot.IsInherited = true
 			} else {
 				var profileNewVirtAutoBoot bool
 				profileNewVirtAutoBoot, err = cmd.Flags().GetBool("virt-auto-boot")
 				if err != nil {
 					return
 				}
-				profile.VirtAutoBoot.Data = profileNewVirtAutoBoot
-				profile.VirtAutoBoot.IsInherited = false
+				profile.Virt.AutoBoot.Data = profileNewVirtAutoBoot
+				profile.Virt.AutoBoot.IsInherited = false
 			}
 		case "virt-bridge":
 			var profileNewVirtBridge string
@@ -452,27 +349,28 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			if err != nil {
 				return
 			}
-			profile.VirtCPUs = profileNewVirtCpus
+			profile.Virt.Cpus.IsInherited = false
+			profile.Virt.Cpus.Data = profileNewVirtCpus
 		case "virt-disk-driver":
 			var profileNewVirtDiskDriver string
 			profileNewVirtDiskDriver, err = cmd.Flags().GetString("virt-disk-driver")
 			if err != nil {
 				return
 			}
-			profile.VirtDiskDriver = profileNewVirtDiskDriver
+			profile.Virt.DiskDriver = profileNewVirtDiskDriver
 		case "virt-file-size":
 			fallthrough
 		case "virt-file-size-inherit":
 			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
-				profile.VirtAutoBoot.IsInherited = true
+				profile.Virt.AutoBoot.IsInherited = true
 			} else {
 				var profileNewVirtFileSize float64
 				profileNewVirtFileSize, err = cmd.Flags().GetFloat64("virt-file-size")
 				if err != nil {
 					return
 				}
-				profile.VirtFileSize.Data = profileNewVirtFileSize
-				profile.VirtFileSize.IsInherited = false
+				profile.Virt.FileSize.Data = profileNewVirtFileSize
+				profile.Virt.FileSize.IsInherited = false
 			}
 		case "virt-path":
 			var profileNewVirtPath string
@@ -480,20 +378,20 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			if err != nil {
 				return
 			}
-			profile.VirtPath = profileNewVirtPath
+			profile.Virt.Path = profileNewVirtPath
 		case "virt-ram":
 			fallthrough
 		case "virt-ram-inherit":
 			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
-				profile.VirtRAM.IsInherited = true
+				profile.Virt.Ram.IsInherited = true
 			} else {
 				var profileNewVirtRam int
 				profileNewVirtRam, err = cmd.Flags().GetInt("virt-ram")
 				if err != nil {
 					return
 				}
-				profile.VirtRAM.Data = profileNewVirtRam
-				profile.VirtRAM.IsInherited = false
+				profile.Virt.Ram.Data = profileNewVirtRam
+				profile.Virt.Ram.IsInherited = false
 			}
 		case "virt-type":
 			var profileNewVirtType string
@@ -501,7 +399,7 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			if err != nil {
 				return
 			}
-			profile.VirtType = profileNewVirtType
+			profile.Virt.Type = profileNewVirtType
 		}
 	})
 	return nil
@@ -638,18 +536,18 @@ func NewProfileDumpVars() *cobra.Command {
 				return err
 			}
 
-			// Get CLI flags
 			profileName, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-
-			// Now retrieve data
-			blendedData, err := Client.GetBlendedData(profileName, "")
+			profile, err := Client.GetProfile(profileName, false, false)
 			if err != nil {
 				return err
 			}
-			// Print data
+			blendedData, err := Client.DumpVars(profile.Uid, false, false)
+			if err != nil {
+				return err
+			}
 			printDumpVars(cmd, blendedData)
 			return err
 		},
@@ -726,6 +624,7 @@ func NewProfileFindCmd() *cobra.Command {
 	addStringFlags(profileFindCmd, findStringFlagMetadata)
 	addIntFlags(profileFindCmd, findIntFlagMetadata)
 	addFloatFlags(profileFindCmd, findFloatFlagMetadata)
+	addPaginationFlags(profileFindCmd)
 	return profileFindCmd
 }
 
@@ -752,7 +651,7 @@ func NewProfileGetAutoinstallCmd() *cobra.Command {
 				return fmt.Errorf("Profile does not exist!")
 
 			}
-			autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "")
+			autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "profile", "name", "", "")
 			if err != nil {
 				return err
 			}

@@ -11,9 +11,14 @@ import (
 )
 
 func createProfile(client cobbler.Client, name string) (*cobbler.Profile, error) {
+	// Distro must be the referenced distro's real uid, not its name.
+	distro, err := client.GetDistro("Ubuntu-20.04-x86_64", false, false)
+	if err != nil {
+		return nil, err
+	}
 	profile := cobbler.NewProfile()
 	profile.Name = name
-	profile.Distro = "Ubuntu-20.04-x86_64"
+	profile.Distro = distro.Uid
 	return client.CreateProfile(profile)
 }
 
@@ -25,6 +30,10 @@ func Test_ProfileAddCmd(t *testing.T) {
 	type args struct {
 		command []string
 	}
+	setupClient(t)
+	// --distro must be the referenced distro's real uid, not its name.
+	distro, err := Client.GetDistro("Ubuntu-20.04-x86_64", false, false)
+	cobbler.FailOnError(t, err)
 	tests := []struct {
 		name    string
 		args    args
@@ -33,7 +42,7 @@ func Test_ProfileAddCmd(t *testing.T) {
 	}{
 		{
 			name:    "plain",
-			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "profile", "add", "--name", "test-plain", "--distro", "Ubuntu-20.04-x86_64"}},
+			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "profile", "add", "--name", "test-plain", "--distro", distro.Uid}},
 			want:    "Profile test-plain created",
 			wantErr: false,
 		},

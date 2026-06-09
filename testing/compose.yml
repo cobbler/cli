@@ -6,12 +6,15 @@ services:
     volumes:
       - ./cobbler_source:/code
       - ../extracted_iso_image:/extracted_iso_image
+      - ./import.py:/import.py:ro
     ports:
       - 8081:80
     # We chmod the code, otherwise some files are read-only and cannot be cleaned up:
+    # The Cobbler 4.0.0 container no longer ships the `cobbler` CLI (superseded by this
+    # project), so the import is done via a direct XML-RPC call instead (see import.py).
     command: bash -c "
       /code/docker/develop/scripts/setup-supervisor.sh &&
       chmod -R o+w /code &&
-      cobbler import --name Ubuntu-20.04 --breed ubuntu --path /extracted_iso_image/ &&
+      python3 /import.py &&
       tail -F /dev/null
       "

@@ -39,12 +39,12 @@ func NewVersionCmd() *cobra.Command {
 
 func getClientVersion() (string, string, error) {
 	bi, _ := debug.ReadBuildInfo()
-	var clientVersion, cliVersion string
+	// The CLI is the main module, which never shows up in bi.Deps (that's only for its
+	// dependencies) - its own version comes from bi.Main instead.
+	cliVersion := bi.Main.Version
+	var clientVersion string
 	for _, dep := range bi.Deps {
-		switch dep.Path {
-		case "github.com/cobbler/cli":
-			cliVersion = dep.Version
-		case "github.com/cobbler/cobblerclient":
+		if dep.Path == "github.com/cobbler/cobblerclient" {
 			clientVersion = dep.Version
 		}
 	}

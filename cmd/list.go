@@ -16,7 +16,7 @@ func NewListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List configuration",
 		Long: `Lists all configuration which Cobbler can obtain from the saved data. There are also report subcommands for
-most of the other Cobbler commands (currently: distro, profile, system, repo, image, mgmtclass, package, file, menu).
+most of the other Cobbler commands (currently: distro, profile, system, repo, image, menu).
 Identical to 'cobbler report'`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,18 +45,6 @@ Identical to 'cobbler report'`,
 			if err != nil {
 				return err
 			}
-			mgmtClassNames, err := Client.ListMgmtClassNames()
-			if err != nil {
-				return err
-			}
-			packageNames, err := Client.ListPackageNames()
-			if err != nil {
-				return err
-			}
-			fileNames, err := Client.ListFileNames()
-			if err != nil {
-				return err
-			}
 			menuNames, err := Client.ListMenuNames()
 			if err != nil {
 				return err
@@ -66,9 +54,6 @@ Identical to 'cobbler report'`,
 			listItems(cmd, "systems", systemNames)
 			listItems(cmd, "repos", repoNames)
 			listItems(cmd, "images", imageNames)
-			listItems(cmd, "mgmtclasses", mgmtClassNames)
-			listItems(cmd, "packages", packageNames)
-			listItems(cmd, "files", fileNames)
 			listItems(cmd, "menus", menuNames)
 			return nil
 		},

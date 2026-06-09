@@ -235,6 +235,7 @@ func NewMenuFindCmd() *cobra.Command {
 	addStringFlags(menuFindCmd, findStringFlagMetadata)
 	addIntFlags(menuFindCmd, findIntFlagMetadata)
 	addFloatFlags(menuFindCmd, findFloatFlagMetadata)
+	addPaginationFlags(menuFindCmd)
 	return menuFindCmd
 }
 
