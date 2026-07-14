@@ -28,9 +28,11 @@ jobs:
       fail-fast: false
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+        # https://github.com/actions/checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Set up Go
-        uses: actions/setup-go@v5
+        # https://github.com/actions/setup-go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: 'go.mod'
         id: go
@@ -45,7 +47,8 @@ jobs:
           sed -i "s/cobbler_commit=.*/cobbler_commit=${{ matrix.cobbler_version }}/" testing/start.sh
       - name: Restore OS ISO
         id: cache-iso-restore
-        uses: actions/cache/restore@v4
+        # https://github.com/actions/cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             *.iso
@@ -55,15 +58,16 @@ jobs:
           make test
       - name: Save OS ISO
         id: cache-iso-save
-        uses: actions/cache/save@v4
+        # https://github.com/actions/cache
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             *.iso
           key: ${{ steps.cache-iso-restore.outputs.cache-primary-key }}
-      # https://github.com/actions/upload-artifact
       - name: Upload coverage report to GH artifacts
         if: matrix.cobbler_version == 'df356046f3cf27be62a61001b982d5983800cfd9'
-        uses: actions/upload-artifact@v4
+        # https://github.com/actions/upload-artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-report
           path: coverage.out
