@@ -47,18 +47,6 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 			if err != nil {
 				return err
 			}
-			mgmtClassesOption, err := cmd.Flags().GetString("mgmtclasses")
-			if err != nil {
-				return err
-			}
-			packagesOption, err := cmd.Flags().GetString("packages")
-			if err != nil {
-				return err
-			}
-			filesOption, err := cmd.Flags().GetString("files")
-			if err != nil {
-				return err
-			}
 			portOption, err := cmd.Flags().GetString("port")
 			if err != nil {
 				return err
@@ -84,20 +72,17 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 				return err
 			}
 			replicateOptions := cobblerclient.ReplicateOptions{
-				Master:            masterOption,
-				Port:              portOption,
-				DistroPatterns:    distrosOption,
-				ProfilePatterns:   profilesOption,
-				SystemPatterns:    systemsOption,
-				RepoPatterns:      reposOption,
-				Imagepatterns:     imagesOption,
-				MgmtclassPatterns: mgmtClassesOption,
-				PackagePatterns:   packagesOption,
-				FilePatterns:      filesOption,
-				Prune:             pruneOption,
-				OmitData:          omitDataOption,
-				SyncAll:           syncAllOption,
-				UseSsl:            useSslOption,
+				Master:          masterOption,
+				Port:            portOption,
+				DistroPatterns:  distrosOption,
+				ProfilePatterns: profilesOption,
+				SystemPatterns:  systemsOption,
+				RepoPatterns:    reposOption,
+				Imagepatterns:   imagesOption,
+				Prune:           pruneOption,
+				OmitData:        omitDataOption,
+				SyncAll:         syncAllOption,
+				UseSsl:          useSslOption,
 			}
 			eventId, err := Client.BackgroundReplicate(replicateOptions)
 			if err != nil {
@@ -108,12 +93,9 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 		},
 	}
 	replicateCmd.Flags().String("distros", "", "patterns of distros to replicate")
-	replicateCmd.Flags().String("files", "", "patterns of files to replicate")
 	replicateCmd.Flags().String("image", "", "patterns of images to replicate")
 	replicateCmd.Flags().String("master", "", "Cobbler server to replicate from")
-	replicateCmd.Flags().String("mgmtclasses", "", "patterns of mgmtclasses to replicate")
 	replicateCmd.Flags().Bool("omit-data", false, "do not rsync data")
-	replicateCmd.Flags().String("packages", "", "patterns of packages to replicate")
 	replicateCmd.Flags().String("port", "", "remote port")
 	replicateCmd.Flags().String("profiles", "", "patterns of profiles to replicate")
 	replicateCmd.Flags().Bool("prune", false, "remove objects (of all types) not found on the master")

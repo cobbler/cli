@@ -15,7 +15,7 @@ func NewReportCmd() *cobra.Command {
 		Use:   "report",
 		Short: "List configuration in detail",
 		Long: `Lists all configuration which Cobbler can obtain from the saved data. There are also report subcommands for
-most of the other Cobbler commands (currently: distro, profile, system, repo, image, mgmtclass, package, file, menu).
+most of the other Cobbler commands (currently: distro, profile, system, repo, image, menu).
 Identical to 'cobbler list'`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -84,45 +84,6 @@ Identical to 'cobbler list'`,
 				return err
 			}
 			err = reportImages(cmd, imageNames)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
-
-			// Mgmtclass
-			fmt.Fprintln(cmd.OutOrStdout(), "mgmtclasses:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			mgmtClassNames, err := Client.ListMgmtClassNames()
-			if err != nil {
-				return err
-			}
-			err = reportMgmtClasses(cmd, mgmtClassNames)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
-
-			// Package
-			fmt.Fprintln(cmd.OutOrStdout(), "packages:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			packageNames, err := Client.ListPackageNames()
-			if err != nil {
-				return err
-			}
-			err = reportPackages(cmd, packageNames)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
-
-			// File
-			fmt.Fprintln(cmd.OutOrStdout(), "files:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			fileNames, err := Client.ListFileNames()
-			if err != nil {
-				return err
-			}
-			err = reportFiles(cmd, fileNames)
 			if err != nil {
 				return err
 			}

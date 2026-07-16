@@ -11,9 +11,14 @@ import (
 )
 
 func createSystem(client cobbler.Client, name string) (*cobbler.System, error) {
+	// Profile must be the referenced profile's real uid, not its name.
+	profile, err := client.GetProfile("Ubuntu-20.04-x86_64", false, false)
+	if err != nil {
+		return nil, err
+	}
 	system := cobbler.NewSystem()
 	system.Name = name
-	system.Profile = "Ubuntu-20.04-x86_64"
+	system.Profile = profile.Uid
 	return client.CreateSystem(system)
 }
 
@@ -25,6 +30,10 @@ func Test_SystemAddCmd(t *testing.T) {
 	type args struct {
 		command []string
 	}
+	setupClient(t)
+	// --profile must be the referenced profile's real uid, not its name.
+	profile, err := Client.GetProfile("Ubuntu-20.04-x86_64", false, false)
+	cobbler.FailOnError(t, err)
 	tests := []struct {
 		name    string
 		args    args
@@ -33,7 +42,7 @@ func Test_SystemAddCmd(t *testing.T) {
 	}{
 		{
 			name:    "plain",
-			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "system", "add", "--name", "test-plain", "--profile", "Ubuntu-20.04-x86_64"}},
+			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "system", "add", "--name", "test-plain", "--profile", profile.Uid}},
 			want:    "System test-plain created",
 			wantErr: false,
 		},

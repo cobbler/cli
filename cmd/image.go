@@ -101,82 +101,23 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				image.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
 			}
 		case "template-files":
-			fallthrough
-		case "template-files-inherit":
-			if cmd.Flags().Lookup("template-files-inherit").Changed {
-				image.TemplateFiles.Data = make(map[string]interface{})
-				image.TemplateFiles.IsInherited, err = cmd.Flags().GetBool("template-files-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				var newTemplateFiles map[string]string
-				newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
-				if err != nil {
-					return
-				}
-				if inPlace {
-					err = Client.ModifyItemInPlace(
-						"image",
-						image.Name,
-						"template_files",
-						convertMapStringToMapInterface(newTemplateFiles),
-					)
-					if err != nil {
-						return
-					}
-				} else {
-					image.TemplateFiles.IsInherited = false
-					image.TemplateFiles.Data = convertMapStringToMapInterface(newTemplateFiles)
-				}
-			}
-		case "boot-files":
-			fallthrough
-		case "boot-files-inherit":
-			var distroNewBootFiles map[string]string
-			distroNewBootFiles, err = cmd.Flags().GetStringToString("boot-files")
+			var newTemplateFiles map[string]string
+			newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
 			if err != nil {
 				return
 			}
-			if cmd.Flags().Lookup("boot-files-inherit").Changed {
-				image.BootFiles.Data = make(map[string]interface{})
-				image.BootFiles.IsInherited, err = cmd.Flags().GetBool("boot-files-inherit")
+			if inPlace {
+				err = Client.ModifyItemInPlace(
+					"image",
+					image.Name,
+					"template_files",
+					convertMapStringToMapInterface(newTemplateFiles),
+				)
 				if err != nil {
 					return
 				}
 			} else {
-				image.BootFiles.IsInherited = false
-				image.BootFiles.Data = convertMapStringToMapInterface(distroNewBootFiles)
-			}
-		case "fetchable-files":
-			fallthrough
-		case "fetchable-files-inherit":
-			var newFetchableFiles map[string]string
-			newFetchableFiles, err = cmd.Flags().GetStringToString("fetchable-files")
-			if err != nil {
-				return
-			}
-			if cmd.Flags().Lookup("fetchable-files-inherit").Changed {
-				image.FetchableFiles.Data = make(map[string]interface{})
-				image.FetchableFiles.IsInherited, err = cmd.Flags().GetBool("fetchable-files-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				if inPlace {
-					err = Client.ModifyItemInPlace(
-						"image",
-						image.Name,
-						"fetchable_files",
-						convertMapStringToMapInterface(newFetchableFiles),
-					)
-					if err != nil {
-						return
-					}
-				} else {
-					image.FetchableFiles.IsInherited = false
-					image.FetchableFiles.Data = convertMapStringToMapInterface(newFetchableFiles)
-				}
+				image.TemplateFiles = newTemplateFiles
 			}
 		case "comment":
 			var imageNewComment string
@@ -272,7 +213,8 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 			if err != nil {
 				return
 			}
-			image.VirtAutoBoot = imageNewVirtAutoBoot
+			image.Virt.AutoBoot.IsInherited = false
+			image.Virt.AutoBoot.Data = imageNewVirtAutoBoot
 		case "virt-bridge":
 			var imageNewVirtBridge string
 			imageNewVirtBridge, err = cmd.Flags().GetString("virt-bridge")
@@ -286,20 +228,21 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 			if err != nil {
 				return
 			}
-			image.VirtCpus = imageNewVirtCpus
+			image.Virt.Cpus.IsInherited = false
+			image.Virt.Cpus.Data = imageNewVirtCpus
 		case "virt-disk-driver":
 			var imageNewVirtDiskDriver string
 			imageNewVirtDiskDriver, err = cmd.Flags().GetString("virt-disk-driver")
 			if err != nil {
 				return
 			}
-			image.VirtDiskDriver = imageNewVirtDiskDriver
+			image.Virt.DiskDriver = imageNewVirtDiskDriver
 		case "virt-file-size":
 			fallthrough
 		case "virt-file-size-inherit":
 			if cmd.Flags().Lookup("owners-inherit").Changed {
-				image.VirtFileSize.Data = 0
-				image.VirtFileSize.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				image.Virt.FileSize.Data = 0
+				image.Virt.FileSize.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
 				if err != nil {
 					return
 				}
@@ -309,8 +252,8 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				if err != nil {
 					return
 				}
-				image.VirtFileSize.IsInherited = false
-				image.VirtFileSize.Data = imageNewVirtFileSize
+				image.Virt.FileSize.IsInherited = false
+				image.Virt.FileSize.Data = imageNewVirtFileSize
 			}
 		case "virt-path":
 			var imageNewVirtPath string
@@ -318,13 +261,13 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 			if err != nil {
 				return
 			}
-			image.VirtPath = imageNewVirtPath
+			image.Virt.Path = imageNewVirtPath
 		case "virt-ram":
 			fallthrough
 		case "virt-ram-inherit":
 			if cmd.Flags().Lookup("owners-inherit").Changed {
-				image.VirtRam.Data = 0
-				image.VirtRam.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				image.Virt.Ram.Data = 0
+				image.Virt.Ram.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
 				if err != nil {
 					return
 				}
@@ -334,8 +277,8 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				if err != nil {
 					return
 				}
-				image.VirtRam.IsInherited = false
-				image.VirtRam.Data = imageNewVirtRam
+				image.Virt.Ram.IsInherited = false
+				image.Virt.Ram.Data = imageNewVirtRam
 			}
 		case "virt-type":
 			var imageNewVirtType string
@@ -343,7 +286,7 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 			if err != nil {
 				return
 			}
-			image.VirtType = imageNewVirtType
+			image.Virt.Type = imageNewVirtType
 		}
 	})
 	return err
@@ -523,6 +466,7 @@ func NewImageFindCmd() *cobra.Command {
 	addStringFlags(imageFindCmd, findStringFlagMetadata)
 	addIntFlags(imageFindCmd, findIntFlagMetadata)
 	addFloatFlags(imageFindCmd, findFloatFlagMetadata)
+	addPaginationFlags(imageFindCmd)
 	return imageFindCmd
 }
 

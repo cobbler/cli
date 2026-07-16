@@ -46,9 +46,6 @@ func NewRootCmd() *cobra.Command {
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(distroCmd)
 	rootCmd.AddCommand(NewEventCmd())
-	fileCmd, err := NewFileCmd()
-	cobra.CheckErr(err)
-	rootCmd.AddCommand(fileCmd)
 	rootCmd.AddCommand(NewHardlinkCmd())
 	imageCmd, err := NewImageCmd()
 	cobra.CheckErr(err)
@@ -61,13 +58,7 @@ func NewRootCmd() *cobra.Command {
 	menuCmd, err := NewMenuCmd()
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(menuCmd)
-	mgmtClassCmd, err := NewMgmtClassCmd()
-	cobra.CheckErr(err)
-	rootCmd.AddCommand(mgmtClassCmd)
 	rootCmd.AddCommand(NewMkLoadersCmd())
-	packageCmd, err := NewPackageCmd()
-	cobra.CheckErr(err)
-	rootCmd.AddCommand(packageCmd)
 	profileCmd, err := NewProfileCmd()
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(profileCmd)
@@ -84,6 +75,18 @@ func NewRootCmd() *cobra.Command {
 	systemCmd, err := NewSystemCmd()
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(systemCmd)
+	templateCmd, err := NewTemplateCmd()
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(templateCmd)
+	distroGroupCmd, err := NewDistroGroupCmd()
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(distroGroupCmd)
+	profileGroupCmd, err := NewProfileGroupCmd()
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(profileGroupCmd)
+	systemGroupCmd, err := NewSystemGroupCmd()
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(systemGroupCmd)
 	rootCmd.AddCommand(NewValidateAutoinstallsCmd())
 	rootCmd.AddCommand(NewVersionCmd())
 	return rootCmd
@@ -174,11 +177,6 @@ func printStructured(cmd *cobra.Command, dataStruct interface{}) {
 			printStructured(cmd, &baseItem)
 			continue
 		}
-		if fieldName == "Resource" {
-			baseResource := f.Interface().(cobbler.Resource)
-			printStructured(cmd, &baseResource)
-			continue
-		}
 		if fieldName == "Interfaces" {
 			// Skip and print at the end
 			continue
@@ -195,8 +193,8 @@ func printStructured(cmd *cobra.Command, dataStruct interface{}) {
 	// Print interfaces at the end of the output
 	networkInterfacesField := s.FieldByName("Interfaces")
 	if networkInterfacesField != (reflect.Value{}) {
-		networkInterfaces := networkInterfacesField.Interface().(cobbler.Interfaces)
-		printNetworkInterface(cmd, networkInterfaces)
+		networkInterfaces := networkInterfacesField.Interface().(map[string]*cobbler.NetworkInterface)
+		printNetworkInterfaces(cmd, networkInterfaces)
 	}
 }
 
@@ -211,10 +209,10 @@ func printValueStructured(cmd *cobra.Command, name string, value reflect.Value) 
 	}
 }
 
-func printNetworkInterface(cmd *cobra.Command, networkInterface cobbler.Interfaces) {
-	for interfaceName, interfaceStruct := range networkInterface {
+func printNetworkInterfaces(cmd *cobra.Command, networkInterfaces map[string]*cobbler.NetworkInterface) {
+	for interfaceName, interfaceStruct := range networkInterfaces {
 		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", "Interface =====", interfaceName)
-		printStructured(cmd, &interfaceStruct)
+		printStructured(cmd, interfaceStruct)
 	}
 }
 

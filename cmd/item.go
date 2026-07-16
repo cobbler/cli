@@ -116,25 +116,60 @@ func RemoveItemRecursive(cmd *cobra.Command, args []string, what string) error {
 	return Client.RemoveItem(what, itemName, recursiveDelete)
 }
 
-// FindItemNames accesses the given flags and attempts to perform a search for the given item type
+// addPaginationFlags registers --page and --items-per-page on a find subcommand.
+// When either is supplied the find handler routes through Client.FindItemsPaged
+// and emits a trailing `# page N of M (T total)` summary line.
+func addPaginationFlags(cmd *cobra.Command) {
+	cmd.Flags().Int("page", 0, "page number for paginated find (1-based; omit for unpaged)")
+	cmd.Flags().Int("items-per-page", 0, "results per page (only honoured when --page is set)")
+}
+
+// FindItemNames accesses the given flags and performs a search for items of the
+// given type. When --page is specified it uses the paginated backend endpoint
+// and prints a trailing summary line; otherwise it falls back to the unpaged
+// find.
 func FindItemNames(cmd *cobra.Command, args []string, what string) error {
 	_ = args
+	page, _ := cmd.Flags().GetInt("page")
+	itemsPerPage, _ := cmd.Flags().GetInt("items-per-page")
 	criteria := make(map[string]interface{})
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
-		if flag.Name == "config" {
+		switch flag.Name {
+		case "config", "page", "items-per-page":
 			return
 		}
 		key := strings.Replace(flag.Name, "-", "_", -1)
 		criteria[key] = flag.Value.String()
 	})
 
-	// Now perform the actual search
+	if page > 0 {
+		if itemsPerPage <= 0 {
+			itemsPerPage = 20
+		}
+		result, err := Client.FindItemsPaged(what, criteria, "name", int32(page), int32(itemsPerPage))
+		if err != nil {
+			return err
+		}
+		for _, raw := range result.FoundItems {
+			if asMap, ok := raw.(map[string]interface{}); ok {
+				if name, ok := asMap["name"].(string); ok {
+					fmt.Fprintln(cmd.OutOrStdout(), name)
+					continue
+				}
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), raw)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "# page %d of %d (%d total)\n",
+			result.PageInfo.Page, result.PageInfo.NumPages, result.PageInfo.NumItems)
+		return nil
+	}
+
 	itemNames, err := Client.FindItemNames(what, criteria, "name")
 	if err != nil {
 		return err
 	}
-	for _, distroName := range itemNames {
-		fmt.Fprintln(cmd.OutOrStdout(), distroName)
+	for _, name := range itemNames {
+		fmt.Fprintln(cmd.OutOrStdout(), name)
 	}
 	return nil
 }

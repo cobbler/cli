@@ -59,24 +59,6 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 				distro.AutoinstallMeta.IsInherited = false
 				distro.AutoinstallMeta.Data = convertMapStringToMapInterface(distroNewAutoinstallMeta)
 			}
-		case "boot-files":
-			fallthrough
-		case "boot-files-inherit":
-			var distroNewBootFiles map[string]string
-			distroNewBootFiles, err = cmd.Flags().GetStringToString("boot-files")
-			if err != nil {
-				return
-			}
-			if cmd.Flags().Lookup("boot-files-inherit").Changed {
-				distro.BootFiles.Data = make(map[string]interface{})
-				distro.BootFiles.IsInherited, err = cmd.Flags().GetBool("boot-files-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				distro.BootFiles.IsInherited = false
-				distro.BootFiles.Data = convertMapStringToMapInterface(distroNewBootFiles)
-			}
 		case "boot-loaders":
 			fallthrough
 		case "boot-loaders-inherit":
@@ -109,36 +91,6 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 				return
 			}
 			distro.Comment = distroNewComment
-		case "fetchable-files":
-			fallthrough
-		case "fetchable-files-inherit":
-			var newFetchableFiles map[string]string
-			newFetchableFiles, err = cmd.Flags().GetStringToString("fetchable-files")
-			if err != nil {
-				return
-			}
-			if cmd.Flags().Lookup("fetchable-files-inherit").Changed {
-				distro.FetchableFiles.Data = make(map[string]interface{})
-				distro.FetchableFiles.IsInherited, err = cmd.Flags().GetBool("fetchable-files-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				if inPlace {
-					err = Client.ModifyItemInPlace(
-						"distro",
-						distro.Name,
-						"fetchable_files",
-						convertMapStringToMapInterface(newFetchableFiles),
-					)
-					if err != nil {
-						return
-					}
-				} else {
-					distro.FetchableFiles.IsInherited = false
-					distro.FetchableFiles.Data = convertMapStringToMapInterface(newFetchableFiles)
-				}
-			}
 		case "initrd":
 			var distroNewInitrd string
 			distroNewInitrd, err = cmd.Flags().GetString("initrd")
@@ -227,24 +179,6 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 					distro.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptionsPost)
 				}
 			}
-		case "mgmt-classes":
-			fallthrough
-		case "mgmt-classes-inherit":
-			var distroNewMgmtClasses []string
-			distroNewMgmtClasses, err = cmd.Flags().GetStringSlice("mgmt-classes")
-			if err != nil {
-				return
-			}
-			if cmd.Flags().Lookup("mgmt-classes-inherit").Changed {
-				distro.MgmtClasses.Data = []string{}
-				distro.MgmtClasses.IsInherited, err = cmd.Flags().GetBool("mgmt-classes-inherit")
-				if err != nil {
-					return
-				}
-			} else {
-				distro.MgmtClasses.IsInherited = false
-				distro.MgmtClasses.Data = distroNewMgmtClasses
-			}
 		case "os-version":
 			var distroNewOsVersion string
 			distroNewOsVersion, err = cmd.Flags().GetString("os-version")
@@ -278,34 +212,23 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 			}
 			distro.RedhatManagementKey = distroNewRedhatManagementKey
 		case "template-files":
-			fallthrough
-		case "template-files-inherit":
-			if cmd.Flags().Lookup("template-files-inherit").Changed {
-				distro.TemplateFiles.Data = make(map[string]interface{})
-				distro.TemplateFiles.IsInherited, err = cmd.Flags().GetBool("template-files-inherit")
+			var newTemplateFiles map[string]string
+			newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
+			if err != nil {
+				return
+			}
+			if inPlace {
+				err = Client.ModifyItemInPlace(
+					"distro",
+					distro.Name,
+					"template_files",
+					convertMapStringToMapInterface(newTemplateFiles),
+				)
 				if err != nil {
 					return
 				}
 			} else {
-				var newTemplateFiles map[string]string
-				newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
-				if err != nil {
-					return
-				}
-				if inPlace {
-					err = Client.ModifyItemInPlace(
-						"distro",
-						distro.Name,
-						"template_files",
-						convertMapStringToMapInterface(newTemplateFiles),
-					)
-					if err != nil {
-						return
-					}
-				} else {
-					distro.TemplateFiles.IsInherited = false
-					distro.TemplateFiles.Data = convertMapStringToMapInterface(newTemplateFiles)
-				}
+				distro.TemplateFiles = newTemplateFiles
 			}
 		}
 	})
@@ -534,6 +457,7 @@ func NewDistroFindCmd() (*cobra.Command, error) {
 	addFloatFlags(distroFindCmd, findFloatFlagMetadata)
 	distroFindCmd.Flags().String("source-repos", "", "source repositories")
 	distroFindCmd.Flags().String("tree-build-time", "", "tree build time")
+	addPaginationFlags(distroFindCmd)
 	return distroFindCmd, nil
 }
 

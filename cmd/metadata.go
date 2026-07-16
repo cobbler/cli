@@ -87,11 +87,6 @@ var distroStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
 		Usage:         "boot loaders (network installation boot loaders)",
 		IsInheritable: true,
 	},
-	"mgmt-classes": {
-		Name:         "mgmt-classes",
-		DefaultValue: []string{},
-		Usage:        "management classes (for external config management)",
-	},
 }
 
 var distroMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
@@ -99,12 +94,6 @@ var distroMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
 		Name:          "autoinstall-meta",
 		DefaultValue:  map[string]string{},
 		Usage:         "automatic installation template metadata",
-		IsInheritable: true,
-	},
-	"boot-files": {
-		Name:          "boot-files",
-		DefaultValue:  map[string]string{},
-		Usage:         "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)",
 		IsInheritable: true,
 	},
 	"kernel-options": {
@@ -119,17 +108,10 @@ var distroMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
 		Usage:         "post install kernel options (e.g. clocksource=pit noapic)",
 		IsInheritable: true,
 	},
-	"fetchable-files": {
-		Name:          "fetchable-files",
-		DefaultValue:  map[string]string{},
-		Usage:         "fetchable files (templates for tftp, wget or curl)",
-		IsInheritable: true,
-	},
 	"template-files": {
-		Name:          "template-files",
-		DefaultValue:  map[string]string{},
-		Usage:         "template files (file mappings for built-in config management)",
-		IsInheritable: true,
+		Name:         "template-files",
+		DefaultValue: map[string]string{},
+		Usage:        "template files (file mappings for built-in config management)",
 	},
 }
 
@@ -142,7 +124,7 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 	"distro": {
 		Name:         "distro",
 		DefaultValue: "",
-		Usage:        "the name of a previously defined Cobbler distribution. This value is required",
+		Usage:        "the UID of a previously defined Cobbler distribution (see 'distro report'). This value is required",
 	},
 	"redhat-management-key": {
 		Name:         "redhat-management-key",
@@ -172,7 +154,7 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 	"parent": {
 		Name:         "parent",
 		DefaultValue: "",
-		Usage:        "parent profile",
+		Usage:        "the UID of the parent profile (see 'profile report')",
 	},
 	"proxy": {
 		Name:         "proxy",
@@ -187,7 +169,7 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 	"menu": {
 		Name:         "menu",
 		DefaultValue: "",
-		Usage:        "parent boot menu",
+		Usage:        "the UID of the parent boot menu (see 'menu report')",
 	},
 	"virt-bridge": {
 		Name:         "virt-bridge",
@@ -263,20 +245,13 @@ var profileStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
 		IsInheritable: true,
 	},
 	"name-servers-search": {
-		Name:          "name-servers-search",
-		DefaultValue:  []string{},
-		Usage:         "name servers search path (comma delimited)",
-		IsInheritable: true,
+		Name:         "name-servers-search",
+		DefaultValue: []string{},
+		Usage:        "name servers search path (comma delimited)",
 	},
 }
 
-var profileMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
-	"mgmt-parameters": {
-		Name:         "mgmt-parameters",
-		DefaultValue: map[string]string{},
-		Usage:        "Parameters which will be handed to your management application (must be a valid YAML dictionary))",
-	},
-}
+var profileMapFlagMetadata = map[string]FlagMetadata[map[string]string]{}
 
 var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 	"autoinstall": {
@@ -352,7 +327,7 @@ var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 	"image": {
 		Name:         "image",
 		DefaultValue: "",
-		Usage:        "parent image (if not a profile)",
+		Usage:        "the UID of the parent image (if not a profile; see 'image report')",
 	},
 	"ipv6-default-device": {
 		Name:         "ipv6-default-device",
@@ -362,7 +337,7 @@ var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 	"profile": {
 		Name:         "profile",
 		DefaultValue: "",
-		Usage:        "Parent profile",
+		Usage:        "the UID of the parent profile (see 'profile report')",
 	},
 	"status": {
 		Name:         "status",
@@ -434,11 +409,6 @@ var systemStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
 		Usage:         "boot loaders (network installation boot loaders)",
 		IsInheritable: true,
 	},
-	"mgmt-classes": {
-		Name:         "mgmt-classes",
-		DefaultValue: []string{},
-		Usage:        "management classes (for external config management)",
-	},
 	"name-servers": {
 		Name:         "name-servers",
 		DefaultValue: []string{},
@@ -458,18 +428,6 @@ var systemMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
 		Usage:         "automatic installation template metadata",
 		IsInheritable: true,
 	},
-	"boot-files": {
-		Name:          "boot-files",
-		DefaultValue:  map[string]string{},
-		Usage:         "TFTP boot files (files copied into tftpboot beyond the kernel/initrd)",
-		IsInheritable: true,
-	},
-	"fetchable-files": {
-		Name:          "fetchable-files",
-		DefaultValue:  map[string]string{},
-		Usage:         "fetchable files (templates for tftp, wget or curl)",
-		IsInheritable: true,
-	},
 	"kernel-options": {
 		Name:          "kernel-options",
 		DefaultValue:  map[string]string{},
@@ -483,15 +441,9 @@ var systemMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
 		IsInheritable: true,
 	},
 	"template-files": {
-		Name:          "template-files",
-		DefaultValue:  map[string]string{},
-		Usage:         "template files (file mappings for built-in config management)",
-		IsInheritable: true,
-	},
-	"mgmt-parameters": {
-		Name:         "mgmt-parameters",
+		Name:         "template-files",
 		DefaultValue: map[string]string{},
-		Usage:        "Parameters which will be handed to your management application (must be a valid YAML dictionary))",
+		Usage:        "template files (file mappings for built-in config management)",
 	},
 }
 
@@ -533,16 +485,20 @@ var systemPowerStringFlagMetadata = map[string]FlagMetadata[string]{
 	},
 }
 
+// interfaceStringFlagMetadata holds the string flags for the dedicated
+// `cobbler interface` command. In Cobbler 4.0.0 the IPv4/IPv6/DNS configuration
+// lives in nested value objects on NetworkInterface; the flag names are
+// dot-separated by convention (--ipv4-address sets IPv4.Address, etc.).
 var interfaceStringFlagMetadata = map[string]FlagMetadata[string]{
 	"bonding-opts": {
 		Name:         "bonding-opts",
 		DefaultValue: "",
-		Usage:        "bonding opts (should be used with --interface)",
+		Usage:        "bonding opts",
 	},
 	"bridge-opts": {
 		Name:         "bridge-opts",
 		DefaultValue: "",
-		Usage:        "bridge opts (should be used with --interface)",
+		Usage:        "bridge opts",
 	},
 	"dhcp-tag": {
 		Name:         "dhcp-tag",
@@ -552,63 +508,68 @@ var interfaceStringFlagMetadata = map[string]FlagMetadata[string]{
 	"dns-name": {
 		Name:         "dns-name",
 		DefaultValue: "",
-		Usage:        "DNS name (should be used with --interface)",
-	},
-	"if-gateway": {
-		Name:         "if-gateway",
-		DefaultValue: "",
-		Usage:        "per-Interface Gateway (should be used with --interface)",
+		Usage:        "DNS name",
 	},
 	"interface-master": {
 		Name:         "interface-master",
 		DefaultValue: "",
-		Usage:        "master interface (Should be used with --interface)",
+		Usage:        "master interface",
 	},
 	"interface-type": {
 		Name:         "interface-type",
-		DefaultValue: "",
-		Usage: `interface Type. Valid options: na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,bmc,infiniband.
-	(should be used with --interface)`,
+		DefaultValue: "na",
+		Usage:        "interface type (na,bond,bond_slave,bridge,bridge_slave,bonded_bridge_slave,infiniband)",
 	},
-	"ip-address": {
-		Name:         "ip-address",
+	"ipv4-address": {
+		Name:         "ipv4-address",
 		DefaultValue: "",
-		Usage:        "IPv4 address (should be used with --interface)",
+		Usage:        "IPv4 address",
+	},
+	"ipv4-netmask": {
+		Name:         "ipv4-netmask",
+		DefaultValue: "",
+		Usage:        "IPv4 subnet mask",
+	},
+	"ipv4-gateway": {
+		Name:         "ipv4-gateway",
+		DefaultValue: "",
+		Usage:        "per-interface IPv4 gateway",
 	},
 	"ipv6-address": {
 		Name:         "ipv6-address",
 		DefaultValue: "",
-		Usage:        "IPv6 address (should be used with --interface)",
+		Usage:        "IPv6 address",
 	},
-	"ipv6-default-gateway": {
-		Name:         "ipv6-default-gateway",
+	"ipv6-prefix": {
+		Name:         "ipv6-prefix",
 		DefaultValue: "",
-		Usage:        "IPv6 Default Gateway (should be used with --interface)",
+		Usage:        "IPv6 prefix",
 	},
 	"ipv6-mtu": {
 		Name:         "ipv6-mtu",
 		DefaultValue: "",
 		Usage:        "IPv6 MTU",
 	},
-	"ipv6-prefix": {
-		Name:         "ipv6-prefix",
+	"ipv6-default-gateway": {
+		Name:         "ipv6-default-gateway",
 		DefaultValue: "",
-		Usage:        "IPv6 Prefix (should be used with --interface)",
+		Usage:        "IPv6 default gateway",
 	},
 	"mac-address": {
 		Name:         "mac-address",
 		DefaultValue: "",
-		Usage:        "MAC Address (place 'random' in this field for a random MAC Address.)",
+		Usage:        "MAC address (use 'random' for a random MAC address)",
 	},
 	"mtu": {
 		Name:         "mtu",
 		DefaultValue: "",
-		Usage:        "MTU (should be used with --interface)",
+		Usage:        "MTU",
 	},
-	"netmask": {
-		Name:         "netmask",
-		DefaultValue: "",
-		Usage:        "Subnet mask (should be used with --interface)",
+	"virt-bridge": {
+		Name:          "virt-bridge",
+		DefaultValue:  "",
+		Usage:         "virt bridge",
+		IsInheritable: true,
 	},
 }
 
@@ -616,40 +577,40 @@ var interfaceBoolFlagMetadata = map[string]FlagMetadata[bool]{
 	"connected-mode": {
 		Name:         "connected-mode",
 		DefaultValue: false,
-		Usage:        "InfiniBand connected mode (should be used with --interface)",
+		Usage:        "InfiniBand connected mode",
 	},
 	"management": {
 		Name:         "management",
 		DefaultValue: false,
-		Usage:        "declares the interface as management interface (should be used with --interface)",
+		Usage:        "declares the interface as a management interface",
 	},
 	"static": {
 		Name:         "static",
 		DefaultValue: false,
-		Usage:        "Is this interface static? (should be used with --interface)",
+		Usage:        "is this interface static?",
 	},
 }
 
 var interfaceStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
-	"cnames": {
-		Name:         "cnames",
+	"dns-cnames": {
+		Name:         "dns-cnames",
 		DefaultValue: []string{},
-		Usage:        "Cannonical Name Records, should be used with --interface (comma delimited)",
+		Usage:        "canonical name records (comma delimited)",
+	},
+	"ipv4-static-routes": {
+		Name:         "ipv4-static-routes",
+		DefaultValue: []string{},
+		Usage:        "IPv4 static routes (comma delimited)",
 	},
 	"ipv6-secondaries": {
 		Name:         "ipv6-secondaries",
 		DefaultValue: []string{},
-		Usage:        "IPv6 Secondaries (should be used with --interface)",
+		Usage:        "IPv6 secondary addresses (comma delimited)",
 	},
 	"ipv6-static-routes": {
 		Name:         "ipv6-static-routes",
 		DefaultValue: []string{},
-		Usage:        "IPv6 Static Routes (should be used with --interface)",
-	},
-	"static-routes": {
-		Name:         "static-routes",
-		DefaultValue: []string{},
-		Usage:        "static routes (should be used with --interface)",
+		Usage:        "IPv6 static routes (comma delimited)",
 	},
 }
 
@@ -687,7 +648,7 @@ var imageStringFlagMetadata = map[string]FlagMetadata[string]{
 	"menu": {
 		Name:         "menu",
 		DefaultValue: "",
-		Usage:        "parent boot menu",
+		Usage:        "the UID of the parent boot menu (see 'menu report')",
 	},
 	"virt-bridge": {
 		Name:         "virt-bridge",
@@ -763,102 +724,6 @@ var menuStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "display-name",
 		DefaultValue: "",
 		Usage:        "display name",
-	},
-}
-
-var fileStringFlagMetadata = map[string]FlagMetadata[string]{
-	"action": {
-		Name:         "action",
-		DefaultValue: "",
-		Usage:        "create or remove file resource",
-	},
-	"mode": {
-		Name:         "mode",
-		DefaultValue: "",
-		Usage:        "file modes",
-	},
-	"template": {
-		Name:         "template",
-		DefaultValue: "",
-		Usage:        "the template for the file",
-	},
-	"path": {
-		Name:         "path",
-		DefaultValue: "",
-		Usage:        "the path of the file",
-	},
-	"group": {
-		Name:         "group",
-		DefaultValue: "",
-		Usage:        "file owner group in file system",
-	},
-	"owner": {
-		Name:         "owner",
-		DefaultValue: "",
-		Usage:        "file owner user in file system",
-	},
-}
-
-var fileBoolFlagMetadata = map[string]FlagMetadata[bool]{
-	"is-dir": {
-		Name:         "is-dir",
-		DefaultValue: false,
-		Usage:        "treat file resource as a directory",
-	},
-}
-
-var packageStringFlagMetadata = map[string]FlagMetadata[string]{
-	"action": {
-		Name:         "action",
-		DefaultValue: "",
-		Usage:        "install or remove package resource",
-	},
-	"installer": {
-		Name:         "installer",
-		DefaultValue: "",
-		Usage:        "package manager",
-	},
-	"version": {
-		Name:         "version",
-		DefaultValue: "",
-		Usage:        "package version",
-	},
-}
-
-var mgmtclassStringFlagMetadata = map[string]FlagMetadata[string]{
-	"class-name": {
-		Name:         "class-name",
-		DefaultValue: "",
-		Usage:        "actual class name (leave blank to use the name field)",
-	},
-}
-
-var mgmtclassBoolFlagMetadata = map[string]FlagMetadata[bool]{
-	"is-definition": {
-		Name:         "is-definition",
-		DefaultValue: false,
-		Usage:        "is Definition? Treat this class as a definition (puppet only)",
-	},
-}
-
-var mgmtclassStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
-	"files": {
-		Name:         "files",
-		DefaultValue: []string{},
-		Usage:        "file resources",
-	},
-	"packages": {
-		Name:         "packages",
-		DefaultValue: []string{},
-		Usage:        "package resources",
-	},
-}
-
-var mgmtclassStringMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
-	"params": {
-		Name:         "params",
-		DefaultValue: make(map[string]string),
-		Usage:        "list of parameters/variables",
 	},
 }
 

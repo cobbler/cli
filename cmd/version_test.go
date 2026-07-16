@@ -31,7 +31,7 @@ func Test_VersionCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdoutString := string(stdoutBytes)
-	if !strings.Contains(stdoutString, "source: ?, ?") {
+	if !strings.Contains(stdoutString, "cli: (devel)") {
 		fmt.Println(stdoutString)
 		t.Fatal("CLI version not part of the return string")
 	}
