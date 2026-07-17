@@ -41,6 +41,9 @@ archives:
       - '**/*.rpm'
       - '**/*.deb'
 
+release:
+  prerelease: auto
+
 changelog:
   sort: asc
   filters:
