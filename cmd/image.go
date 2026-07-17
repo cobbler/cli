@@ -341,7 +341,7 @@ func NewImageAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Image %s created\n", system.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Image %s created\n", system.Name)
 			return nil
 		},
 	}
@@ -569,7 +569,7 @@ func reportImages(cmd *cobra.Command, imageNames []string) error {
 			return err
 		}
 		printStructured(cmd, system)
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -655,15 +655,15 @@ func NewImageExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
 				}
 				if formatOption == "yaml" {
 					yamlDocument, err := yaml.Marshal(image)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
 				}
 			}
 			return nil

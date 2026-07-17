@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -46,19 +45,6 @@ func settingsFieldByMapstructureTag(settings *cobbler.Settings, name string) ref
 		}
 	}
 	return reflect.Value{}
-}
-
-// listSettingNames returns the known setting names sorted alphabetically.
-func listSettingNames(settings *cobbler.Settings) []string {
-	t := reflect.TypeOf(settings).Elem()
-	out := make([]string, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		if tag := t.Field(i).Tag.Get("mapstructure"); tag != "" {
-			out = append(out, tag)
-		}
-	}
-	sort.Strings(out)
-	return out
 }
 
 // parseSettingValue coerces the raw string the user passed via --value into
@@ -159,9 +145,9 @@ func NewSettingEditCmd() *cobra.Command {
 				return err
 			}
 			if result == 0 {
-				fmt.Fprintln(cmd.OutOrStdout(), "Successfully updated!")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Successfully updated!")
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), "Updating settings failed!")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Updating settings failed!")
 			}
 			return nil
 		},
@@ -224,14 +210,14 @@ func NewSettingExportCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), string(out))
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 			case "yaml":
 				out, err := yaml.Marshal(settings)
 				if err != nil {
 					return err
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), "---")
-				fmt.Fprintln(cmd.OutOrStdout(), string(out))
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 			}
 			return nil
 		},

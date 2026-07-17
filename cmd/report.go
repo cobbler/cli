@@ -25,8 +25,8 @@ Identical to 'cobbler list'`,
 			}
 
 			// Distro
-			fmt.Fprintln(cmd.OutOrStdout(), "distros:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "distros:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
 			distroNames, err := Client.ListDistroNames()
 			if err != nil {
 				return err
@@ -35,11 +35,11 @@ Identical to 'cobbler list'`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 
 			// Profile
-			fmt.Fprintln(cmd.OutOrStdout(), "profiles:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "profiles:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
 			profileNames, err := Client.ListProfileNames()
 			if err != nil {
 				return err
@@ -48,11 +48,11 @@ Identical to 'cobbler list'`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 
 			// System
-			fmt.Fprintln(cmd.OutOrStdout(), "systems:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "systems:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
 			systemNames, err := Client.ListSystemNames()
 			if err != nil {
 				return err
@@ -61,11 +61,11 @@ Identical to 'cobbler list'`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 
 			// Repository
-			fmt.Fprintln(cmd.OutOrStdout(), "repos:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "repos:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
 			repoNames, err := Client.ListRepoNames()
 			if err != nil {
 				return err
@@ -74,11 +74,11 @@ Identical to 'cobbler list'`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 
 			// Image
-			fmt.Fprintln(cmd.OutOrStdout(), "images:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "images:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
 			imageNames, err := Client.ListImageNames()
 			if err != nil {
 				return err
@@ -87,11 +87,11 @@ Identical to 'cobbler list'`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 
 			// Menu
-			fmt.Fprintln(cmd.OutOrStdout(), "menus:")
-			fmt.Fprintln(cmd.OutOrStdout(), "==========")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "menus:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
 			menuNames, err := Client.ListMenuNames()
 			if err != nil {
 				return err
@@ -100,7 +100,7 @@ Identical to 'cobbler list'`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			return nil
 		},
 	}

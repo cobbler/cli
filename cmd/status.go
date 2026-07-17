@@ -22,7 +22,7 @@ run for longer then 100 minutes are considered stalled.`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), res.(string))
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), res.(string))
 
 			return nil
 		},

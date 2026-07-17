@@ -26,11 +26,11 @@ func NewVersionCmd() *cobra.Command {
 				return err
 			}
 			clientVersion, cliVersion, _ := getClientVersion()
-			fmt.Fprintf(cmd.OutOrStdout(), "Cobbler %s\n", version.Version)
-			fmt.Fprintf(cmd.OutOrStdout(), "  source: %s, %s\n", version.Gitstamp, version.Gitdate)
-			fmt.Fprintf(cmd.OutOrStdout(), "  build time: %s\n", version.Builddate)
-			fmt.Fprintf(cmd.OutOrStdout(), "  cli: %s\n", cliVersion)
-			fmt.Fprintf(cmd.OutOrStdout(), "  client: %s\n", clientVersion)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Cobbler %s\n", version.Version)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  source: %s, %s\n", version.Gitstamp, version.Gitdate)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  build time: %s\n", version.Builddate)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  cli: %s\n", cliVersion)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  client: %s\n", clientVersion)
 			return nil
 		},
 	}

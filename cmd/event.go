@@ -42,7 +42,7 @@ func NewEventStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), event.State)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), event.State)
 			return nil
 		},
 	}
@@ -84,13 +84,13 @@ func NewEventListCmd() *cobra.Command {
 					stateWidth = len(event.State)
 				}
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%*s | %*s | %*s | %*s | %s \n", idWidth, "ID", nameWidth, "Name", stateWidth, "Task State", stateTimeWidth, "Time (last transitioned)", "Read by Who")
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%*s | %*s | %*s | %*s | %s \n", idWidth, "ID", nameWidth, "Name", stateWidth, "Task State", stateTimeWidth, "Time (last transitioned)", "Read by Who")
 			for _, event := range events {
 				stateTimeStruct, err := covertFloatToUtcTime(event.StateTime)
 				if err != nil {
 					return err
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%*s | %*s | %*s | %*s | %s \n", idWidth, event.ID, nameWidth, event.Name, stateWidth, event.State, stateTimeWidth, stateTimeStruct.Format(time.DateTime), event.ReadByWho)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%*s | %*s | %*s | %*s | %s \n", idWidth, event.ID, nameWidth, event.Name, stateWidth, event.State, stateTimeWidth, stateTimeStruct.Format(time.DateTime), event.ReadByWho)
 			}
 			return nil
 		},
@@ -117,7 +117,7 @@ func NewEventLogCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), eventLog)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), eventLog)
 			return nil
 		},
 	}

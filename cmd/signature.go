@@ -17,7 +17,7 @@ func NewSignatureCmd() *cobra.Command {
 		Short: "Signature management",
 		Long:  `Reloads, reports or updates the signatures of the distinct operating system versions.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "Please use one of the sub commands!")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Please use one of the sub commands!")
 			_ = cmd.Help()
 		},
 	}
@@ -49,14 +49,14 @@ func NewSignatureReportCmd() *cobra.Command {
 				var totalOsVersions int
 
 				// Print signatures
-				fmt.Fprintln(cmd.OutOrStdout(), "Currently loaded signatures")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Currently loaded signatures")
 				breedNameList := make([]string, 0, len(signatures.Breeds))
 				for key := range signatures.Breeds {
 					breedNameList = append(breedNameList, key)
 				}
 				sort.Strings(breedNameList)
 				for _, breedName := range breedNameList {
-					fmt.Fprintln(cmd.OutOrStdout(), breedName)
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), breedName)
 					totalOsVersions += len(signatures.Breeds[breedName])
 					if len(signatures.Breeds[breedName]) > 0 {
 						osVersionNameList := make([]string, 0, len(signatures.Breeds[breedName]))
@@ -65,16 +65,16 @@ func NewSignatureReportCmd() *cobra.Command {
 						}
 						sort.Strings(osVersionNameList)
 						for _, versionName := range osVersionNameList {
-							fmt.Fprintf(cmd.OutOrStdout(), "\t%s\n", versionName)
+							_, _ = fmt.Fprintf(cmd.OutOrStdout(), "\t%s\n", versionName)
 						}
 					} else {
-						fmt.Fprintln(cmd.OutOrStdout(), "\t(none)")
+						_, _ = fmt.Fprintln(cmd.OutOrStdout(), "\t(none)")
 					}
 
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "\n%d breeds with %d total OS versions loaded\n", len(signatures.Breeds), totalOsVersions)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "\n%d breeds with %d total OS versions loaded\n", len(signatures.Breeds), totalOsVersions)
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), "No  breeds found in the signature, a signature update is recommended")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No  breeds found in the signature, a signature update is recommended")
 			}
 			return nil
 		},
@@ -94,7 +94,7 @@ func NewSignatureUpdateCmd() *cobra.Command {
 			}
 
 			eventId, _ := Client.BackgroundSignatureUpdate()
-			fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
 			return nil
 		},
 	}
@@ -112,7 +112,7 @@ func NewSignatureReloadCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintln(cmd.OutOrStdout(), "This functionality cannot be used in the new CLI until https://github.com/cobbler/cobbler/issues/3791 is implemented!")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "This functionality cannot be used in the new CLI until https://github.com/cobbler/cobbler/issues/3791 is implemented!")
 			return nil
 		},
 	}

@@ -62,7 +62,7 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-sync for more 
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
 			return nil
 		},
 	}

@@ -28,7 +28,7 @@ The options are configured in the Cobbler settings file.`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
 			return nil
 		},
 	}

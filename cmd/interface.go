@@ -196,7 +196,7 @@ func NewInterfaceAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Network interface %s created\n", created.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Network interface %s created\n", created.Name)
 			return nil
 		},
 	}
@@ -368,9 +368,9 @@ func NewInterfaceListCommand() *cobra.Command {
 			for _, systemName := range systemNames {
 				ifaceNames := grouped[systemName]
 				sort.Strings(ifaceNames)
-				fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", systemName)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", systemName)
 				for _, n := range ifaceNames {
-					fmt.Fprintf(cmd.OutOrStdout(), "    %s\n", n)
+					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "    %s\n", n)
 				}
 			}
 			return nil
@@ -419,7 +419,7 @@ func NewInterfaceReportCommand() *cobra.Command {
 			}
 			for _, iface := range interfaces {
 				printStructured(cmd, iface)
-				fmt.Fprintln(cmd.OutOrStdout(), "")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
 			return nil
 		},
@@ -489,14 +489,14 @@ func NewInterfaceExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(out))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 				case "yaml":
 					out, err := yaml.Marshal(iface)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(out))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 				}
 			}
 			return nil
