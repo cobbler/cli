@@ -114,6 +114,7 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: ${{ env.PUSH_IMAGE }}
   goreleaser:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     needs:
       - native

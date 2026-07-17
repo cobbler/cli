@@ -322,7 +322,7 @@ func NewDistroAddCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Distro %s created\n", distro.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Distro %s created\n", distro.Name)
 			return nil
 		},
 	}
@@ -570,7 +570,7 @@ func reportDistros(cmd *cobra.Command, distroNames []string) error {
 			return err
 		}
 		printStructured(cmd, distro)
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -656,15 +656,15 @@ func NewDistroExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
 				}
 				if formatOption == "yaml" {
 					yamlDocument, err := yaml.Marshal(distro)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
 				}
 			}
 			return nil

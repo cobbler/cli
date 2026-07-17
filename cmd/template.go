@@ -154,7 +154,7 @@ func NewTemplateAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Template %s created\n", created.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Template %s created\n", created.Name)
 			return nil
 		},
 	}
@@ -324,7 +324,7 @@ func NewTemplateReportCmd() *cobra.Command {
 					return err
 				}
 				printStructured(cmd, t)
-				fmt.Fprintln(cmd.OutOrStdout(), "")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
 			return nil
 		},
@@ -379,14 +379,14 @@ func NewTemplateExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(out))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 				case "yaml":
 					out, err := yaml.Marshal(t)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(out))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 				}
 			}
 			return nil
@@ -421,7 +421,7 @@ func NewTemplateContentCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprint(cmd.OutOrStdout(), content)
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), content)
 			return nil
 		},
 	}

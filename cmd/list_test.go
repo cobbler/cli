@@ -31,7 +31,7 @@ func Test_ListCmd(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdoutString := string(stdoutBytes)
-	if !(strings.Contains(stdoutString, "distros:") && strings.Contains(stdoutString, "profiles")) {
+	if !strings.Contains(stdoutString, "distros:") || !strings.Contains(stdoutString, "profiles") {
 		fmt.Println(stdoutString)
 		t.Fatal("no heading for distros and profiles present")
 	}

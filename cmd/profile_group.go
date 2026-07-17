@@ -57,7 +57,7 @@ func newProfileGroupAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Profile group %s created\n", created.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Profile group %s created\n", created.Name)
 			return nil
 		},
 	}
@@ -233,7 +233,7 @@ func newProfileGroupReportCmd() *cobra.Command {
 					return err
 				}
 				printStructured(cmd, g)
-				fmt.Fprintln(cmd.OutOrStdout(), "")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
 			return nil
 		},

@@ -224,7 +224,7 @@ func NewRepoAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Repo %s created\n", repo.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Repo %s created\n", repo.Name)
 			return nil
 		},
 	}
@@ -476,7 +476,7 @@ func reportRepos(cmd *cobra.Command, repoNames []string) error {
 			return err
 		}
 		printStructured(cmd, repo)
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -562,15 +562,15 @@ func NewRepoExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
 				}
 				if formatOption == "yaml" {
 					yamlDocument, err := yaml.Marshal(repo)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
 				}
 			}
 			return nil

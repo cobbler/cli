@@ -55,14 +55,14 @@ func writeExport(cmd *cobra.Command, format string, v interface{}) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), string(out))
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 	case "yaml":
 		out, err := yaml.Marshal(v)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), "---")
-		fmt.Fprintln(cmd.OutOrStdout(), string(out))
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(out))
 	default:
 		return fmt.Errorf("format must be json or yaml")
 	}

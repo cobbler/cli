@@ -138,7 +138,7 @@ func FindItemNames(cmd *cobra.Command, args []string, what string) error {
 		case "config", "page", "items-per-page":
 			return
 		}
-		key := strings.Replace(flag.Name, "-", "_", -1)
+		key := strings.ReplaceAll(flag.Name, "-", "_")
 		criteria[key] = flag.Value.String()
 	})
 
@@ -153,13 +153,13 @@ func FindItemNames(cmd *cobra.Command, args []string, what string) error {
 		for _, raw := range result.FoundItems {
 			if asMap, ok := raw.(map[string]interface{}); ok {
 				if name, ok := asMap["name"].(string); ok {
-					fmt.Fprintln(cmd.OutOrStdout(), name)
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), name)
 					continue
 				}
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), raw)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), raw)
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "# page %d of %d (%d total)\n",
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "# page %d of %d (%d total)\n",
 			result.PageInfo.Page, result.PageInfo.NumPages, result.PageInfo.NumItems)
 		return nil
 	}
@@ -169,7 +169,7 @@ func FindItemNames(cmd *cobra.Command, args []string, what string) error {
 		return err
 	}
 	for _, name := range itemNames {
-		fmt.Fprintln(cmd.OutOrStdout(), name)
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), name)
 	}
 	return nil
 }

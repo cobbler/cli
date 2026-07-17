@@ -62,10 +62,10 @@ Identical to 'cobbler report'`,
 }
 
 func listItems(cmd *cobra.Command, what string, items []string) {
-	fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", what)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", what)
 	sort.Strings(items)
 	for _, item := range items {
-		fmt.Fprintf(cmd.OutOrStdout(), "   %s\n", item)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "   %s\n", item)
 	}
-	fmt.Fprintln(cmd.OutOrStdout(), "")
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 }

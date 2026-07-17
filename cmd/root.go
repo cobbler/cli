@@ -211,7 +211,7 @@ func printValueStructured(cmd *cobra.Command, name string, value reflect.Value) 
 
 func printNetworkInterfaces(cmd *cobra.Command, networkInterfaces map[string]*cobbler.NetworkInterface) {
 	for interfaceName, interfaceStruct := range networkInterfaces {
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", "Interface =====", interfaceName)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", "Interface =====", interfaceName)
 		printStructured(cmd, interfaceStruct)
 	}
 }
@@ -221,46 +221,46 @@ func printField(cmd *cobra.Command, valueType reflect.Kind, name string, value i
 		time, err := covertFloatToUtcTime(value.(float64))
 		if err == nil {
 			// If there is an error just show the float
-			fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, time)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, time)
 			return
 		}
 	}
 	switch valueType {
 	case reflect.Bool:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %t\n", name, value.(bool))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %t\n", name, value.(bool))
 	case reflect.Int64:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int64))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int64))
 	case reflect.Int32:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int32))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int32))
 	case reflect.Int16:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int16))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int16))
 	case reflect.Int8:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int8))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int8))
 	case reflect.Int:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %d\n", name, value.(int))
 	case reflect.Float32:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %f\n", name, value.(float32))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %f\n", name, value.(float32))
 	case reflect.Float64:
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %f\n", name, value.(float64))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %f\n", name, value.(float64))
 	case reflect.Map:
 		res2B, _ := json.Marshal(value)
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, string(res2B))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, string(res2B))
 	case reflect.Array, reflect.Slice:
 		arr := reflect.ValueOf(value)
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: [", name)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: [", name)
 		for i := 0; i < arr.Len(); i++ {
 			if i+1 != arr.Len() {
-				fmt.Fprintf(cmd.OutOrStdout(), "'%v', ", arr.Index(i).Interface())
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "'%v', ", arr.Index(i).Interface())
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "'%v'", arr.Index(i).Interface())
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "'%v'", arr.Index(i).Interface())
 			}
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "]\n")
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "]\n")
 	default:
 		if value == nil {
 			value = ""
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, value)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, value)
 		// fmt.Fprintf(cmd.OutOrStdout(),"%d: %s %s = %v\n", i, typeOfT.Field(i).Name, f.Type(), f.Interface())
 	}
 }

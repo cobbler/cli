@@ -479,7 +479,7 @@ func NewSystemAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "System %s created\n", system.Name)
 			return nil
 		},
 	}
@@ -694,14 +694,13 @@ func NewSystemGetAutoinstallCmd() *cobra.Command {
 				return err
 			}
 			if !systemExists {
-				//goland:noinspection GoErrorStringFormat
-				return fmt.Errorf("System does not exist")
+				return fmt.Errorf("system does not exist")
 			}
 			autoinstallRendered, err := Client.GenerateAutoinstall(systemName, "system", "name", "", "")
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
 			return nil
 		},
 	}
@@ -942,7 +941,7 @@ func reportSystems(cmd *cobra.Command, systemNames []string) error {
 			return err
 		}
 		printStructured(cmd, system)
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -1028,15 +1027,15 @@ func NewSystemExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
 				}
 				if formatOption == "yaml" {
 					yamlDocument, err := yaml.Marshal(system)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
 				}
 			}
 			return nil

@@ -455,7 +455,7 @@ func NewProfileAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Profile %s created\n", profile.Name)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Profile %s created\n", profile.Name)
 			return nil
 		},
 	}
@@ -648,14 +648,14 @@ func NewProfileGetAutoinstallCmd() *cobra.Command {
 				return err
 			}
 			if !profileExists {
-				return fmt.Errorf("Profile does not exist!")
+				return fmt.Errorf("profile does not exist")
 
 			}
 			autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "profile", "name", "", "")
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), autoinstallRendered)
 			return nil
 		},
 	}
@@ -773,7 +773,7 @@ func reportProfiles(cmd *cobra.Command, profileNames []string) error {
 			return err
 		}
 		printStructured(cmd, profile)
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
 }
@@ -859,15 +859,15 @@ func NewProfileExportCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonDocument))
 				}
 				if formatOption == "yaml" {
 					yamlDocument, err := yaml.Marshal(profile)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(cmd.OutOrStdout(), "---")
-					fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "---")
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(yamlDocument))
 				}
 			}
 			return nil

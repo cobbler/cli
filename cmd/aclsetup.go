@@ -47,7 +47,7 @@ func NewAclSetupCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "Event ID: ", eventId)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Event ID: ", eventId)
 			return nil
 		},
 	}
