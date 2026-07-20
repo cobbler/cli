@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Install Go ${{ matrix.go }}
         # https://github.com/actions/setup-go
-        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go }}
       - name: Checkout code
@@ -129,7 +129,7 @@ jobs:
           fetch-depth: 0
       - name: Set up Go
         # https://github.com/actions/setup-go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       - name: Download all artifacts
         # https://github.com/actions/download-artifact
         id: download-artifact
