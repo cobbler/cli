@@ -29,6 +29,7 @@ Long Usage:
    cobbler report <commands/report>
    cobbler reposync <commands/reposync>
    cobbler signature <commands/signature>
+   cobbler status <commands/status>
    cobbler sync <commands/sync>
    cobbler system <commands/system>
    cobbler validate-autoinstalls <commands/validate-autoinstalls>
