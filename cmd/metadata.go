@@ -78,6 +78,11 @@ var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "RedHat management key (registration key for RHN, Spacewalk, or Satellite)",
 	},
+	"source-tree-path": {
+		Name:         "source-tree-path",
+		DefaultValue: "",
+		Usage:        "the original location of the distro's source tree on disk (for use by the dynamic_httpd manager)",
+	},
 }
 
 var distroStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
@@ -208,6 +213,11 @@ var profileBoolFlagMetadata = map[string]FlagMetadata[bool]{
 		Name:         "virt-auto-boot",
 		DefaultValue: false,
 		Usage:        "auto boot this VM?",
+	},
+	"virt-uefi": {
+		Name:         "virt-uefi",
+		DefaultValue: false,
+		Usage:        "boot this VM via UEFI firmware instead of legacy BIOS?",
 	},
 }
 
@@ -368,6 +378,11 @@ var systemBoolFlagMetadata = map[string]FlagMetadata[bool]{
 		Name:         "virt-pxe-boot",
 		DefaultValue: false,
 		Usage:        "use PXE to build this VM?",
+	},
+	"virt-uefi": {
+		Name:         "virt-uefi",
+		DefaultValue: false,
+		Usage:        "boot this VM via UEFI firmware instead of legacy BIOS?",
 	},
 }
 
@@ -703,6 +718,11 @@ var imageBoolFlagMetadata = map[string]FlagMetadata[bool]{
 		Name:         "virt-auto-boot",
 		DefaultValue: false,
 		Usage:        "auto boot this VM?",
+	},
+	"virt-uefi": {
+		Name:         "virt-uefi",
+		DefaultValue: false,
+		Usage:        "boot this VM via UEFI firmware instead of legacy BIOS?",
 	},
 }
 

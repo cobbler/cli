@@ -1,20 +1,11 @@
 services:
   cobbler:
-    image: cobbler-dev
+    image: ghcr.io/cobbler/cobblerd:${COBBLER_IMAGE_TAG:-latest}
     container_name: cobbler-dev
-    privileged: true  # Required for Cobbler 3.3.2 and newer
+    environment:
+      - COBBLER_XMLRPC_BIND_ADDRESS=0.0.0.0
     volumes:
-      - ./cobbler_source:/code
-      - ../extracted_iso_image:/extracted_iso_image
-      - ./import.py:/import.py:ro
+      - ../extracted_iso_image:/extracted_iso_image:ro,z
     ports:
-      - 8081:80
-    # We chmod the code, otherwise some files are read-only and cannot be cleaned up:
-    # The Cobbler 4.0.0 container no longer ships the `cobbler` CLI (superseded by this
-    # project), so the import is done via a direct XML-RPC call instead (see import.py).
-    command: bash -c "
-      /code/docker/develop/scripts/setup-supervisor.sh &&
-      chmod -R o+w /code &&
-      python3 /import.py &&
-      tail -F /dev/null
-      "
+      - 25151:25151
+    command: cobblerd -F

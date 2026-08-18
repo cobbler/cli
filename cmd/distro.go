@@ -211,6 +211,13 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 				return
 			}
 			distro.RedhatManagementKey = distroNewRedhatManagementKey
+		case "source-tree-path":
+			var distroNewSourceTreePath string
+			distroNewSourceTreePath, err = cmd.Flags().GetString("source-tree-path")
+			if err != nil {
+				return
+			}
+			distro.SourceTreePath = distroNewSourceTreePath
 		case "template-files":
 			var newTemplateFiles map[string]string
 			newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
