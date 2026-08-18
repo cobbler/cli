@@ -1,6 +1,6 @@
 BINARY_NAME=cobbler
 EXECUTOR?=docker
-COBBLER_SERVER_URL=http://localhost:8081/cobbler_api
+COBBLER_SERVER_URL=http://localhost:25151/
 TEST?=$$(go list ./... |grep -v 'vendor')
 VERSION=0.0.1
 
