@@ -31,9 +31,9 @@ func Test_SignatureReloadCmd(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdoutString := string(stdoutBytes)
-	if !strings.Contains(stdoutString, "This functionality cannot be used in the new CLI") {
+	if !strings.Contains(stdoutString, "Event ID:") {
 		fmt.Println(stdoutString)
-		t.Fatal("No missing feature message present")
+		t.Fatal("No Event ID present")
 	}
 }
 

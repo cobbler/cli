@@ -112,7 +112,8 @@ func NewSignatureReloadCmd() *cobra.Command {
 				return err
 			}
 
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "This functionality cannot be used in the new CLI until https://github.com/cobbler/cobbler/issues/3791 is implemented!")
+			eventId, _ := Client.BackgroundSignatureReload()
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Event ID: %s\n", eventId)
 			return nil
 		},
 	}

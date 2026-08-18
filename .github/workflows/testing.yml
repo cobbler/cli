@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         cobbler_version:
-          - 2f0ff03f17ae957cac65d9ef033a98e8d597145a # v4.0.0a4
+          - fedf73120ff1d5018e1635d5677d868caac34a78 # v4.0.0b1
       fail-fast: false
     steps:
       - name: Check out code into the Go module directory
@@ -59,7 +59,7 @@ jobs:
             *.iso
           key: ${{ steps.cache-iso-restore.outputs.cache-primary-key }}
       - name: Upload coverage report to GH artifacts
-        if: matrix.cobbler_version == 'df356046f3cf27be62a61001b982d5983800cfd9'
+        if: matrix.cobbler_version == 'fedf73120ff1d5018e1635d5677d868caac34a78'
         # https://github.com/actions/upload-artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

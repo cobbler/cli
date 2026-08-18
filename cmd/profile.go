@@ -400,6 +400,13 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				return
 			}
 			profile.Virt.Type = profileNewVirtType
+		case "virt-uefi":
+			var profileNewVirtUEFI bool
+			profileNewVirtUEFI, err = cmd.Flags().GetBool("virt-uefi")
+			if err != nil {
+				return
+			}
+			profile.Virt.UEFI = profileNewVirtUEFI
 		}
 	})
 	return nil

@@ -183,6 +183,62 @@ func Test_DistroEditCmd(t *testing.T) {
 	}
 }
 
+func Test_DistroEditCmd_SourceTreePath(t *testing.T) {
+	type args struct {
+		command []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			// The path must be an absolute path that exists on the server; /extracted_iso_image
+			// is bind-mounted into the test Cobbler container by testing/compose.yml.
+			name:    "plain",
+			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "distro", "edit", "--name", "test-distro-edit-source-tree-path", "--source-tree-path", "/extracted_iso_image"}},
+			want:    "Event ID:",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Cleanup
+			var err error
+			defer func() {
+				// Client is initialized since this is the cleanup
+				cleanupErr := removeDistro(Client, tt.args.command[5])
+				cobbler.FailOnError(t, cleanupErr)
+			}()
+			// Arrange
+			setupClient(t)
+			_, err = createDistro(Client, tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			cobra.OnInitialize(initConfig, setupLogger)
+			rootCmd := NewRootCmd()
+			rootCmd.SetArgs(tt.args.command)
+			stdout := bytes.NewBufferString("")
+			stderr := bytes.NewBufferString("")
+			rootCmd.SetOut(stdout)
+			rootCmd.SetErr(stderr)
+
+			// Act
+			err = rootCmd.Execute()
+
+			// Assert
+			cobbler.FailOnError(t, err)
+			FailOnNonEmptyStream(t, stderr)
+			FailOnNonEmptyStream(t, stdout)
+			updatedDistro, err := Client.GetDistro(tt.args.command[5], false, false)
+			cobbler.FailOnError(t, err)
+			if updatedDistro.SourceTreePath != "/extracted_iso_image" {
+				t.Fatal("distro source-tree-path update wasn't successful")
+			}
+		})
+	}
+}
+
 func Test_DistroFindCmd(t *testing.T) {
 	type args struct {
 		command []string

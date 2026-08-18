@@ -297,6 +297,13 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				return
 			}
 			system.Virt.Type = systemNewVirtType
+		case "virt-uefi":
+			var systemNewVirtUEFI bool
+			systemNewVirtUEFI, err = cmd.Flags().GetBool("virt-uefi")
+			if err != nil {
+				return
+			}
+			system.Virt.UEFI = systemNewVirtUEFI
 		case "gateway":
 			var systemNewGateway string
 			systemNewGateway, err = cmd.Flags().GetString("gateway")

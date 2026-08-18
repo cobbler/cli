@@ -181,6 +181,60 @@ func Test_ImageEditCmd(t *testing.T) {
 	}
 }
 
+func Test_ImageEditCmd_VirtUEFI(t *testing.T) {
+	type args struct {
+		command []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "plain",
+			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "image", "edit", "--name", "test-image-edit-virt-uefi", "--virt-uefi=true"}},
+			want:    "Event ID:",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Cleanup
+			var err error
+			defer func() {
+				// Client is initialized since this is the cleanup
+				cleanupErr := removeImage(Client, tt.args.command[5])
+				cobbler.FailOnError(t, cleanupErr)
+			}()
+			// Arrange
+			setupClient(t)
+			_, err = createImage(Client, tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			cobra.OnInitialize(initConfig, setupLogger)
+			rootCmd := NewRootCmd()
+			rootCmd.SetArgs(tt.args.command)
+			stdout := bytes.NewBufferString("")
+			stderr := bytes.NewBufferString("")
+			rootCmd.SetOut(stdout)
+			rootCmd.SetErr(stderr)
+
+			// Act
+			err = rootCmd.Execute()
+
+			// Assert
+			cobbler.FailOnError(t, err)
+			FailOnNonEmptyStream(t, stderr)
+			FailOnNonEmptyStream(t, stdout)
+			updatedImage, err := Client.GetImage(tt.args.command[5], false, false)
+			cobbler.FailOnError(t, err)
+			if !updatedImage.Virt.UEFI {
+				t.Fatal("image virt-uefi update wasn't successful")
+			}
+		})
+	}
+}
+
 func Test_ImageFindCmd(t *testing.T) {
 	type args struct {
 		command []string

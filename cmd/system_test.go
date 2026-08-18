@@ -191,6 +191,60 @@ func Test_SystemEditCmd(t *testing.T) {
 	}
 }
 
+func Test_SystemEditCmd_VirtUEFI(t *testing.T) {
+	type args struct {
+		command []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "plain",
+			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "system", "edit", "--name", "test-system-edit-virt-uefi", "--virt-uefi=true"}},
+			want:    "Event ID:",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Cleanup
+			var err error
+			defer func() {
+				// Client is initialized since this is the cleanup
+				cleanupErr := removeSystem(Client, tt.args.command[5])
+				cobbler.FailOnError(t, cleanupErr)
+			}()
+			// Arrange
+			setupClient(t)
+			_, err = createSystem(Client, tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			cobra.OnInitialize(initConfig, setupLogger)
+			rootCmd := NewRootCmd()
+			rootCmd.SetArgs(tt.args.command)
+			stdout := bytes.NewBufferString("")
+			stderr := bytes.NewBufferString("")
+			rootCmd.SetOut(stdout)
+			rootCmd.SetErr(stderr)
+
+			// Act
+			err = rootCmd.Execute()
+
+			// Assert
+			cobbler.FailOnError(t, err)
+			FailOnNonEmptyStream(t, stderr)
+			FailOnNonEmptyStream(t, stdout)
+			updatedSystem, err := Client.GetSystem(tt.args.command[5], false, false)
+			cobbler.FailOnError(t, err)
+			if !updatedSystem.Virt.UEFI {
+				t.Fatal("system virt-uefi update wasn't successful")
+			}
+		})
+	}
+}
+
 func Test_SystemFindCmd(t *testing.T) {
 	type args struct {
 		command []string

@@ -287,6 +287,13 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				return
 			}
 			image.Virt.Type = imageNewVirtType
+		case "virt-uefi":
+			var imageNewVirtUEFI bool
+			imageNewVirtUEFI, err = cmd.Flags().GetBool("virt-uefi")
+			if err != nil {
+				return
+			}
+			image.Virt.UEFI = imageNewVirtUEFI
 		}
 	})
 	return err
