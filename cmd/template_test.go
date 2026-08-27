@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -156,6 +157,149 @@ func Test_TemplateEditCmd_UID(t *testing.T) {
 	cobbler.FailOnError(t, err)
 	if updated.Comment != "testcomment-uid" {
 		t.Fatal("template update via --uid wasn't successful")
+	}
+}
+
+// Test_TemplateEditCmd_AllFlags exercises updateTemplateFromFlags' template-type,
+// uri-schema/uri-path, tags and content-file branches, plus parseTemplateSchema's
+// success path -- none of which were covered by the --comment-only edit tests.
+func Test_TemplateEditCmd_AllFlags(t *testing.T) {
+	name := "test-template-edit-allflags"
+	setupClient(t)
+	fixture := newTemplateFixtureFile(t, "test-template-edit-allflags.j2")
+	newFixture := newTemplateFixtureFile(t, "test-template-edit-allflags-2.j2")
+	_, err := createTemplate(Client, name, fixture)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeTemplate(Client, name); err != nil {
+			t.Errorf("cleanup: remove template %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{
+		"--config", "../testing/.cobbler.yaml", "template", "edit", "--name", name,
+		"--template-type", "cheetah",
+		"--uri-schema", "file",
+		"--uri-path", newFixture,
+		"--tags", "tag1,tag2",
+	})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	handle, err := Client.GetTemplateHandle(name)
+	cobbler.FailOnError(t, err)
+	updated, err := Client.GetTemplate(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if updated.TemplateType != "cheetah" {
+		t.Fatal("template-type update wasn't successful")
+	}
+	if updated.URI.Schema != cobbler.TemplateSchemaFile {
+		t.Fatal("uri-schema update wasn't successful")
+	}
+	if updated.URI.Path != newFixture {
+		t.Fatal("uri-path update wasn't successful")
+	}
+	if len(updated.Tags) != 2 || updated.Tags[0] != "tag1" || updated.Tags[1] != "tag2" {
+		t.Fatalf("tags update wasn't successful, got: %v", updated.Tags)
+	}
+}
+
+// Test_TemplateEditCmd_Content exercises updateTemplateFromFlags' inline
+// --content branch.
+func Test_TemplateEditCmd_Content(t *testing.T) {
+	name := "test-template-edit-content"
+	setupClient(t)
+	fixture := newTemplateFixtureFile(t, "test-template-edit-content.j2")
+	_, err := createTemplate(Client, name, fixture)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeTemplate(Client, name); err != nil {
+			t.Errorf("cleanup: remove template %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "template", "edit", "--name", name, "--content", "hello world"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+}
+
+// Test_TemplateEditCmd_ContentFile exercises updateTemplateFromFlags'
+// --content-file branch, which reads the given file off disk.
+func Test_TemplateEditCmd_ContentFile(t *testing.T) {
+	name := "test-template-edit-content-file"
+	setupClient(t)
+	fixture := newTemplateFixtureFile(t, "test-template-edit-content-file.j2")
+	_, err := createTemplate(Client, name, fixture)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeTemplate(Client, name); err != nil {
+			t.Errorf("cleanup: remove template %s: %v", name, err)
+		}
+	})
+	contentFile := t.TempDir() + "/content.txt"
+	if err := os.WriteFile(contentFile, []byte("content-from-file"), 0o644); err != nil {
+		t.Fatalf("failed to write content file: %v", err)
+	}
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "template", "edit", "--name", name, "--content-file", contentFile})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+}
+
+// Test_TemplateEditCmd_InvalidSchema exercises parseTemplateSchema's error
+// branch, surfaced through the edit command's --uri-schema flag.
+func Test_TemplateEditCmd_InvalidSchema(t *testing.T) {
+	name := "test-template-edit-badschema"
+	setupClient(t)
+	fixture := newTemplateFixtureFile(t, "test-template-edit-badschema.j2")
+	_, err := createTemplate(Client, name, fixture)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeTemplate(Client, name); err != nil {
+			t.Errorf("cleanup: remove template %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "template", "edit", "--name", name, "--uri-schema", "bogus"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error for an unknown URI schema")
+	}
+	if !strings.Contains(err.Error(), "unknown URI schema") {
+		t.Fatalf("unexpected error for invalid uri-schema: %v", err)
 	}
 }
 

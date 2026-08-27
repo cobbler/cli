@@ -56,6 +56,45 @@ func Test_DistroGroupAddCmd(t *testing.T) {
 	}
 }
 
+// Test_DistroGroupAddCmd_Items exercises extractGroupFlags' --items branch
+// (group_common.go) together with distro_group.go's own itemsSet handling.
+func Test_DistroGroupAddCmd_Items(t *testing.T) {
+	name := "test-distro-group-add-items"
+	distroName := "test-distro-group-add-items-member"
+	setupClient(t)
+	member, err := createDistro(Client, distroName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, distroName); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", distroName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeDistroGroup(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro group %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro-group", "add", "--name", name, "--items", member.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	handle, err := Client.GetDistroGroupHandle(name)
+	cobbler.FailOnError(t, err)
+	created, err := Client.GetDistroGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if len(created.Members) != 1 || created.Members[0] != member.Uid {
+		t.Fatalf("distro group members weren't set from --items, got: %v", created.Members)
+	}
+}
+
 func Test_DistroGroupEditCmd(t *testing.T) {
 	name := "test-distro-group-edit"
 	setupClient(t)

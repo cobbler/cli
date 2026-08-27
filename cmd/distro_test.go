@@ -191,6 +191,77 @@ func Test_DistroEditCmd(t *testing.T) {
 	}
 }
 
+// Test_DistroCopyCmd_UID exercises the --uid sibling flag on copy.
+func Test_DistroCopyCmd_UID(t *testing.T) {
+	name := "test-distro-copy-uid"
+	newName := "test-distro-copied-uid"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeDistro(Client, newName); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", newName, err)
+		}
+	})
+	uid, err := Client.GetDistroHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "copy", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	copiedHandle, err := Client.GetDistroHandle(newName)
+	cobbler.FailOnError(t, err)
+	_, err = Client.GetDistro(copiedHandle, false, false)
+	cobbler.FailOnError(t, err)
+}
+
+// Test_DistroEditCmd_UID exercises the --uid sibling flag on edit.
+func Test_DistroEditCmd_UID(t *testing.T) {
+	name := "test-distro-edit-uid"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetDistroHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "edit", "--uid", uid, "--comment", "testcomment-uid"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	updatedDistro, err := Client.GetDistro(uid, false, false)
+	cobbler.FailOnError(t, err)
+	if updatedDistro.Comment != "testcomment-uid" {
+		t.Fatal("distro update via --uid wasn't successful")
+	}
+}
+
 func Test_DistroEditCmd_SourceTreePath(t *testing.T) {
 	type args struct {
 		command []string
@@ -438,6 +509,45 @@ func Test_DistroRemoveCmd_UID(t *testing.T) {
 	})
 }
 
+// Test_DistroRenameCmd_UID exercises the --uid sibling flag on rename.
+func Test_DistroRenameCmd_UID(t *testing.T) {
+	name := "test-distro-rename-uid"
+	newName := "test-distro-renamed-uid"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetDistroHandle(name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, newName); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", newName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "rename", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	resultOldName, err := Client.HasItem("distro", name)
+	cobbler.FailOnError(t, err)
+	if resultOldName {
+		t.Fatal("distro not successfully renamed via --uid (old name present)")
+	}
+	resultNewName, err := Client.HasItem("distro", newName)
+	cobbler.FailOnError(t, err)
+	if !resultNewName {
+		t.Fatal("distro not successfully renamed via --uid (new name not present)")
+	}
+}
+
 func Test_DistroRenameCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -554,5 +664,178 @@ func Test_DistroReportCmd(t *testing.T) {
 				t.Fatal("No Event ID present")
 			}
 		})
+	}
+}
+
+// Test_DistroReportCmd_UID exercises the --uid sibling flag on report.
+func Test_DistroReportCmd_UID(t *testing.T) {
+	name := "test-distro-report-uid"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetDistroHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "report", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("distro name missing from report --uid output")
+	}
+}
+
+// Test_DistroReportCmd_All exercises the report branch taken when neither
+// --name nor --uid is supplied (report every distro).
+func Test_DistroReportCmd_All(t *testing.T) {
+	name := "test-distro-report-all"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "report"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("distro name missing from report --all output")
+	}
+}
+
+// Test_DistroExportCmd exercises the export command's json branch with an
+// explicit --name.
+func Test_DistroExportCmd(t *testing.T) {
+	name := "test-distro-export"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "export", "--name", name, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("distro name missing from json export output")
+	}
+}
+
+// Test_DistroExportCmd_UID exercises the export command's --uid sibling
+// flag.
+func Test_DistroExportCmd_UID(t *testing.T) {
+	name := "test-distro-export-uid"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetDistroHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "export", "--uid", uid, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("distro name missing from json export --uid output")
+	}
+}
+
+// Test_DistroExportCmd_All exercises the export branch taken when neither
+// --name nor --uid is supplied, using the yaml format.
+func Test_DistroExportCmd_All(t *testing.T) {
+	name := "test-distro-export-all"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "export", "--format", "yaml"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("distro name missing from yaml export --all output")
 	}
 }

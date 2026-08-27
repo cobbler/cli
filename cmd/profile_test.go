@@ -261,6 +261,217 @@ func Test_ProfileEditCmd_VirtUEFI(t *testing.T) {
 	}
 }
 
+// Test_ProfileCopyCmd_UID exercises the --uid sibling flag on copy.
+func Test_ProfileCopyCmd_UID(t *testing.T) {
+	name := "test-profile-copy-uid"
+	newName := "test-profile-copied-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeProfile(Client, newName); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", newName, err)
+		}
+	})
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "copy", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	copiedHandle, err := Client.GetProfileHandle(newName)
+	cobbler.FailOnError(t, err)
+	_, err = Client.GetProfile(copiedHandle, false, false)
+	cobbler.FailOnError(t, err)
+}
+
+// Test_ProfileEditCmd_UID exercises the --uid sibling flag on edit.
+func Test_ProfileEditCmd_UID(t *testing.T) {
+	name := "test-profile-edit-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "edit", "--uid", uid, "--comment", "testcomment-uid"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	updatedProfile, err := Client.GetProfile(uid, false, false)
+	cobbler.FailOnError(t, err)
+	if updatedProfile.Comment != "testcomment-uid" {
+		t.Fatal("profile update via --uid wasn't successful")
+	}
+}
+
+// Test_ProfileDumpVarsCmd exercises the dumpvars command.
+func Test_ProfileDumpVarsCmd(t *testing.T) {
+	name := "test-profile-dumpvars"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "dumpvars", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "profile_name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile_name missing from dumpvars output")
+	}
+}
+
+// Test_ProfileDumpVarsCmd_UID exercises the --uid sibling flag on dumpvars.
+func Test_ProfileDumpVarsCmd_UID(t *testing.T) {
+	name := "test-profile-dumpvars-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "dumpvars", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "profile_name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile_name missing from dumpvars --uid output")
+	}
+}
+
+// Test_ProfileGetAutoinstallCmd exercises the get-autoinstall command, which
+// now resolves the profile by uid internally (Client.GenerateAutoinstall is
+// called with "uid" instead of "name").
+func Test_ProfileGetAutoinstallCmd(t *testing.T) {
+	setupClient(t)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "get-autoinstall", "--name", "Ubuntu-20.04-x86_64"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err := rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stdoutBytes) == 0 {
+		t.Fatal("get-autoinstall produced no output")
+	}
+}
+
+// Test_ProfileGetAutoinstallCmd_UID exercises the --uid sibling flag on
+// get-autoinstall.
+func Test_ProfileGetAutoinstallCmd_UID(t *testing.T) {
+	setupClient(t)
+	uid, err := Client.GetProfileHandle("Ubuntu-20.04-x86_64")
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "get-autoinstall", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stdoutBytes) == 0 {
+		t.Fatal("get-autoinstall --uid produced no output")
+	}
+}
+
+// Test_ProfileGetAutoinstallCmd_NotFound exercises the error path when
+// neither --name nor a matching profile exists.
+func Test_ProfileGetAutoinstallCmd_NotFound(t *testing.T) {
+	setupClient(t)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "get-autoinstall", "--name", "does-not-exist-profile"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err := rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error for a non-existent profile")
+	}
+}
+
 func Test_ProfileFindCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -414,6 +625,34 @@ func Test_ProfileRemoveCmd(t *testing.T) {
 	}
 }
 
+// Test_ProfileRemoveCmd_UID exercises the --uid sibling flag on remove.
+func Test_ProfileRemoveCmd_UID(t *testing.T) {
+	name := "test-profile-remove-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "remove", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	result, err := Client.HasItem("profile", name)
+	cobbler.FailOnError(t, err)
+	if result {
+		t.Fatal("profile not successfully removed via --uid")
+	}
+}
+
 func Test_ProfileRenameCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -530,5 +769,217 @@ func Test_ProfileReportCmd(t *testing.T) {
 				t.Fatal("No Event ID present")
 			}
 		})
+	}
+}
+
+// Test_ProfileRenameCmd_UID exercises the --uid sibling flag on rename.
+func Test_ProfileRenameCmd_UID(t *testing.T) {
+	name := "test-profile-rename-uid"
+	newName := "test-profile-renamed-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, newName); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", newName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "rename", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	resultOldName, err := Client.HasItem("profile", name)
+	cobbler.FailOnError(t, err)
+	if resultOldName {
+		t.Fatal("profile not successfully renamed via --uid (old name present)")
+	}
+	resultNewName, err := Client.HasItem("profile", newName)
+	cobbler.FailOnError(t, err)
+	if !resultNewName {
+		t.Fatal("profile not successfully renamed via --uid (new name not present)")
+	}
+}
+
+// Test_ProfileReportCmd_UID exercises the --uid sibling flag on report.
+func Test_ProfileReportCmd_UID(t *testing.T) {
+	name := "test-profile-report-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "report", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile name missing from report --uid output")
+	}
+}
+
+// Test_ProfileReportCmd_All exercises the report branch taken when neither
+// --name nor --uid is supplied (report every profile).
+func Test_ProfileReportCmd_All(t *testing.T) {
+	name := "test-profile-report-all"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "report"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile name missing from report --all output")
+	}
+}
+
+// Test_ProfileExportCmd exercises the export command's json branch with an
+// explicit --name.
+func Test_ProfileExportCmd(t *testing.T) {
+	name := "test-profile-export"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "export", "--name", name, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile name missing from json export output")
+	}
+}
+
+// Test_ProfileExportCmd_UID exercises the export command's --uid sibling
+// flag.
+func Test_ProfileExportCmd_UID(t *testing.T) {
+	name := "test-profile-export-uid"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetProfileHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "export", "--uid", uid, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile name missing from json export --uid output")
+	}
+}
+
+// Test_ProfileExportCmd_All exercises the export branch taken when neither
+// --name nor --uid is supplied, using the yaml format.
+func Test_ProfileExportCmd_All(t *testing.T) {
+	name := "test-profile-export-all"
+	setupClient(t)
+	_, err := createProfile(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile", "export", "--format", "yaml"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("profile name missing from yaml export --all output")
 	}
 }

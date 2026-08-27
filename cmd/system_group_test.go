@@ -56,6 +56,45 @@ func Test_SystemGroupAddCmd(t *testing.T) {
 	}
 }
 
+// Test_SystemGroupAddCmd_Items exercises extractGroupFlags' --items branch
+// (group_common.go) together with system_group.go's own itemsSet handling.
+func Test_SystemGroupAddCmd_Items(t *testing.T) {
+	name := "test-system-group-add-items"
+	systemName := "test-system-group-add-items-member"
+	setupClient(t)
+	member, err := createSystem(Client, systemName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, systemName); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", systemName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeSystemGroup(Client, name); err != nil {
+			t.Errorf("cleanup: remove system group %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system-group", "add", "--name", name, "--items", member.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	handle, err := Client.GetSystemGroupHandle(name)
+	cobbler.FailOnError(t, err)
+	created, err := Client.GetSystemGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if len(created.Members) != 1 || created.Members[0] != member.Uid {
+		t.Fatalf("system group members weren't set from --items, got: %v", created.Members)
+	}
+}
+
 func Test_SystemGroupEditCmd(t *testing.T) {
 	name := "test-system-group-edit"
 	setupClient(t)

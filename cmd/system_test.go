@@ -205,6 +205,386 @@ func Test_SystemEditCmd(t *testing.T) {
 	}
 }
 
+// Test_SystemCopyCmd_UID exercises the --uid sibling flag on copy.
+func Test_SystemCopyCmd_UID(t *testing.T) {
+	name := "test-system-copy-uid"
+	newName := "test-system-copied-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeSystem(Client, newName); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", newName, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "copy", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	copiedHandle, err := Client.GetSystemHandle(newName)
+	cobbler.FailOnError(t, err)
+	_, err = Client.GetSystem(copiedHandle, false, false)
+	cobbler.FailOnError(t, err)
+}
+
+// Test_SystemEditCmd_UID exercises the --uid sibling flag on edit.
+func Test_SystemEditCmd_UID(t *testing.T) {
+	name := "test-system-edit-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "edit", "--uid", uid, "--comment", "testcomment-uid"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	updatedSystem, err := Client.GetSystem(uid, false, false)
+	cobbler.FailOnError(t, err)
+	if updatedSystem.Comment != "testcomment-uid" {
+		t.Fatal("system update via --uid wasn't successful")
+	}
+}
+
+// Test_SystemDumpVarsCmd exercises the dumpvars command.
+func Test_SystemDumpVarsCmd(t *testing.T) {
+	name := "test-system-dumpvars"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "dumpvars", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("name missing from dumpvars output")
+	}
+}
+
+// Test_SystemDumpVarsCmd_UID exercises the --uid sibling flag on dumpvars.
+func Test_SystemDumpVarsCmd_UID(t *testing.T) {
+	name := "test-system-dumpvars-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "dumpvars", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("name missing from dumpvars --uid output")
+	}
+}
+
+// Test_SystemGetAutoinstallCmd exercises the get-autoinstall command, which
+// now resolves the system by uid internally (Client.GenerateAutoinstall is
+// called with "uid" instead of "name").
+func Test_SystemGetAutoinstallCmd(t *testing.T) {
+	name := "test-system-get-autoinstall"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "get-autoinstall", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stdoutBytes) == 0 {
+		t.Fatal("get-autoinstall produced no output")
+	}
+}
+
+// Test_SystemGetAutoinstallCmd_UID exercises the --uid sibling flag on
+// get-autoinstall.
+func Test_SystemGetAutoinstallCmd_UID(t *testing.T) {
+	name := "test-system-get-autoinstall-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "get-autoinstall", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stdoutBytes) == 0 {
+		t.Fatal("get-autoinstall --uid produced no output")
+	}
+}
+
+// Test_SystemGetAutoinstallCmd_NotFound exercises the error path when the
+// named system does not exist.
+func Test_SystemGetAutoinstallCmd_NotFound(t *testing.T) {
+	setupClient(t)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "get-autoinstall", "--name", "does-not-exist-system"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err := rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error for a non-existent system")
+	}
+}
+
+// Test_SystemPowerOffCmd exercises the poweroff command's resolveUID and
+// Client.PowerSystem call. The test system has no power management
+// configured, so the RPC call is expected to fail server-side -- the point
+// of this test is to exercise the resolution + RPC call path.
+func Test_SystemPowerOffCmd(t *testing.T) {
+	name := "test-system-poweroff"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "poweroff", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error since the test system has no power management configured")
+	}
+	if !strings.Contains(err.Error(), "command failed") {
+		t.Fatalf("unexpected error from poweroff: %v", err)
+	}
+}
+
+// Test_SystemPowerOffCmd_UID exercises the --uid sibling flag on poweroff.
+func Test_SystemPowerOffCmd_UID(t *testing.T) {
+	name := "test-system-poweroff-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "poweroff", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error since the test system has no power management configured")
+	}
+	if !strings.Contains(err.Error(), "command failed") {
+		t.Fatalf("unexpected error from poweroff --uid: %v", err)
+	}
+}
+
+// Test_SystemPowerOnCmd exercises the poweron command's resolveUID and
+// Client.PowerSystem call.
+func Test_SystemPowerOnCmd(t *testing.T) {
+	name := "test-system-poweron"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "poweron", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error since the test system has no power management configured")
+	}
+	if !strings.Contains(err.Error(), "command failed") {
+		t.Fatalf("unexpected error from poweron: %v", err)
+	}
+}
+
+// Test_SystemPowerStatusCmd exercises the powerstatus command's resolveUID
+// and Client.PowerSystem call.
+func Test_SystemPowerStatusCmd(t *testing.T) {
+	name := "test-system-powerstatus"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "powerstatus", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error since the test system has no power management configured")
+	}
+	if !strings.Contains(err.Error(), "command failed") {
+		t.Fatalf("unexpected error from powerstatus: %v", err)
+	}
+}
+
+// Test_SystemRebootCmd exercises the reboot command's resolveUID and
+// Client.PowerSystem call.
+func Test_SystemRebootCmd(t *testing.T) {
+	name := "test-system-reboot"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "reboot", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error since the test system has no power management configured")
+	}
+	if !strings.Contains(err.Error(), "command failed") {
+		t.Fatalf("unexpected error from reboot: %v", err)
+	}
+}
+
 func Test_SystemEditCmd_VirtUEFI(t *testing.T) {
 	type args struct {
 		command []string
@@ -414,6 +794,34 @@ func Test_SystemRemoveCmd(t *testing.T) {
 	}
 }
 
+// Test_SystemRemoveCmd_UID exercises the --uid sibling flag on remove.
+func Test_SystemRemoveCmd_UID(t *testing.T) {
+	name := "test-system-remove-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "remove", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	result, err := Client.HasItem("system", name)
+	cobbler.FailOnError(t, err)
+	if result {
+		t.Fatal("system not successfully removed via --uid")
+	}
+}
+
 func Test_SystemRenameCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -530,5 +938,217 @@ func Test_SystemReportCmd(t *testing.T) {
 				t.Fatal("No Event ID present")
 			}
 		})
+	}
+}
+
+// Test_SystemRenameCmd_UID exercises the --uid sibling flag on rename.
+func Test_SystemRenameCmd_UID(t *testing.T) {
+	name := "test-system-rename-uid"
+	newName := "test-system-renamed-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, newName); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", newName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "rename", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	resultOldName, err := Client.HasItem("system", name)
+	cobbler.FailOnError(t, err)
+	if resultOldName {
+		t.Fatal("system not successfully renamed via --uid (old name present)")
+	}
+	resultNewName, err := Client.HasItem("system", newName)
+	cobbler.FailOnError(t, err)
+	if !resultNewName {
+		t.Fatal("system not successfully renamed via --uid (new name not present)")
+	}
+}
+
+// Test_SystemReportCmd_UID exercises the --uid sibling flag on report.
+func Test_SystemReportCmd_UID(t *testing.T) {
+	name := "test-system-report-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "report", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("system name missing from report --uid output")
+	}
+}
+
+// Test_SystemReportCmd_All exercises the report branch taken when neither
+// --name nor --uid is supplied (report every system).
+func Test_SystemReportCmd_All(t *testing.T) {
+	name := "test-system-report-all"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "report"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("system name missing from report --all output")
+	}
+}
+
+// Test_SystemExportCmd exercises the export command's json branch with an
+// explicit --name.
+func Test_SystemExportCmd(t *testing.T) {
+	name := "test-system-export"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "export", "--name", name, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("system name missing from json export output")
+	}
+}
+
+// Test_SystemExportCmd_UID exercises the export command's --uid sibling
+// flag.
+func Test_SystemExportCmd_UID(t *testing.T) {
+	name := "test-system-export-uid"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "export", "--uid", uid, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("system name missing from json export --uid output")
+	}
+}
+
+// Test_SystemExportCmd_All exercises the export branch taken when neither
+// --name nor --uid is supplied, using the yaml format.
+func Test_SystemExportCmd_All(t *testing.T) {
+	name := "test-system-export-all"
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystem(Client, name); err != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system", "export", "--format", "yaml"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("system name missing from yaml export --all output")
 	}
 }

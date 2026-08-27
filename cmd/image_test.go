@@ -245,6 +245,77 @@ func Test_ImageEditCmd_VirtUEFI(t *testing.T) {
 	}
 }
 
+// Test_ImageCopyCmd_UID exercises the --uid sibling flag on copy.
+func Test_ImageCopyCmd_UID(t *testing.T) {
+	name := "test-image-copy-uid"
+	newName := "test-image-copied-uid"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeImage(Client, newName); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", newName, err)
+		}
+	})
+	uid, err := Client.GetImageHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "copy", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	copiedHandle, err := Client.GetImageHandle(newName)
+	cobbler.FailOnError(t, err)
+	_, err = Client.GetImage(copiedHandle, false, false)
+	cobbler.FailOnError(t, err)
+}
+
+// Test_ImageEditCmd_UID exercises the --uid sibling flag on edit.
+func Test_ImageEditCmd_UID(t *testing.T) {
+	name := "test-image-edit-uid"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetImageHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "edit", "--uid", uid, "--comment", "testcomment-uid"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	updatedImage, err := Client.GetImage(uid, false, false)
+	cobbler.FailOnError(t, err)
+	if updatedImage.Comment != "testcomment-uid" {
+		t.Fatal("image update via --uid wasn't successful")
+	}
+}
+
 func Test_ImageFindCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -398,6 +469,34 @@ func Test_ImageRemoveCmd(t *testing.T) {
 	}
 }
 
+// Test_ImageRemoveCmd_UID exercises the --uid sibling flag on remove.
+func Test_ImageRemoveCmd_UID(t *testing.T) {
+	name := "test-image-remove-uid"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetImageHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "remove", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	result, err := Client.HasItem("image", name)
+	cobbler.FailOnError(t, err)
+	if result {
+		t.Fatal("image not successfully removed via --uid")
+	}
+}
+
 func Test_ImageRenameCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -514,5 +613,216 @@ func Test_ImageReportCmd(t *testing.T) {
 				t.Fatal("No Event ID present")
 			}
 		})
+	}
+}
+
+// Test_ImageRenameCmd_UID exercises the --uid sibling flag on rename.
+func Test_ImageRenameCmd_UID(t *testing.T) {
+	name := "test-image-rename-uid"
+	newName := "test-image-renamed-uid"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetImageHandle(name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, newName); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", newName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "rename", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	resultOldName, err := Client.HasItem("image", name)
+	cobbler.FailOnError(t, err)
+	if resultOldName {
+		t.Fatal("image not successfully renamed via --uid (old name present)")
+	}
+	resultNewName, err := Client.HasItem("image", newName)
+	cobbler.FailOnError(t, err)
+	if !resultNewName {
+		t.Fatal("image not successfully renamed via --uid (new name not present)")
+	}
+}
+
+// Test_ImageReportCmd_UID exercises the --uid sibling flag on report.
+func Test_ImageReportCmd_UID(t *testing.T) {
+	name := "test-image-report-uid"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetImageHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "report", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("image name missing from report --uid output")
+	}
+}
+
+// Test_ImageReportCmd_All exercises the report branch taken when neither
+// --name nor --uid is supplied (report every image).
+func Test_ImageReportCmd_All(t *testing.T) {
+	name := "test-image-report-all"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "report"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("image name missing from report --all output")
+	}
+}
+
+// Test_ImageExportCmd exercises the export command's json branch with an
+// explicit --name.
+func Test_ImageExportCmd(t *testing.T) {
+	name := "test-image-export"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "export", "--name", name, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("image name missing from json export output")
+	}
+}
+
+// Test_ImageExportCmd_UID exercises the export command's --uid sibling flag.
+func Test_ImageExportCmd_UID(t *testing.T) {
+	name := "test-image-export-uid"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetImageHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "export", "--uid", uid, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("image name missing from json export --uid output")
+	}
+}
+
+// Test_ImageExportCmd_All exercises the export branch taken when neither
+// --name nor --uid is supplied, using the yaml format.
+func Test_ImageExportCmd_All(t *testing.T) {
+	name := "test-image-export-all"
+	setupClient(t)
+	_, err := createImage(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeImage(Client, name); err != nil {
+			t.Errorf("cleanup: remove image %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "image", "export", "--format", "yaml"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("image name missing from yaml export --all output")
 	}
 }

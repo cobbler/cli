@@ -56,6 +56,45 @@ func Test_ProfileGroupAddCmd(t *testing.T) {
 	}
 }
 
+// Test_ProfileGroupAddCmd_Items exercises extractGroupFlags' --items branch
+// (group_common.go) together with profile_group.go's own itemsSet handling.
+func Test_ProfileGroupAddCmd_Items(t *testing.T) {
+	name := "test-profile-group-add-items"
+	profileName := "test-profile-group-add-items-member"
+	setupClient(t)
+	member, err := createProfile(Client, profileName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfile(Client, profileName); err != nil {
+			t.Errorf("cleanup: remove profile %s: %v", profileName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeProfileGroup(Client, name); err != nil {
+			t.Errorf("cleanup: remove profile group %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile-group", "add", "--name", name, "--items", member.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	handle, err := Client.GetProfileGroupHandle(name)
+	cobbler.FailOnError(t, err)
+	created, err := Client.GetProfileGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if len(created.Members) != 1 || created.Members[0] != member.Uid {
+		t.Fatalf("profile group members weren't set from --items, got: %v", created.Members)
+	}
+}
+
 func Test_ProfileGroupEditCmd(t *testing.T) {
 	name := "test-profile-group-edit"
 	setupClient(t)

@@ -191,6 +191,160 @@ func Test_InterfaceEditCmd_UID(t *testing.T) {
 	}
 }
 
+// Test_InterfaceEditCmd_AllFlags exercises updateNetworkInterfaceFromFlags'
+// full switch statement (link-layer, bonding/bridging, IPv4, IPv6 and DNS
+// flags) plus parseNetworkInterfaceType's success path, none of which were
+// covered by the other, narrower interface tests.
+func Test_InterfaceEditCmd_AllFlags(t *testing.T) {
+	systemName := "test-interface-edit-allflags-system"
+	ifaceName := "eth-interface-edit-allflags"
+	setupClient(t)
+	system, err := createSystem(Client, systemName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", systemName, err)
+		}
+	})
+	iface := cobbler.NewNetworkInterface()
+	iface.Name = ifaceName
+	iface.SystemUid = system.Uid
+	_, err = Client.CreateNetworkInterface(system.Uid, iface)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{
+		"--config", "../testing/.cobbler.yaml", "interface", "edit", "--name", ifaceName,
+		"--mac-address", "aa:bb:cc:dd:ee:ff",
+		"--interface-type", "bond",
+		"--interface-master", "eth0",
+		"--bonding-opts", "mode=1",
+		"--bridge-opts", "foo=bar",
+		"--connected-mode=true",
+		"--management=true",
+		"--static=true",
+		"--dhcp-tag", "mytag",
+		"--mtu", "1500",
+		"--virt-bridge", "br0",
+		"--ipv4-address", "10.0.0.5",
+		"--ipv4-netmask", "255.255.255.0",
+		"--ipv4-gateway", "10.0.0.1",
+		"--ipv4-static-routes", "10.0.1.0/24",
+		"--ipv6-address", "fe80::1",
+		"--ipv6-prefix", "64",
+		"--ipv6-secondaries", "fe80::2",
+		"--ipv6-mtu", "1500",
+		"--ipv6-static-routes", "fe80::0/64",
+		"--ipv6-default-gateway", "fe80::ff",
+		"--dns-name", "myhost.example.com",
+		"--dns-cnames", "alias1.example.com",
+	})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	handle, err := Client.GetNetworkInterfaceHandle(ifaceName)
+	cobbler.FailOnError(t, err)
+	updated, err := Client.GetNetworkInterface(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if updated.MacAddress != "aa:bb:cc:dd:ee:ff" {
+		t.Fatal("mac-address update wasn't successful")
+	}
+	if updated.InterfaceType != cobbler.NetworkInterfaceTypeBond {
+		t.Fatal("interface-type update wasn't successful")
+	}
+	if updated.IPv4.Address != "10.0.0.5" {
+		t.Fatal("ipv4-address update wasn't successful")
+	}
+	if updated.IPv6.Address != "fe80::1" {
+		t.Fatal("ipv6-address update wasn't successful")
+	}
+	if updated.DNS.Name != "myhost.example.com" {
+		t.Fatal("dns-name update wasn't successful")
+	}
+}
+
+// Test_InterfaceEditCmd_AllTypes exercises every remaining success branch of
+// parseNetworkInterfaceType not already covered by Test_InterfaceEditCmd_AllFlags
+// (which only exercises "bond").
+func Test_InterfaceEditCmd_AllTypes(t *testing.T) {
+	systemName := "test-interface-edit-alltypes-system"
+	ifaceName := "eth-interface-edit-alltypes"
+	setupClient(t)
+	system, err := createSystem(Client, systemName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", systemName, err)
+		}
+	})
+	iface := cobbler.NewNetworkInterface()
+	iface.Name = ifaceName
+	iface.SystemUid = system.Uid
+	_, err = Client.CreateNetworkInterface(system.Uid, iface)
+	cobbler.FailOnError(t, err)
+
+	for _, ifaceType := range []string{"na", "infiniband", "bridge", "bridge_slave", "bond_slave", "bonded_bridge_slave"} {
+		cobra.OnInitialize(initConfig, setupLogger)
+		rootCmd := NewRootCmd()
+		rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "edit", "--name", ifaceName, "--interface-type", ifaceType})
+		stdout := bytes.NewBufferString("")
+		stderr := bytes.NewBufferString("")
+		rootCmd.SetOut(stdout)
+		rootCmd.SetErr(stderr)
+
+		err = rootCmd.Execute()
+
+		cobbler.FailOnError(t, err)
+		FailOnNonEmptyStream(t, stderr)
+		FailOnNonEmptyStream(t, stdout)
+	}
+}
+
+// Test_InterfaceEditCmd_InvalidType exercises parseNetworkInterfaceType's
+// error branch, surfaced through the edit command's --interface-type flag.
+func Test_InterfaceEditCmd_InvalidType(t *testing.T) {
+	systemName := "test-interface-edit-badtype-system"
+	ifaceName := "eth-interface-edit-badtype"
+	setupClient(t)
+	system, err := createSystem(Client, systemName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", systemName, err)
+		}
+	})
+	iface := cobbler.NewNetworkInterface()
+	iface.Name = ifaceName
+	iface.SystemUid = system.Uid
+	_, err = Client.CreateNetworkInterface(system.Uid, iface)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "edit", "--name", ifaceName, "--interface-type", "bogus"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error for an unknown interface type")
+	}
+	if !strings.Contains(err.Error(), "unknown interface type") {
+		t.Fatalf("unexpected error for invalid interface type: %v", err)
+	}
+}
+
 func Test_InterfaceCopyCmd(t *testing.T) {
 	systemName := "test-interface-copy-system"
 	ifaceName := "eth-interface-to-copy"
