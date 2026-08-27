@@ -494,12 +494,16 @@ func NewProfileCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			profileUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			profileNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			profileHandle, err := Client.GetProfileHandle(profileName)
+			profileHandle, err := resolveUID(&Client, "profile", profileName, profileUID)
 			if err != nil {
 				return err
 			}
@@ -507,7 +511,11 @@ func NewProfileCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			newProfile, err := Client.GetProfile(profileNewName, false, false)
+			newProfileHandle, err := Client.GetProfileHandle(profileNewName)
+			if err != nil {
+				return err
+			}
+			newProfile, err := Client.GetProfile(newProfileHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -529,6 +537,7 @@ func NewProfileCopyCmd() *cobra.Command {
 	addMapFlags(profileCopyCmd, profileMapFlagMetadata)
 	profileCopyCmd.Flags().String("newname", "", "the new profile name")
 	profileCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(profileCopyCmd, "profile")
 	return profileCopyCmd
 }
 
@@ -547,11 +556,15 @@ func NewProfileDumpVars() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			profile, err := Client.GetProfile(profileName, false, false)
+			profileUID, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
-			blendedData, err := Client.DumpVars(profile.Uid, false, false)
+			resolvedUID, err := resolveUID(&Client, "profile", profileName, profileUID)
+			if err != nil {
+				return err
+			}
+			blendedData, err := Client.DumpVars(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -560,6 +573,7 @@ func NewProfileDumpVars() *cobra.Command {
 		},
 	}
 	profileDumpVarsCmd.Flags().String("name", "", "the profile name")
+	addUIDFlag(profileDumpVarsCmd, "profile")
 	return profileDumpVarsCmd
 }
 
@@ -574,12 +588,20 @@ func NewProfileEditCmd() *cobra.Command {
 				return err
 			}
 
-			// find profile through its name
+			// find profile through its name/uid
 			pname, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-			updateProfile, err := Client.GetProfile(pname, false, false)
+			puid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "profile", pname, puid)
+			if err != nil {
+				return err
+			}
+			updateProfile, err := Client.GetProfile(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -602,6 +624,7 @@ func NewProfileEditCmd() *cobra.Command {
 	addMapFlags(profileEditCmd, distroMapFlagMetadata)
 	addMapFlags(profileEditCmd, profileMapFlagMetadata)
 	profileEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(profileEditCmd, "profile")
 	return profileEditCmd
 }
 
@@ -650,15 +673,15 @@ func NewProfileGetAutoinstallCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			profileExists, err := Client.HasItem("profile", profileName)
+			profileUID, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
-			if !profileExists {
-				return fmt.Errorf("profile does not exist")
-
+			resolvedUID, err := resolveUID(&Client, "profile", profileName, profileUID)
+			if err != nil {
+				return err
 			}
-			autoinstallRendered, err := Client.GenerateAutoinstall(profileName, "profile", "name", "", "")
+			autoinstallRendered, err := Client.GenerateAutoinstall(resolvedUID, "profile", "uid", "", "")
 			if err != nil {
 				return err
 			}
@@ -667,6 +690,7 @@ func NewProfileGetAutoinstallCmd() *cobra.Command {
 		},
 	}
 	profileGetAutoinstallCmd.Flags().String("name", "", "the profile name")
+	addUIDFlag(profileGetAutoinstallCmd, "profile")
 	return profileGetAutoinstallCmd
 }
 
@@ -707,15 +731,24 @@ func NewProfileRemoveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			puid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			recursiveDelete, err := cmd.Flags().GetBool("recursive")
 			if err != nil {
 				return err
 			}
-			return Client.DeleteProfileRecursive(pname, recursiveDelete)
+			resolvedUID, err := resolveUID(&Client, "profile", pname, puid)
+			if err != nil {
+				return err
+			}
+			return Client.DeleteProfileRecursive(resolvedUID, recursiveDelete)
 		},
 	}
 	profileRemoveCmd.Flags().String("name", "", "the profile name")
 	profileRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(profileRemoveCmd, "profile")
 	return profileRemoveCmd
 }
 
@@ -734,13 +767,17 @@ func NewProfileRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			profileUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			profileNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
 			// Now do the real edit
-			profileHandle, err := Client.GetProfileHandle(profileName)
+			profileHandle, err := resolveUID(&Client, "profile", profileName, profileUID)
 			if err != nil {
 				return err
 			}
@@ -748,7 +785,11 @@ func NewProfileRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			newProfile, err := Client.GetProfile(profileNewName, false, false)
+			newProfileHandle, err := Client.GetProfileHandle(profileNewName)
+			if err != nil {
+				return err
+			}
+			newProfile, err := Client.GetProfile(newProfileHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -770,15 +811,12 @@ func NewProfileRenameCmd() *cobra.Command {
 	addMapFlags(profileRenameCmd, profileMapFlagMetadata)
 	profileRenameCmd.Flags().String("newname", "", "the new profile name")
 	profileRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(profileRenameCmd, "profile")
 	return profileRenameCmd
 }
 
-func reportProfiles(cmd *cobra.Command, profileNames []string) error {
-	for _, itemName := range profileNames {
-		profile, err := Client.GetProfile(itemName, false, false)
-		if err != nil {
-			return err
-		}
+func reportProfiles(cmd *cobra.Command, profiles []*cobbler.Profile) error {
+	for _, profile := range profiles {
 		printStructured(cmd, profile)
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
@@ -800,19 +838,32 @@ func NewProfileReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListProfileNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var profiles []*cobbler.Profile
+			if name == "" && uid == "" {
+				profiles, err = Client.GetProfiles()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
+				resolvedUID, err := resolveUID(&Client, "profile", name, uid)
+				if err != nil {
+					return err
+				}
+				profile, err := Client.GetProfile(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				profiles = []*cobbler.Profile{profile}
 			}
-			return reportProfiles(cmd, itemNames)
+			return reportProfiles(cmd, profiles)
 		},
 	}
 	profileReportCmd.Flags().String("name", "", "the profile name")
+	addUIDFlag(profileReportCmd, "profile")
 	return profileReportCmd
 }
 
@@ -841,26 +892,34 @@ func NewProfileExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			formatOption, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListProfileNames()
+			var profiles []*cobbler.Profile
+			if name == "" && uid == "" {
+				profiles, err = Client.GetProfiles()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
-			}
-
-			for _, itemName := range itemNames {
-				profile, err := Client.GetProfile(itemName, false, false)
+				resolvedUID, err := resolveUID(&Client, "profile", name, uid)
 				if err != nil {
 					return err
 				}
+				profile, err := Client.GetProfile(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				profiles = []*cobbler.Profile{profile}
+			}
+
+			for _, profile := range profiles {
 				if formatOption == "json" {
 					jsonDocument, err := json.Marshal(profile)
 					if err != nil {
@@ -882,5 +941,6 @@ func NewProfileExportCmd() *cobra.Command {
 	}
 	profileExportCmd.Flags().String("name", "", "the profile name")
 	profileExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(profileExportCmd, "profile")
 	return profileExportCmd
 }

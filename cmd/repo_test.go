@@ -17,7 +17,11 @@ func createRepo(client cobbler.Client, name string) (*cobbler.Repo, error) {
 }
 
 func removeRepo(client cobbler.Client, name string) error {
-	return client.DeleteRepo(name)
+	handle, err := client.GetRepoHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteRepo(handle)
 }
 
 func Test_RepoAddCmd(t *testing.T) {
@@ -121,7 +125,9 @@ func Test_RepoCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetRepo(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetRepoHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetRepo(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -172,7 +178,9 @@ func Test_RepoEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedRepo, err := Client.GetRepo(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetRepoHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedRepo, err := Client.GetRepo(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedRepo.Comment != "testcomment" {
 				t.Fatal("repo update wasn't successful")

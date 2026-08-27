@@ -19,7 +19,11 @@ func createDistro(client cobbler.Client, name string) (*cobbler.Distro, error) {
 }
 
 func removeDistro(client cobbler.Client, name string) error {
-	return client.DeleteDistro(name)
+	handle, err := client.GetDistroHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteDistro(handle)
 }
 
 func Test_DistroAddCmd(t *testing.T) {
@@ -123,7 +127,9 @@ func Test_DistroCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetDistro(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetDistroHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetDistro(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -174,7 +180,9 @@ func Test_DistroEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedDistro, err := Client.GetDistro(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetDistroHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedDistro, err := Client.GetDistro(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedDistro.Comment != "testcomment" {
 				t.Fatal("distro update wasn't successful")
@@ -230,7 +238,9 @@ func Test_DistroEditCmd_SourceTreePath(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedDistro, err := Client.GetDistro(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetDistroHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedDistro, err := Client.GetDistro(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedDistro.SourceTreePath != "/extracted_iso_image" {
 				t.Fatal("distro source-tree-path update wasn't successful")
@@ -390,6 +400,42 @@ func Test_DistroRemoveCmd(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_DistroRemoveCmd_UID exercises the --uid sibling flag added alongside
+// --name so a target distro can be identified by its Cobbler UID instead of
+// its name.
+func Test_DistroRemoveCmd_UID(t *testing.T) {
+	distroName := "test-distro-remove-uid"
+	t.Run("uid", func(t *testing.T) {
+		// Arrange
+		setupClient(t)
+		_, err := createDistro(Client, distroName)
+		cobbler.FailOnError(t, err)
+		distroUID, err := Client.GetDistroHandle(distroName)
+		cobbler.FailOnError(t, err)
+		cobra.OnInitialize(initConfig, setupLogger)
+		rootCmd := NewRootCmd()
+		rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "remove", "--uid", distroUID})
+		stdout := bytes.NewBufferString("")
+		stderr := bytes.NewBufferString("")
+		rootCmd.SetOut(stdout)
+		rootCmd.SetErr(stderr)
+
+		// Act
+		err = rootCmd.Execute()
+
+		// Assert
+		cobbler.FailOnError(t, err)
+		FailOnNonEmptyStream(t, stderr)
+		FailOnNonEmptyStream(t, stdout)
+		result, err := Client.HasItem("distro", distroName)
+		cobbler.FailOnError(t, err)
+		if result {
+			// A missing item means we get "false", as such we error when we find an item.
+			t.Fatal("distro not successfully removed via --uid")
+		}
+	})
 }
 
 func Test_DistroRenameCmd(t *testing.T) {

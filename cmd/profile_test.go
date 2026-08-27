@@ -12,7 +12,11 @@ import (
 
 func createProfile(client cobbler.Client, name string) (*cobbler.Profile, error) {
 	// Distro must be the referenced distro's real uid, not its name.
-	distro, err := client.GetDistro("Ubuntu-20.04-x86_64", false, false)
+	distroHandle, err := client.GetDistroHandle("Ubuntu-20.04-x86_64")
+	if err != nil {
+		return nil, err
+	}
+	distro, err := client.GetDistro(distroHandle, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +27,11 @@ func createProfile(client cobbler.Client, name string) (*cobbler.Profile, error)
 }
 
 func removeProfile(client cobbler.Client, name string) error {
-	return client.DeleteProfile(name)
+	handle, err := client.GetProfileHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteProfile(handle)
 }
 
 func Test_ProfileAddCmd(t *testing.T) {
@@ -32,7 +40,9 @@ func Test_ProfileAddCmd(t *testing.T) {
 	}
 	setupClient(t)
 	// --distro must be the referenced distro's real uid, not its name.
-	distro, err := Client.GetDistro("Ubuntu-20.04-x86_64", false, false)
+	distroHandle, err := Client.GetDistroHandle("Ubuntu-20.04-x86_64")
+	cobbler.FailOnError(t, err)
+	distro, err := Client.GetDistro(distroHandle, false, false)
 	cobbler.FailOnError(t, err)
 	tests := []struct {
 		name    string
@@ -131,7 +141,9 @@ func Test_ProfileCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetProfile(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetProfileHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetProfile(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -182,7 +194,9 @@ func Test_ProfileEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedProfile, err := Client.GetProfile(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetProfileHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedProfile, err := Client.GetProfile(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedProfile.Comment != "testcomment" {
 				t.Fatal("profile update wasn't successful")
@@ -236,7 +250,9 @@ func Test_ProfileEditCmd_VirtUEFI(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedProfile, err := Client.GetProfile(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetProfileHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedProfile, err := Client.GetProfile(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if !updatedProfile.Virt.UEFI {
 				t.Fatal("profile virt-uefi update wasn't successful")

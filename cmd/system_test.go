@@ -12,7 +12,11 @@ import (
 
 func createSystem(client cobbler.Client, name string) (*cobbler.System, error) {
 	// Profile must be the referenced profile's real uid, not its name.
-	profile, err := client.GetProfile("Ubuntu-20.04-x86_64", false, false)
+	profileHandle, err := client.GetProfileHandle("Ubuntu-20.04-x86_64")
+	if err != nil {
+		return nil, err
+	}
+	profile, err := client.GetProfile(profileHandle, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +27,11 @@ func createSystem(client cobbler.Client, name string) (*cobbler.System, error) {
 }
 
 func removeSystem(client cobbler.Client, name string) error {
-	return client.DeleteSystem(name)
+	handle, err := client.GetSystemHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteSystem(handle)
 }
 
 func Test_SystemAddCmd(t *testing.T) {
@@ -32,7 +40,9 @@ func Test_SystemAddCmd(t *testing.T) {
 	}
 	setupClient(t)
 	// --profile must be the referenced profile's real uid, not its name.
-	profile, err := Client.GetProfile("Ubuntu-20.04-x86_64", false, false)
+	profileHandle, err := Client.GetProfileHandle("Ubuntu-20.04-x86_64")
+	cobbler.FailOnError(t, err)
+	profile, err := Client.GetProfile(profileHandle, false, false)
 	cobbler.FailOnError(t, err)
 	tests := []struct {
 		name    string
@@ -131,7 +141,9 @@ func Test_SystemCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetSystem(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetSystemHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetSystem(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -182,7 +194,9 @@ func Test_SystemEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedSystem, err := Client.GetSystem(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetSystemHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedSystem, err := Client.GetSystem(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedSystem.Comment != "testcomment" {
 				t.Fatal("system update wasn't successful")
@@ -236,7 +250,9 @@ func Test_SystemEditCmd_VirtUEFI(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedSystem, err := Client.GetSystem(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetSystemHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedSystem, err := Client.GetSystem(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if !updatedSystem.Virt.UEFI {
 				t.Fatal("system virt-uefi update wasn't successful")

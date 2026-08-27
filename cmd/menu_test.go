@@ -17,7 +17,11 @@ func createMenu(client cobbler.Client, name string) (*cobbler.Menu, error) {
 }
 
 func removeMenu(client cobbler.Client, name string) error {
-	return client.DeleteMenu(name)
+	handle, err := client.GetMenuHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteMenu(handle)
 }
 
 func Test_MenuAddCmd(t *testing.T) {
@@ -121,7 +125,9 @@ func Test_MenuCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetMenu(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetMenuHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetMenu(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -172,7 +178,9 @@ func Test_MenuEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedMenu, err := Client.GetMenu(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetMenuHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedMenu, err := Client.GetMenu(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedMenu.Comment != "testcomment" {
 				t.Fatal("menu update wasn't successful")

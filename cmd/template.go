@@ -174,7 +174,15 @@ func NewTemplateEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			t, err := Client.GetTemplate(name, false, false)
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "template", name, uid)
+			if err != nil {
+				return err
+			}
+			t, err := Client.GetTemplate(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -185,6 +193,7 @@ func NewTemplateEditCmd() *cobra.Command {
 		},
 	}
 	addTemplateFlagSet(cmd)
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 
@@ -200,11 +209,15 @@ func NewTemplateCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetTemplateHandle(name)
+			handle, err := resolveUID(&Client, "template", name, uid)
 			if err != nil {
 				return err
 			}
@@ -213,6 +226,7 @@ func NewTemplateCopyCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 
@@ -228,11 +242,15 @@ func NewTemplateRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetTemplateHandle(name)
+			handle, err := resolveUID(&Client, "template", name, uid)
 			if err != nil {
 				return err
 			}
@@ -241,6 +259,7 @@ func NewTemplateRenameCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 
@@ -257,6 +276,7 @@ func NewTemplateRemoveCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the template name")
 	cmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 
@@ -309,20 +329,28 @@ func NewTemplateReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListTemplateNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var templates []*cobbler.Template
+			if name == "" && uid == "" {
+				templates, err = Client.GetTemplates()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				t, err := Client.GetTemplate(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "template", name, uid)
 				if err != nil {
 					return err
 				}
+				t, err := Client.GetTemplate(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				templates = []*cobbler.Template{t}
+			}
+			for _, t := range templates {
 				printStructured(cmd, t)
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
@@ -330,6 +358,7 @@ func NewTemplateReportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the template name")
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 
@@ -355,24 +384,32 @@ func NewTemplateExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			format, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListTemplateNames()
+			var templates []*cobbler.Template
+			if name == "" && uid == "" {
+				templates, err = Client.GetTemplates()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				t, err := Client.GetTemplate(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "template", name, uid)
 				if err != nil {
 					return err
 				}
+				t, err := Client.GetTemplate(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				templates = []*cobbler.Template{t}
+			}
+			for _, t := range templates {
 				switch format {
 				case "json":
 					out, err := json.Marshal(t)
@@ -394,6 +431,7 @@ func NewTemplateExportCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the template name")
 	cmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 
@@ -410,14 +448,15 @@ func NewTemplateContentCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if name == "" {
-				return fmt.Errorf("--name is required")
-			}
-			t, err := Client.GetTemplate(name, false, false)
+			uid, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
-			content, err := Client.GetTemplateContent(t.Uid)
+			resolvedUID, err := resolveUID(&Client, "template", name, uid)
+			if err != nil {
+				return err
+			}
+			content, err := Client.GetTemplateContent(resolvedUID)
 			if err != nil {
 				return err
 			}
@@ -426,6 +465,7 @@ func NewTemplateContentCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the template name")
+	addUIDFlag(cmd, "template")
 	return cmd
 }
 

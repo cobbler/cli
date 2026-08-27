@@ -17,7 +17,11 @@ func createImage(client cobbler.Client, name string) (*cobbler.Image, error) {
 }
 
 func removeImage(client cobbler.Client, name string) error {
-	return client.DeleteImage(name)
+	handle, err := client.GetImageHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteImage(handle)
 }
 
 func Test_ImageAddCmd(t *testing.T) {
@@ -121,7 +125,9 @@ func Test_ImageCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetImage(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetImageHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetImage(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -172,7 +178,9 @@ func Test_ImageEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedImage, err := Client.GetImage(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetImageHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedImage, err := Client.GetImage(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedImage.Comment != "testcomment" {
 				t.Fatal("image update wasn't successful")
@@ -226,7 +234,9 @@ func Test_ImageEditCmd_VirtUEFI(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedImage, err := Client.GetImage(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetImageHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedImage, err := Client.GetImage(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if !updatedImage.Virt.UEFI {
 				t.Fatal("image virt-uefi update wasn't successful")
