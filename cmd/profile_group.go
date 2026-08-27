@@ -77,7 +77,15 @@ func newProfileGroupEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			g, err := Client.GetProfileGroup(name, false, false)
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "profile_group", name, uid)
+			if err != nil {
+				return err
+			}
+			g, err := Client.GetProfileGroup(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -95,6 +103,7 @@ func newProfileGroupEditCmd() *cobra.Command {
 		},
 	}
 	addGroupFlagSet(cmd)
+	addUIDFlag(cmd, "profile group")
 	return cmd
 }
 
@@ -110,11 +119,15 @@ func newProfileGroupCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetProfileGroupHandle(name)
+			handle, err := resolveUID(&Client, "profile_group", name, uid)
 			if err != nil {
 				return err
 			}
@@ -123,6 +136,7 @@ func newProfileGroupCopyCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "profile group")
 	return cmd
 }
 
@@ -138,11 +152,15 @@ func newProfileGroupRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetProfileGroupHandle(name)
+			handle, err := resolveUID(&Client, "profile_group", name, uid)
 			if err != nil {
 				return err
 			}
@@ -151,6 +169,7 @@ func newProfileGroupRenameCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "profile group")
 	return cmd
 }
 
@@ -167,6 +186,7 @@ func newProfileGroupRemoveCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the profile group name")
 	cmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(cmd, "profile group")
 	return cmd
 }
 
@@ -218,20 +238,28 @@ func newProfileGroupReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListProfileGroupNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var groups []*cobbler.ProfileGroup
+			if name == "" && uid == "" {
+				groups, err = Client.GetProfileGroups()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				g, err := Client.GetProfileGroup(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "profile_group", name, uid)
 				if err != nil {
 					return err
 				}
+				g, err := Client.GetProfileGroup(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				groups = []*cobbler.ProfileGroup{g}
+			}
+			for _, g := range groups {
 				printStructured(cmd, g)
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
@@ -239,6 +267,7 @@ func newProfileGroupReportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the profile group name")
+	addUIDFlag(cmd, "profile group")
 	return cmd
 }
 
@@ -264,24 +293,32 @@ func newProfileGroupExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			format, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListProfileGroupNames()
+			var groups []*cobbler.ProfileGroup
+			if name == "" && uid == "" {
+				groups, err = Client.GetProfileGroups()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				g, err := Client.GetProfileGroup(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "profile_group", name, uid)
 				if err != nil {
 					return err
 				}
+				g, err := Client.GetProfileGroup(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				groups = []*cobbler.ProfileGroup{g}
+			}
+			for _, g := range groups {
 				if err := writeExport(cmd, format, g); err != nil {
 					return err
 				}
@@ -291,5 +328,6 @@ func newProfileGroupExportCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the profile group name")
 	cmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(cmd, "profile group")
 	return cmd
 }

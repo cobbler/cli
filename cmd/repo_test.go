@@ -17,7 +17,11 @@ func createRepo(client cobbler.Client, name string) (*cobbler.Repo, error) {
 }
 
 func removeRepo(client cobbler.Client, name string) error {
-	return client.DeleteRepo(name)
+	handle, err := client.GetRepoHandle(name)
+	if err != nil {
+		return err
+	}
+	return client.DeleteRepo(handle)
 }
 
 func Test_RepoAddCmd(t *testing.T) {
@@ -121,7 +125,9 @@ func Test_RepoCopyCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			_, err = Client.GetRepo(tt.args.command[7], false, false)
+			copiedHandle, err := Client.GetRepoHandle(tt.args.command[7])
+			cobbler.FailOnError(t, err)
+			_, err = Client.GetRepo(copiedHandle, false, false)
 			cobbler.FailOnError(t, err)
 		})
 	}
@@ -172,12 +178,85 @@ func Test_RepoEditCmd(t *testing.T) {
 			cobbler.FailOnError(t, err)
 			FailOnNonEmptyStream(t, stderr)
 			FailOnNonEmptyStream(t, stdout)
-			updatedRepo, err := Client.GetRepo(tt.args.command[5], false, false)
+			editedHandle, err := Client.GetRepoHandle(tt.args.command[5])
+			cobbler.FailOnError(t, err)
+			updatedRepo, err := Client.GetRepo(editedHandle, false, false)
 			cobbler.FailOnError(t, err)
 			if updatedRepo.Comment != "testcomment" {
 				t.Fatal("repo update wasn't successful")
 			}
 		})
+	}
+}
+
+// Test_RepoCopyCmd_UID exercises the --uid sibling flag on copy.
+func Test_RepoCopyCmd_UID(t *testing.T) {
+	name := "test-repo-copy-uid"
+	newName := "test-repo-copied-uid"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeRepo(Client, newName); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", newName, err)
+		}
+	})
+	uid, err := Client.GetRepoHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "copy", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	copiedHandle, err := Client.GetRepoHandle(newName)
+	cobbler.FailOnError(t, err)
+	_, err = Client.GetRepo(copiedHandle, false, false)
+	cobbler.FailOnError(t, err)
+}
+
+// Test_RepoEditCmd_UID exercises the --uid sibling flag on edit.
+func Test_RepoEditCmd_UID(t *testing.T) {
+	name := "test-repo-edit-uid"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetRepoHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "edit", "--uid", uid, "--comment", "testcomment-uid"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	updatedRepo, err := Client.GetRepo(uid, false, false)
+	cobbler.FailOnError(t, err)
+	if updatedRepo.Comment != "testcomment-uid" {
+		t.Fatal("repo update via --uid wasn't successful")
 	}
 }
 
@@ -334,6 +413,34 @@ func Test_RepoRemoveCmd(t *testing.T) {
 	}
 }
 
+// Test_RepoRemoveCmd_UID exercises the --uid sibling flag on remove.
+func Test_RepoRemoveCmd_UID(t *testing.T) {
+	name := "test-repo-remove-uid"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetRepoHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "remove", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	result, err := Client.HasItem("repo", name)
+	cobbler.FailOnError(t, err)
+	if result {
+		t.Fatal("repo not successfully removed via --uid")
+	}
+}
+
 func Test_RepoRenameCmd(t *testing.T) {
 	type args struct {
 		command []string
@@ -450,5 +557,216 @@ func Test_RepoReportCmd(t *testing.T) {
 				t.Fatal("No Event ID present")
 			}
 		})
+	}
+}
+
+// Test_RepoRenameCmd_UID exercises the --uid sibling flag on rename.
+func Test_RepoRenameCmd_UID(t *testing.T) {
+	name := "test-repo-rename-uid"
+	newName := "test-repo-renamed-uid"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	uid, err := Client.GetRepoHandle(name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, newName); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", newName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "rename", "--uid", uid, "--newname", newName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	resultOldName, err := Client.HasItem("repo", name)
+	cobbler.FailOnError(t, err)
+	if resultOldName {
+		t.Fatal("repo not successfully renamed via --uid (old name present)")
+	}
+	resultNewName, err := Client.HasItem("repo", newName)
+	cobbler.FailOnError(t, err)
+	if !resultNewName {
+		t.Fatal("repo not successfully renamed via --uid (new name not present)")
+	}
+}
+
+// Test_RepoReportCmd_UID exercises the --uid sibling flag on report.
+func Test_RepoReportCmd_UID(t *testing.T) {
+	name := "test-repo-report-uid"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetRepoHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "report", "--uid", uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("repo name missing from report --uid output")
+	}
+}
+
+// Test_RepoReportCmd_All exercises the report branch taken when neither
+// --name nor --uid is supplied (report every repo).
+func Test_RepoReportCmd_All(t *testing.T) {
+	name := "test-repo-report-all"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "report"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("repo name missing from report --all output")
+	}
+}
+
+// Test_RepoExportCmd exercises the export command's json branch with an
+// explicit --name.
+func Test_RepoExportCmd(t *testing.T) {
+	name := "test-repo-export"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "export", "--name", name, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("repo name missing from json export output")
+	}
+}
+
+// Test_RepoExportCmd_UID exercises the export command's --uid sibling flag.
+func Test_RepoExportCmd_UID(t *testing.T) {
+	name := "test-repo-export-uid"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	uid, err := Client.GetRepoHandle(name)
+	cobbler.FailOnError(t, err)
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "export", "--uid", uid, "--format", "json"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), `"name":"`+name+`"`) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("repo name missing from json export --uid output")
+	}
+}
+
+// Test_RepoExportCmd_All exercises the export branch taken when neither
+// --name nor --uid is supplied, using the yaml format.
+func Test_RepoExportCmd_All(t *testing.T) {
+	name := "test-repo-export-all"
+	setupClient(t)
+	_, err := createRepo(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeRepo(Client, name); err != nil {
+			t.Errorf("cleanup: remove repo %s: %v", name, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "repo", "export", "--format", "yaml"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "name: "+name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("repo name missing from yaml export --all output")
 	}
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"strings"
@@ -102,6 +103,57 @@ func addCommonArgs(command *cobra.Command) {
 	addStringSliceFlags(command, commonStringSliceFlagMetadata)
 }
 
+// resolveUID resolves the target item identified by the --name/--uid flag pair to its
+// Cobbler UID. Cobbler 4.0.0's get_item/get_<type> and remove_item/remove_<type> XML-RPC
+// calls require an object UID rather than a name (names aren't guaranteed to be globally
+// unique for every item type, e.g. NetworkInterface names are only unique per-system), so
+// every CLI subcommand that lets a human identify its target by name has to resolve that
+// name to a UID before calling into cobblerclient.
+//
+// If uid is non-empty it is returned directly without a server round-trip. Otherwise name
+// is resolved via Client.FindItems using an exact-match, expanded search:
+//   - zero matches is an error ("no <what> found with name ...")
+//   - exactly one match returns that item's uid
+//   - more than one match is an error telling the caller to use --uid instead
+//
+// If neither name nor uid is supplied, an error asking for one of --name/--uid is returned.
+func resolveUID(client *cobbler.Client, what, name, uid string) (string, error) {
+	if uid != "" {
+		return uid, nil
+	}
+	if name == "" {
+		return "", fmt.Errorf("either --name or --uid must be supplied to identify the %s", what)
+	}
+	results, err := client.FindItems(what, map[string]interface{}{"name": name}, "", true)
+	if err != nil {
+		return "", err
+	}
+	switch len(results) {
+	case 0:
+		return "", fmt.Errorf("no %s found with name %q", what, name)
+	case 1:
+		asMap, ok := results[0].(map[string]interface{})
+		if !ok {
+			return "", fmt.Errorf("unexpected result type for %s %q", what, name)
+		}
+		uidValue, ok := asMap["uid"].(string)
+		if !ok || uidValue == "" {
+			return "", fmt.Errorf("no uid found in result for %s %q", what, name)
+		}
+		return uidValue, nil
+	default:
+		return "", fmt.Errorf("multiple %s items found with name %q; use --uid to disambiguate", what, name)
+	}
+}
+
+// addUIDFlag registers a --uid sibling flag next to a target-identifying --name flag,
+// letting the user identify the item this command acts on by its Cobbler UID instead of
+// (or, together with resolveUID, alongside) its name. what is used only for the help text,
+// e.g. addUIDFlag(cmd, "distro") registers "the distro uid (alternative to --name)".
+func addUIDFlag(command *cobra.Command, what string) {
+	command.Flags().String("uid", "", fmt.Sprintf("the %s uid (alternative to --name)", what))
+}
+
 // RemoveItemRecursive accesses the given flags and attempts to remove a given item
 func RemoveItemRecursive(cmd *cobra.Command, args []string, what string) error {
 	_ = args
@@ -109,11 +161,19 @@ func RemoveItemRecursive(cmd *cobra.Command, args []string, what string) error {
 	if err != nil {
 		return err
 	}
+	itemUID, err := cmd.Flags().GetString("uid")
+	if err != nil {
+		return err
+	}
 	recursiveDelete, err := cmd.Flags().GetBool("recursive")
 	if err != nil {
 		return err
 	}
-	return Client.RemoveItem(what, itemName, recursiveDelete)
+	uid, err := resolveUID(&Client, what, itemName, itemUID)
+	if err != nil {
+		return err
+	}
+	return Client.RemoveItem(what, uid, recursiveDelete)
 }
 
 // addPaginationFlags registers --page and --items-per-page on a find subcommand.

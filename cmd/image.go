@@ -377,12 +377,16 @@ func NewImageCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			imageUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			imageNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			imageHandle, err := Client.GetImageHandle(imageName)
+			imageHandle, err := resolveUID(&Client, "image", imageName, imageUID)
 			if err != nil {
 				return err
 			}
@@ -390,7 +394,11 @@ func NewImageCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			copiedImage, err := Client.GetImage(imageNewName, false, false)
+			copiedImageHandle, err := Client.GetImageHandle(imageNewName)
+			if err != nil {
+				return err
+			}
+			copiedImage, err := Client.GetImage(copiedImageHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -410,6 +418,7 @@ func NewImageCopyCmd() *cobra.Command {
 	addStringSliceFlags(imageCopyCmd, imageStringSliceFlagMetadata)
 	imageCopyCmd.Flags().String("newname", "", "the new image name")
 	imageCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(imageCopyCmd, "image")
 	return imageCopyCmd
 }
 
@@ -428,8 +437,16 @@ func NewImageEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			imageUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "image", imageName, imageUID)
+			if err != nil {
+				return err
+			}
 
-			imageToEdit, err := Client.GetImage(imageName, false, false)
+			imageToEdit, err := Client.GetImage(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -448,6 +465,7 @@ func NewImageEditCmd() *cobra.Command {
 	addBoolFlags(imageEditCmd, imageBoolFlagMetadata)
 	addStringSliceFlags(imageEditCmd, imageStringSliceFlagMetadata)
 	imageEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(imageEditCmd, "image")
 	return imageEditCmd
 }
 
@@ -515,6 +533,7 @@ func NewImageRemoveCmd() *cobra.Command {
 	}
 	imageRemoveCmd.Flags().String("name", "", "the image name")
 	imageRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(imageRemoveCmd, "image")
 	return imageRemoveCmd
 }
 
@@ -533,12 +552,16 @@ func NewImageRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			imageUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			imageNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			imageHandle, err := Client.GetImageHandle(imageName)
+			imageHandle, err := resolveUID(&Client, "image", imageName, imageUID)
 			if err != nil {
 				return err
 			}
@@ -546,7 +569,11 @@ func NewImageRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			renamedImage, err := Client.GetImage(imageNewName, false, false)
+			renamedImageHandle, err := Client.GetImageHandle(imageNewName)
+			if err != nil {
+				return err
+			}
+			renamedImage, err := Client.GetImage(renamedImageHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -566,16 +593,13 @@ func NewImageRenameCmd() *cobra.Command {
 	addStringSliceFlags(imageRenameCmd, imageStringSliceFlagMetadata)
 	imageRenameCmd.Flags().String("newname", "", "the new image name")
 	imageRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(imageRenameCmd, "image")
 	return imageRenameCmd
 }
 
-func reportImages(cmd *cobra.Command, imageNames []string) error {
-	for _, itemName := range imageNames {
-		system, err := Client.GetImage(itemName, false, false)
-		if err != nil {
-			return err
-		}
-		printStructured(cmd, system)
+func reportImages(cmd *cobra.Command, images []*cobbler.Image) error {
+	for _, image := range images {
+		printStructured(cmd, image)
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
 	return nil
@@ -596,19 +620,32 @@ func NewImageReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListImageNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var images []*cobbler.Image
+			if name == "" && uid == "" {
+				images, err = Client.GetImages()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
+				resolvedUID, err := resolveUID(&Client, "image", name, uid)
+				if err != nil {
+					return err
+				}
+				image, err := Client.GetImage(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				images = []*cobbler.Image{image}
 			}
-			return reportImages(cmd, itemNames)
+			return reportImages(cmd, images)
 		},
 	}
 	imageReportCmd.Flags().String("name", "", "the image name")
+	addUIDFlag(imageReportCmd, "image")
 	return imageReportCmd
 }
 
@@ -637,26 +674,34 @@ func NewImageExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			formatOption, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListImageNames()
+			var images []*cobbler.Image
+			if name == "" && uid == "" {
+				images, err = Client.GetImages()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
-			}
-
-			for _, itemName := range itemNames {
-				image, err := Client.GetImage(itemName, false, false)
+				resolvedUID, err := resolveUID(&Client, "image", name, uid)
 				if err != nil {
 					return err
 				}
+				image, err := Client.GetImage(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				images = []*cobbler.Image{image}
+			}
+
+			for _, image := range images {
 				if formatOption == "json" {
 					jsonDocument, err := json.Marshal(image)
 					if err != nil {
@@ -678,5 +723,6 @@ func NewImageExportCmd() *cobra.Command {
 	}
 	imageExportCmd.Flags().String("name", "", "the image name")
 	imageExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(imageExportCmd, "image")
 	return imageExportCmd
 }

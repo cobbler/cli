@@ -144,12 +144,16 @@ func NewMenuCopyCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
+			menuUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			menuNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			menuHandle, err := Client.GetMenuHandle(menuName)
+			menuHandle, err := resolveUID(&Client, "menu", menuName, menuUID)
 			if err != nil {
 				return err
 			}
@@ -157,7 +161,11 @@ func NewMenuCopyCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			newMenu, err := Client.GetMenu(menuNewName, false, false)
+			newMenuHandle, err := Client.GetMenuHandle(menuNewName)
+			if err != nil {
+				return err
+			}
+			newMenu, err := Client.GetMenu(newMenuHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -172,11 +180,8 @@ func NewMenuCopyCmd() (*cobra.Command, error) {
 	addStringFlags(menuCopyCmd, menuStringFlagMetadata)
 	addStringFlags(menuCopyCmd, copyRenameStringFlagMetadata)
 	menuCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	err := menuCopyCmd.MarkFlagRequired("name")
-	if err != nil {
-		return nil, err
-	}
-	err = menuCopyCmd.MarkFlagRequired("newname")
+	addUIDFlag(menuCopyCmd, "menu")
+	err := menuCopyCmd.MarkFlagRequired("newname")
 	if err != nil {
 		return nil, err
 	}
@@ -198,8 +203,16 @@ func NewMenuEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			menuUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "menu", menuName, menuUID)
+			if err != nil {
+				return err
+			}
 
-			menuToEdit, err := Client.GetMenu(menuName, false, false)
+			menuToEdit, err := Client.GetMenu(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -213,6 +226,7 @@ func NewMenuEditCmd() *cobra.Command {
 	addCommonArgs(menuEditCmd)
 	addStringFlags(menuEditCmd, menuStringFlagMetadata)
 	menuEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(menuEditCmd, "menu")
 	return menuEditCmd
 }
 
@@ -277,6 +291,7 @@ func NewMenuRemoveCmd() *cobra.Command {
 	}
 	menuRemoveCmd.Flags().String("name", "", "the menu name")
 	menuRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(menuRemoveCmd, "menu")
 	return menuRemoveCmd
 }
 
@@ -295,12 +310,16 @@ func NewMenuRenameCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
+			menuUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			menuNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			menuHandle, err := Client.GetMenuHandle(menuName)
+			menuHandle, err := resolveUID(&Client, "menu", menuName, menuUID)
 			if err != nil {
 				return err
 			}
@@ -308,7 +327,11 @@ func NewMenuRenameCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			newMenu, err := Client.GetMenu(menuNewName, false, false)
+			newMenuHandle, err := Client.GetMenuHandle(menuNewName)
+			if err != nil {
+				return err
+			}
+			newMenu, err := Client.GetMenu(newMenuHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -323,23 +346,16 @@ func NewMenuRenameCmd() (*cobra.Command, error) {
 	addStringFlags(menuRenameCmd, menuStringFlagMetadata)
 	addStringFlags(menuRenameCmd, copyRenameStringFlagMetadata)
 	menuRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
-	err := menuRenameCmd.MarkFlagRequired("name")
-	if err != nil {
-		return nil, err
-	}
-	err = menuRenameCmd.MarkFlagRequired("newname")
+	addUIDFlag(menuRenameCmd, "menu")
+	err := menuRenameCmd.MarkFlagRequired("newname")
 	if err != nil {
 		return nil, err
 	}
 	return menuRenameCmd, nil
 }
 
-func reportMenus(cmd *cobra.Command, menuNames []string) error {
-	for _, itemName := range menuNames {
-		menu, err := Client.GetMenu(itemName, false, false)
-		if err != nil {
-			return err
-		}
+func reportMenus(cmd *cobra.Command, menus []*cobbler.Menu) error {
+	for _, menu := range menus {
 		printStructured(cmd, menu)
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
@@ -361,19 +377,32 @@ func NewMenuReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListMenuNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var menus []*cobbler.Menu
+			if name == "" && uid == "" {
+				menus, err = Client.GetMenus()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
+				resolvedUID, err := resolveUID(&Client, "menu", name, uid)
+				if err != nil {
+					return err
+				}
+				menu, err := Client.GetMenu(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				menus = []*cobbler.Menu{menu}
 			}
-			return reportMenus(cmd, itemNames)
+			return reportMenus(cmd, menus)
 		},
 	}
 	menuReportCmd.Flags().String("name", "", "the menu name")
+	addUIDFlag(menuReportCmd, "menu")
 	return menuReportCmd
 }
 
@@ -402,26 +431,34 @@ func NewMenuExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			formatOption, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListMenuNames()
+			var menus []*cobbler.Menu
+			if name == "" && uid == "" {
+				menus, err = Client.GetMenus()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
-			}
-
-			for _, itemName := range itemNames {
-				menu, err := Client.GetMenu(itemName, false, false)
+				resolvedUID, err := resolveUID(&Client, "menu", name, uid)
 				if err != nil {
 					return err
 				}
+				menu, err := Client.GetMenu(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				menus = []*cobbler.Menu{menu}
+			}
+
+			for _, menu := range menus {
 				if formatOption == "json" {
 					jsonDocument, err := json.Marshal(menu)
 					if err != nil {
@@ -443,5 +480,6 @@ func NewMenuExportCmd() *cobra.Command {
 	}
 	menuExportCmd.Flags().String("name", "", "the menu name")
 	menuExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(menuExportCmd, "menu")
 	return menuExportCmd
 }

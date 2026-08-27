@@ -517,12 +517,16 @@ func NewSystemCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			systemNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			systemHandle, err := Client.GetSystemHandle(systemName)
+			systemHandle, err := resolveUID(&Client, "system", systemName, systemUID)
 			if err != nil {
 				return err
 			}
@@ -530,7 +534,11 @@ func NewSystemCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			newSystem, err := Client.GetSystem(systemNewName, false, false)
+			newSystemHandle, err := Client.GetSystemHandle(systemNewName)
+			if err != nil {
+				return err
+			}
+			newSystem, err := Client.GetSystem(newSystemHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -541,7 +549,7 @@ func NewSystemCopyCmd() *cobra.Command {
 			}
 			if newSystem.Meta.IsDirty {
 				newSystem, err = Client.GetSystem(
-					newSystem.Name,
+					newSystem.Uid,
 					newSystem.Meta.IsFlattened,
 					newSystem.Meta.IsResolved,
 				)
@@ -564,6 +572,7 @@ func NewSystemCopyCmd() *cobra.Command {
 	// Network interface flags
 	addStringFlags(systemCopyCmd, copyRenameStringFlagMetadata)
 	systemCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(systemCopyCmd, "system")
 	return systemCopyCmd
 }
 
@@ -582,11 +591,15 @@ func NewSystemDumpVarsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			system, err := Client.GetSystem(systemName, false, false)
+			systemUID, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
-			blendedData, err := Client.DumpVars(system.Uid, false, false)
+			resolvedUID, err := resolveUID(&Client, "system", systemName, systemUID)
+			if err != nil {
+				return err
+			}
+			blendedData, err := Client.DumpVars(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -595,6 +608,7 @@ func NewSystemDumpVarsCmd() *cobra.Command {
 		},
 	}
 	systemDumpVarsCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemDumpVarsCmd, "system")
 	return systemDumpVarsCmd
 }
 
@@ -609,12 +623,20 @@ func NewSystemEditCmd() *cobra.Command {
 				return err
 			}
 
-			// find profile through its name
+			// find system through its name/uid
 			systemName, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
-			updateSystem, err := Client.GetSystem(systemName, false, false)
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "system", systemName, systemUID)
+			if err != nil {
+				return err
+			}
+			updateSystem, err := Client.GetSystem(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -626,7 +648,7 @@ func NewSystemEditCmd() *cobra.Command {
 			}
 			if updateSystem.Meta.IsDirty {
 				updateSystem, err = Client.GetSystem(
-					updateSystem.Name,
+					updateSystem.Uid,
 					updateSystem.Meta.IsFlattened,
 					updateSystem.Meta.IsResolved,
 				)
@@ -648,6 +670,7 @@ func NewSystemEditCmd() *cobra.Command {
 	addMapFlags(systemEditCmd, systemMapFlagMetadata)
 	// Network interface flags
 	systemEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(systemEditCmd, "system")
 	return systemEditCmd
 }
 
@@ -696,14 +719,15 @@ func NewSystemGetAutoinstallCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			systemExists, err := Client.HasItem("system", systemName)
+			systemUID, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
-			if !systemExists {
-				return fmt.Errorf("system does not exist")
+			resolvedUID, err := resolveUID(&Client, "system", systemName, systemUID)
+			if err != nil {
+				return err
 			}
-			autoinstallRendered, err := Client.GenerateAutoinstall(systemName, "system", "name", "", "")
+			autoinstallRendered, err := Client.GenerateAutoinstall(resolvedUID, "system", "uid", "", "")
 			if err != nil {
 				return err
 			}
@@ -712,6 +736,7 @@ func NewSystemGetAutoinstallCmd() *cobra.Command {
 		},
 	}
 	systemGetAutoinstallCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemGetAutoinstallCmd, "system")
 	return systemGetAutoinstallCmd
 }
 
@@ -753,9 +778,13 @@ func NewSystemPowerOffCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 
 			// Perform action
-			systemHandle, err := Client.GetSystemHandle(systemName)
+			systemHandle, err := resolveUID(&Client, "system", systemName, systemUID)
 			if err != nil {
 				return err
 			}
@@ -764,6 +793,7 @@ func NewSystemPowerOffCmd() *cobra.Command {
 		},
 	}
 	systemPowerOffCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemPowerOffCmd, "system")
 	return systemPowerOffCmd
 }
 
@@ -783,9 +813,13 @@ func NewSystemPowerOnCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 
 			// Perform action
-			systemHandle, err := Client.GetSystemHandle(systemName)
+			systemHandle, err := resolveUID(&Client, "system", systemName, systemUID)
 			if err != nil {
 				return err
 			}
@@ -794,6 +828,7 @@ func NewSystemPowerOnCmd() *cobra.Command {
 		},
 	}
 	systemPowerOnCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemPowerOnCmd, "system")
 	return systemPowerOnCmd
 }
 
@@ -813,9 +848,13 @@ func NewSystemPowerStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 
 			// Perform action
-			systemHandle, err := Client.GetSystemHandle(systemName)
+			systemHandle, err := resolveUID(&Client, "system", systemName, systemUID)
 			if err != nil {
 				return err
 			}
@@ -824,6 +863,7 @@ func NewSystemPowerStatusCmd() *cobra.Command {
 		},
 	}
 	systemPowerStatusCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemPowerStatusCmd, "system")
 	return systemPowerStatusCmd
 }
 
@@ -843,9 +883,13 @@ func NewSystemRebootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 
 			// Perform action
-			systemHandle, err := Client.GetSystemHandle(systemName)
+			systemHandle, err := resolveUID(&Client, "system", systemName, systemUID)
 			if err != nil {
 				return err
 			}
@@ -854,6 +898,7 @@ func NewSystemRebootCmd() *cobra.Command {
 		},
 	}
 	systemRebootCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemRebootCmd, "system")
 	return systemRebootCmd
 }
 
@@ -873,6 +918,7 @@ func NewSystemRemoveCmd() *cobra.Command {
 	}
 	systemRemoveCmd.Flags().String("name", "", "the system name")
 	systemRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(systemRemoveCmd, "system")
 	return systemRemoveCmd
 }
 
@@ -892,13 +938,17 @@ func NewSystemRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			systemUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			systemNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
 			// Perform action
-			systemHandle, err := Client.GetSystemHandle(systemName)
+			systemHandle, err := resolveUID(&Client, "system", systemName, systemUID)
 			if err != nil {
 				return err
 			}
@@ -906,7 +956,11 @@ func NewSystemRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			newSystem, err := Client.GetSystem(systemNewName, false, false)
+			newSystemHandle, err := Client.GetSystemHandle(systemNewName)
+			if err != nil {
+				return err
+			}
+			newSystem, err := Client.GetSystem(newSystemHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -916,7 +970,7 @@ func NewSystemRenameCmd() *cobra.Command {
 			}
 			if newSystem.Meta.IsDirty {
 				newSystem, err = Client.GetSystem(
-					newSystem.Name,
+					newSystem.Uid,
 					newSystem.Meta.IsFlattened,
 					newSystem.Meta.IsResolved,
 				)
@@ -938,15 +992,12 @@ func NewSystemRenameCmd() *cobra.Command {
 	// Network interface flags
 	addStringFlags(systemRenameCmd, copyRenameStringFlagMetadata)
 	systemRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(systemRenameCmd, "system")
 	return systemRenameCmd
 }
 
-func reportSystems(cmd *cobra.Command, systemNames []string) error {
-	for _, itemName := range systemNames {
-		system, err := Client.GetSystem(itemName, false, false)
-		if err != nil {
-			return err
-		}
+func reportSystems(cmd *cobra.Command, systems []*cobbler.System) error {
+	for _, system := range systems {
 		printStructured(cmd, system)
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
@@ -968,19 +1019,32 @@ func NewSystemReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListSystemNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var systems []*cobbler.System
+			if name == "" && uid == "" {
+				systems, err = Client.GetSystems()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
+				resolvedUID, err := resolveUID(&Client, "system", name, uid)
+				if err != nil {
+					return err
+				}
+				system, err := Client.GetSystem(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				systems = []*cobbler.System{system}
 			}
-			return reportSystems(cmd, itemNames)
+			return reportSystems(cmd, systems)
 		},
 	}
 	systemReportCmd.Flags().String("name", "", "the system name")
+	addUIDFlag(systemReportCmd, "system")
 	return systemReportCmd
 }
 
@@ -1009,26 +1073,34 @@ func NewSystemExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			formatOption, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListSystemNames()
+			var systems []*cobbler.System
+			if name == "" && uid == "" {
+				systems, err = Client.GetSystems()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
-			}
-
-			for _, itemName := range itemNames {
-				system, err := Client.GetSystem(itemName, false, false)
+				resolvedUID, err := resolveUID(&Client, "system", name, uid)
 				if err != nil {
 					return err
 				}
+				system, err := Client.GetSystem(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				systems = []*cobbler.System{system}
+			}
+
+			for _, system := range systems {
 				if formatOption == "json" {
 					jsonDocument, err := json.Marshal(system)
 					if err != nil {
@@ -1050,5 +1122,6 @@ func NewSystemExportCmd() *cobra.Command {
 	}
 	systemExportCmd.Flags().String("name", "", "the system name")
 	systemExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(systemExportCmd, "system")
 	return systemExportCmd
 }

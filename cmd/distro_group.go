@@ -77,7 +77,15 @@ func newDistroGroupEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			g, err := Client.GetDistroGroup(name, false, false)
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "distro_group", name, uid)
+			if err != nil {
+				return err
+			}
+			g, err := Client.GetDistroGroup(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -95,6 +103,7 @@ func newDistroGroupEditCmd() *cobra.Command {
 		},
 	}
 	addGroupFlagSet(cmd)
+	addUIDFlag(cmd, "distro group")
 	return cmd
 }
 
@@ -110,11 +119,15 @@ func newDistroGroupCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetDistroGroupHandle(name)
+			handle, err := resolveUID(&Client, "distro_group", name, uid)
 			if err != nil {
 				return err
 			}
@@ -123,6 +136,7 @@ func newDistroGroupCopyCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "distro group")
 	return cmd
 }
 
@@ -138,11 +152,15 @@ func newDistroGroupRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetDistroGroupHandle(name)
+			handle, err := resolveUID(&Client, "distro_group", name, uid)
 			if err != nil {
 				return err
 			}
@@ -151,6 +169,7 @@ func newDistroGroupRenameCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "distro group")
 	return cmd
 }
 
@@ -167,6 +186,7 @@ func newDistroGroupRemoveCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the distro group name")
 	cmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(cmd, "distro group")
 	return cmd
 }
 
@@ -218,20 +238,28 @@ func newDistroGroupReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListDistroGroupNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var groups []*cobbler.DistroGroup
+			if name == "" && uid == "" {
+				groups, err = Client.GetDistroGroups()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				g, err := Client.GetDistroGroup(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "distro_group", name, uid)
 				if err != nil {
 					return err
 				}
+				g, err := Client.GetDistroGroup(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				groups = []*cobbler.DistroGroup{g}
+			}
+			for _, g := range groups {
 				printStructured(cmd, g)
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
@@ -239,6 +267,7 @@ func newDistroGroupReportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the distro group name")
+	addUIDFlag(cmd, "distro group")
 	return cmd
 }
 
@@ -264,24 +293,32 @@ func newDistroGroupExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			format, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListDistroGroupNames()
+			var groups []*cobbler.DistroGroup
+			if name == "" && uid == "" {
+				groups, err = Client.GetDistroGroups()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				g, err := Client.GetDistroGroup(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "distro_group", name, uid)
 				if err != nil {
 					return err
 				}
+				g, err := Client.GetDistroGroup(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				groups = []*cobbler.DistroGroup{g}
+			}
+			for _, g := range groups {
 				if err := writeExport(cmd, format, g); err != nil {
 					return err
 				}
@@ -291,5 +328,6 @@ func newDistroGroupExportCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the distro group name")
 	cmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(cmd, "distro group")
 	return cmd
 }

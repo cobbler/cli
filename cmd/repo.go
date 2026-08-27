@@ -270,12 +270,16 @@ func NewRepoCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			repoUID, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			repoNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			repoHandle, err := Client.GetRepoHandle(repoName)
+			repoHandle, err := resolveUID(&Client, "repo", repoName, repoUID)
 			if err != nil {
 				return err
 			}
@@ -283,7 +287,11 @@ func NewRepoCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			copiedRepo, err := Client.GetRepo(repoNewName, false, false)
+			copiedRepoHandle, err := Client.GetRepoHandle(repoNewName)
+			if err != nil {
+				return err
+			}
+			copiedRepo, err := Client.GetRepo(copiedRepoHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -302,6 +310,7 @@ func NewRepoCopyCmd() *cobra.Command {
 	addMapFlags(repoCopyCmd, repoMapFlagMetadata)
 	repoCopyCmd.Flags().String("newname", "", "the new repo name")
 	repoCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(repoCopyCmd, "repo")
 	return repoCopyCmd
 }
 
@@ -316,13 +325,21 @@ func NewRepoEditCmd() *cobra.Command {
 				return err
 			}
 
-			// find repo through its name
+			// find repo through its name/uid
 			rname, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
+			ruid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "repo", rname, ruid)
+			if err != nil {
+				return err
+			}
 			// Get repo from API
-			updateRepo, err := Client.GetRepo(rname, false, false)
+			updateRepo, err := Client.GetRepo(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -342,6 +359,7 @@ func NewRepoEditCmd() *cobra.Command {
 	addStringSliceFlags(repoEditCmd, repoStringSliceFlagMetadata)
 	addMapFlags(repoEditCmd, repoMapFlagMetadata)
 	repoEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(repoEditCmd, "repo")
 	return repoEditCmd
 }
 
@@ -411,6 +429,7 @@ func NewRepoRemoveCmd() *cobra.Command {
 	}
 	repoRemoveCmd.Flags().String("name", "", "the repo name")
 	repoRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(repoRemoveCmd, "repo")
 	return repoRemoveCmd
 }
 
@@ -425,8 +444,12 @@ func NewRepoRenameCmd() *cobra.Command {
 				return err
 			}
 
-			// Get special name and newname flags
+			// Get special name/uid and newname flags
 			repoName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			repoUID, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
@@ -435,7 +458,7 @@ func NewRepoRenameCmd() *cobra.Command {
 				return err
 			}
 			// Get repo handle from the API
-			repoHandle, err := Client.GetRepoHandle(repoName)
+			repoHandle, err := resolveUID(&Client, "repo", repoName, repoUID)
 			if err != nil {
 				return err
 			}
@@ -445,7 +468,11 @@ func NewRepoRenameCmd() *cobra.Command {
 				return err
 			}
 			// Get the renamed repository from the API
-			newRepository, err := Client.GetRepo(repoNewName, false, false)
+			newRepositoryHandle, err := Client.GetRepoHandle(repoNewName)
+			if err != nil {
+				return err
+			}
+			newRepository, err := Client.GetRepo(newRepositoryHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -466,15 +493,12 @@ func NewRepoRenameCmd() *cobra.Command {
 	addMapFlags(repoRenameCmd, repoMapFlagMetadata)
 	repoRenameCmd.Flags().String("newname", "", "the new repo name")
 	repoRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(repoRenameCmd, "repo")
 	return repoRenameCmd
 }
 
-func reportRepos(cmd *cobra.Command, repoNames []string) error {
-	for _, itemName := range repoNames {
-		repo, err := Client.GetRepo(itemName, false, false)
-		if err != nil {
-			return err
-		}
+func reportRepos(cmd *cobra.Command, repos []*cobbler.Repo) error {
+	for _, repo := range repos {
 		printStructured(cmd, repo)
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
@@ -496,19 +520,32 @@ func NewRepoReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListRepoNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var repos []*cobbler.Repo
+			if name == "" && uid == "" {
+				repos, err = Client.GetRepos()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
+				resolvedUID, err := resolveUID(&Client, "repo", name, uid)
+				if err != nil {
+					return err
+				}
+				repo, err := Client.GetRepo(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				repos = []*cobbler.Repo{repo}
 			}
-			return reportRepos(cmd, itemNames)
+			return reportRepos(cmd, repos)
 		},
 	}
 	repoReportCmd.Flags().String("name", "", "the repo name")
+	addUIDFlag(repoReportCmd, "repo")
 	return repoReportCmd
 }
 
@@ -537,26 +574,34 @@ func NewRepoExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			formatOption, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListRepoNames()
+			var repos []*cobbler.Repo
+			if name == "" && uid == "" {
+				repos, err = Client.GetRepos()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
-			}
-
-			for _, itemName := range itemNames {
-				repo, err := Client.GetRepo(itemName, false, false)
+				resolvedUID, err := resolveUID(&Client, "repo", name, uid)
 				if err != nil {
 					return err
 				}
+				repo, err := Client.GetRepo(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				repos = []*cobbler.Repo{repo}
+			}
+
+			for _, repo := range repos {
 				if formatOption == "json" {
 					jsonDocument, err := json.Marshal(repo)
 					if err != nil {
@@ -578,5 +623,6 @@ func NewRepoExportCmd() *cobra.Command {
 	}
 	repoExportCmd.Flags().String("name", "", "the repository name")
 	repoExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(repoExportCmd, "repo")
 	return repoExportCmd
 }

@@ -359,12 +359,16 @@ func NewDistroCopyCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
+			duid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			distroNewName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
 
-			dhandle, err := Client.GetDistroHandle(dname)
+			dhandle, err := resolveUID(&Client, "distro", dname, duid)
 			if err != nil {
 				return err
 			}
@@ -372,7 +376,11 @@ func NewDistroCopyCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			newDistro, err := Client.GetDistro(distroNewName, false, false)
+			newDistroHandle, err := Client.GetDistroHandle(distroNewName)
+			if err != nil {
+				return err
+			}
+			newDistro, err := Client.GetDistro(newDistroHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -391,6 +399,7 @@ func NewDistroCopyCmd() (*cobra.Command, error) {
 	addMapFlags(distroCopyCmd, distroMapFlagMetadata)
 	distroCopyCmd.Flags().String("newname", "", "the new distro name")
 	distroCopyCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(distroCopyCmd, "distro")
 	return distroCopyCmd, nil
 }
 
@@ -405,13 +414,21 @@ func NewDistroEditCmd() (*cobra.Command, error) {
 				return err
 			}
 
-			// find distro through its name
+			// find distro through its name/uid
 			dname, err := cmd.Flags().GetString("name")
 			if err != nil {
 				return err
 			}
+			duid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "distro", dname, duid)
+			if err != nil {
+				return err
+			}
 			// Get distro from the API
-			updateDistro, err := Client.GetDistro(dname, false, false)
+			updateDistro, err := Client.GetDistro(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -422,7 +439,7 @@ func NewDistroEditCmd() (*cobra.Command, error) {
 			}
 			if updateDistro.Meta.IsDirty {
 				updateDistro, err = Client.GetDistro(
-					updateDistro.Name,
+					updateDistro.Uid,
 					updateDistro.Meta.IsFlattened,
 					updateDistro.Meta.IsResolved,
 				)
@@ -439,6 +456,7 @@ func NewDistroEditCmd() (*cobra.Command, error) {
 	addStringSliceFlags(distroEditCmd, distroStringSliceFlagMetadata)
 	addMapFlags(distroEditCmd, distroMapFlagMetadata)
 	distroEditCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(distroEditCmd, "distro")
 	return distroEditCmd, nil
 }
 
@@ -504,15 +522,24 @@ func NewDistroRemoveCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
+			duid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			recursiveDelete, err := cmd.Flags().GetBool("recursive")
 			if err != nil {
 				return err
 			}
-			return Client.DeleteDistroRecursive(dname, recursiveDelete)
+			resolvedUID, err := resolveUID(&Client, "distro", dname, duid)
+			if err != nil {
+				return err
+			}
+			return Client.DeleteDistroRecursive(resolvedUID, recursiveDelete)
 		},
 	}
 	distroRemoveCmd.Flags().String("name", "", "the distro name")
 	distroRemoveCmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(distroRemoveCmd, "distro")
 	return distroRemoveCmd, nil
 }
 
@@ -527,8 +554,12 @@ func NewDistroRenameCmd() (*cobra.Command, error) {
 				return err
 			}
 
-			// Get the name and newname flags
+			// Get the name/uid and newname flags
 			distroName, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			distroUID, err := cmd.Flags().GetString("uid")
 			if err != nil {
 				return err
 			}
@@ -538,7 +569,7 @@ func NewDistroRenameCmd() (*cobra.Command, error) {
 			}
 
 			// Get the distro API handle
-			distroHandle, err := Client.GetDistroHandle(distroName)
+			distroHandle, err := resolveUID(&Client, "distro", distroName, distroUID)
 			if err != nil {
 				return err
 			}
@@ -548,7 +579,11 @@ func NewDistroRenameCmd() (*cobra.Command, error) {
 				return err
 			}
 			// Retrieve the renamed distro from the API
-			newDistro, err := Client.GetDistro(distroNewName, false, false)
+			newDistroHandle, err := Client.GetDistroHandle(distroNewName)
+			if err != nil {
+				return err
+			}
+			newDistro, err := Client.GetDistro(newDistroHandle, false, false)
 			if err != nil {
 				return err
 			}
@@ -567,15 +602,12 @@ func NewDistroRenameCmd() (*cobra.Command, error) {
 	addMapFlags(distroRenameCmd, distroMapFlagMetadata)
 	distroRenameCmd.Flags().String("newname", "", "the new distro name")
 	distroRenameCmd.Flags().Bool("in-place", false, "edit items in kopts or autoinstall without clearing the other items")
+	addUIDFlag(distroRenameCmd, "distro")
 	return distroRenameCmd, nil
 }
 
-func reportDistros(cmd *cobra.Command, distroNames []string) error {
-	for _, itemName := range distroNames {
-		distro, err := Client.GetDistro(itemName, false, false)
-		if err != nil {
-			return err
-		}
+func reportDistros(cmd *cobra.Command, distros []*cobbler.Distro) error {
+	for _, distro := range distros {
 		printStructured(cmd, distro)
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 	}
@@ -597,19 +629,32 @@ func NewDistroReportCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListDistroNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var distros []*cobbler.Distro
+			if name == "" && uid == "" {
+				distros, err = Client.GetDistros()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
+				resolvedUID, err := resolveUID(&Client, "distro", name, uid)
+				if err != nil {
+					return err
+				}
+				distro, err := Client.GetDistro(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				distros = []*cobbler.Distro{distro}
 			}
-			return reportDistros(cmd, itemNames)
+			return reportDistros(cmd, distros)
 		},
 	}
 	distroReportCmd.Flags().String("name", "", "the distro name")
+	addUIDFlag(distroReportCmd, "distro")
 	return distroReportCmd, nil
 }
 
@@ -638,26 +683,34 @@ func NewDistroExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			formatOption, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
 
-			itemNames := make([]string, 0)
-			if name == "" {
-				itemNames, err = Client.ListDistroNames()
+			var distros []*cobbler.Distro
+			if name == "" && uid == "" {
+				distros, err = Client.GetDistros()
 				if err != nil {
 					return err
 				}
 			} else {
-				itemNames = append(itemNames, name)
-			}
-
-			for _, itemName := range itemNames {
-				distro, err := Client.GetDistro(itemName, false, false)
+				resolvedUID, err := resolveUID(&Client, "distro", name, uid)
 				if err != nil {
 					return err
 				}
+				distro, err := Client.GetDistro(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				distros = []*cobbler.Distro{distro}
+			}
+
+			for _, distro := range distros {
 				if formatOption == "json" {
 					jsonDocument, err := json.Marshal(distro)
 					if err != nil {
@@ -679,5 +732,6 @@ func NewDistroExportCmd() *cobra.Command {
 	}
 	distroExportCmd.Flags().String("name", "", "the distro name")
 	distroExportCmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(distroExportCmd, "distro")
 	return distroExportCmd
 }

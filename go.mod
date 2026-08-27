@@ -4,7 +4,7 @@ module github.com/cobbler/cli
 go 1.24
 
 require (
-	github.com/cobbler/cobblerclient v1.0.0-rc3
+	github.com/cobbler/cobblerclient v1.0.0-rc5
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0

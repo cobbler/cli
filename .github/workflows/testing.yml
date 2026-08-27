@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         cobbler_version:
-          - v4.0.0b1
+          - v4.0.0b5
       fail-fast: false
     steps:
       - name: Check out code into the Go module directory
@@ -59,7 +59,7 @@ jobs:
             *.iso
           key: ${{ steps.cache-iso-restore.outputs.cache-primary-key }}
       - name: Upload coverage report to GH artifacts
-        if: matrix.cobbler_version == 'v4.0.0b1'
+        if: matrix.cobbler_version == 'v4.0.0b5'
         # https://github.com/actions/upload-artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

@@ -27,11 +27,11 @@ Identical to 'cobbler list'`,
 			// Distro
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "distros:")
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			distroNames, err := Client.ListDistroNames()
+			distros, err := Client.GetDistros()
 			if err != nil {
 				return err
 			}
-			err = reportDistros(cmd, distroNames)
+			err = reportDistros(cmd, distros)
 			if err != nil {
 				return err
 			}
@@ -40,11 +40,11 @@ Identical to 'cobbler list'`,
 			// Profile
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "profiles:")
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			profileNames, err := Client.ListProfileNames()
+			profiles, err := Client.GetProfiles()
 			if err != nil {
 				return err
 			}
-			err = reportProfiles(cmd, profileNames)
+			err = reportProfiles(cmd, profiles)
 			if err != nil {
 				return err
 			}
@@ -53,11 +53,11 @@ Identical to 'cobbler list'`,
 			// System
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "systems:")
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			systemNames, err := Client.ListSystemNames()
+			systems, err := Client.GetSystems()
 			if err != nil {
 				return err
 			}
-			err = reportSystems(cmd, systemNames)
+			err = reportSystems(cmd, systems)
 			if err != nil {
 				return err
 			}
@@ -66,11 +66,11 @@ Identical to 'cobbler list'`,
 			// Repository
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "repos:")
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			repoNames, err := Client.ListRepoNames()
+			repos, err := Client.GetRepos()
 			if err != nil {
 				return err
 			}
-			err = reportRepos(cmd, repoNames)
+			err = reportRepos(cmd, repos)
 			if err != nil {
 				return err
 			}
@@ -79,11 +79,11 @@ Identical to 'cobbler list'`,
 			// Image
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "images:")
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			imageNames, err := Client.ListImageNames()
+			images, err := Client.GetImages()
 			if err != nil {
 				return err
 			}
-			err = reportImages(cmd, imageNames)
+			err = reportImages(cmd, images)
 			if err != nil {
 				return err
 			}
@@ -92,11 +92,11 @@ Identical to 'cobbler list'`,
 			// Menu
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "menus:")
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "==========")
-			menuNames, err := Client.ListMenuNames()
+			menus, err := Client.GetMenus()
 			if err != nil {
 				return err
 			}
-			err = reportMenus(cmd, menuNames)
+			err = reportMenus(cmd, menus)
 			if err != nil {
 				return err
 			}

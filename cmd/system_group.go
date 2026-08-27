@@ -77,7 +77,15 @@ func newSystemGroupEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			g, err := Client.GetSystemGroup(name, false, false)
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			resolvedUID, err := resolveUID(&Client, "system_group", name, uid)
+			if err != nil {
+				return err
+			}
+			g, err := Client.GetSystemGroup(resolvedUID, false, false)
 			if err != nil {
 				return err
 			}
@@ -95,6 +103,7 @@ func newSystemGroupEditCmd() *cobra.Command {
 		},
 	}
 	addGroupFlagSet(cmd)
+	addUIDFlag(cmd, "system group")
 	return cmd
 }
 
@@ -110,11 +119,15 @@ func newSystemGroupCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetSystemGroupHandle(name)
+			handle, err := resolveUID(&Client, "system_group", name, uid)
 			if err != nil {
 				return err
 			}
@@ -123,6 +136,7 @@ func newSystemGroupCopyCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "system group")
 	return cmd
 }
 
@@ -138,11 +152,15 @@ func newSystemGroupRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			newName, err := cmd.Flags().GetString("newname")
 			if err != nil {
 				return err
 			}
-			handle, err := Client.GetSystemGroupHandle(name)
+			handle, err := resolveUID(&Client, "system_group", name, uid)
 			if err != nil {
 				return err
 			}
@@ -151,6 +169,7 @@ func newSystemGroupRenameCmd() *cobra.Command {
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
 	addStringFlags(cmd, copyRenameStringFlagMetadata)
+	addUIDFlag(cmd, "system group")
 	return cmd
 }
 
@@ -167,6 +186,7 @@ func newSystemGroupRemoveCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the system group name")
 	cmd.Flags().Bool("recursive", false, "also delete child objects")
+	addUIDFlag(cmd, "system group")
 	return cmd
 }
 
@@ -218,20 +238,28 @@ func newSystemGroupReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListSystemGroupNames()
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
+			var groups []*cobbler.SystemGroup
+			if name == "" && uid == "" {
+				groups, err = Client.GetSystemGroups()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				g, err := Client.GetSystemGroup(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "system_group", name, uid)
 				if err != nil {
 					return err
 				}
+				g, err := Client.GetSystemGroup(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				groups = []*cobbler.SystemGroup{g}
+			}
+			for _, g := range groups {
 				printStructured(cmd, g)
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
@@ -239,6 +267,7 @@ func newSystemGroupReportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the system group name")
+	addUIDFlag(cmd, "system group")
 	return cmd
 }
 
@@ -264,24 +293,32 @@ func newSystemGroupExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			uid, err := cmd.Flags().GetString("uid")
+			if err != nil {
+				return err
+			}
 			format, err := cmd.Flags().GetString("format")
 			if err != nil {
 				return err
 			}
-			names := make([]string, 0)
-			if name == "" {
-				names, err = Client.ListSystemGroupNames()
+			var groups []*cobbler.SystemGroup
+			if name == "" && uid == "" {
+				groups, err = Client.GetSystemGroups()
 				if err != nil {
 					return err
 				}
 			} else {
-				names = append(names, name)
-			}
-			for _, n := range names {
-				g, err := Client.GetSystemGroup(n, false, false)
+				resolvedUID, err := resolveUID(&Client, "system_group", name, uid)
 				if err != nil {
 					return err
 				}
+				g, err := Client.GetSystemGroup(resolvedUID, false, false)
+				if err != nil {
+					return err
+				}
+				groups = []*cobbler.SystemGroup{g}
+			}
+			for _, g := range groups {
 				if err := writeExport(cmd, format, g); err != nil {
 					return err
 				}
@@ -291,5 +328,6 @@ func newSystemGroupExportCmd() *cobra.Command {
 	}
 	cmd.Flags().String("name", "", "the system group name")
 	cmd.Flags().String(exportStringMetadata["format"].Name, exportStringMetadata["format"].DefaultValue, exportStringMetadata["format"].Usage)
+	addUIDFlag(cmd, "system group")
 	return cmd
 }
