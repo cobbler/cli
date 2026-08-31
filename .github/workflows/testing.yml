@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         cobbler_version:
-          - v4.0.0b5
+          - v4.0.0b6
       fail-fast: false
     steps:
       - name: Check out code into the Go module directory
