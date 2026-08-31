@@ -146,6 +146,25 @@ func resolveUID(client *cobbler.Client, what, name, uid string) (string, error) 
 	}
 }
 
+// resolveUIDs resolves a slice of item names to their Cobbler UIDs, in order.
+// It is used for flags like --profiles/--systems (e.g. on `cobbler buildiso`/`cobbler sync`)
+// that accept a list of names but must forward UIDs to background_buildiso/
+// background_syncsystems as of Cobbler 4.0.0b6.
+func resolveUIDs(client *cobbler.Client, what string, names []string) ([]string, error) {
+	if len(names) == 0 {
+		return names, nil
+	}
+	uids := make([]string, 0, len(names))
+	for _, name := range names {
+		uid, err := resolveUID(client, what, name, "")
+		if err != nil {
+			return nil, err
+		}
+		uids = append(uids, uid)
+	}
+	return uids, nil
+}
+
 // addUIDFlag registers a --uid sibling flag next to a target-identifying --name flag,
 // letting the user identify the item this command acts on by its Cobbler UID instead of
 // (or, together with resolveUID, alongside) its name. what is used only for the help text,
