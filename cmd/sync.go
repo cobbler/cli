@@ -42,6 +42,10 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-sync for more 
 			if err != nil {
 				return err
 			}
+			systemsOption, err = resolveUIDs(&Client, "system", systemsOption)
+			if err != nil {
+				return err
+			}
 
 			var eventId string
 			if len(systemsOption) > 0 {
@@ -68,7 +72,7 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-sync for more 
 	}
 	syncCmd.Flags().Bool("dhcp", false, "write DHCP config files and restart service")
 	syncCmd.Flags().Bool("dns", false, "write DNS config files and restart service")
-	syncCmd.Flags().StringSlice("systems", []string{}, "run a sync only on specified systems")
+	syncCmd.Flags().StringSlice("systems", []string{}, "run a sync only on specified systems (names, resolved to UIDs)")
 	syncCmd.Flags().Bool("verbose", false, "more verbose output")
 	syncCmd.MarkFlagsMutuallyExclusive("dhcp", "systems")
 	syncCmd.MarkFlagsMutuallyExclusive("dns", "systems")

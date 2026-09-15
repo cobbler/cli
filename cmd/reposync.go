@@ -33,6 +33,12 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-reposync for m
 			if err != nil {
 				return err
 			}
+			if onlyOption != "" {
+				onlyOption, err = resolveUID(&Client, "repo", onlyOption, "")
+				if err != nil {
+					return err
+				}
+			}
 			triesOption, err := cmd.Flags().GetInt("tries")
 			if err != nil {
 				return err
@@ -52,7 +58,7 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-reposync for m
 		},
 	}
 	reposyncCmd.Flags().Bool("no-fail", false, "do not stop reposyncing if a failure occurs")
-	reposyncCmd.Flags().String("only", "", "update only this repository name")
+	reposyncCmd.Flags().String("only", "", "update only this repository (name, resolved to a UID)")
 	reposyncCmd.Flags().Int("tries", 3, "try each repo this many times")
 	return reposyncCmd
 }

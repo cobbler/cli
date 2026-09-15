@@ -1,12 +1,18 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"os"
 	"strings"
 )
+
+// errItemNotFound is wrapped into resolveUID's "no <what> found with name ..." error so callers
+// like resolveUIDs can distinguish "doesn't exist" from a genuine lookup failure via errors.Is.
+var errItemNotFound = errors.New("item not found")
 
 var inheritedUsageFormat = "Mark %s as inherited and remove its concrete value"
 
@@ -130,7 +136,7 @@ func resolveUID(client *cobbler.Client, what, name, uid string) (string, error) 
 	}
 	switch len(results) {
 	case 0:
-		return "", fmt.Errorf("no %s found with name %q", what, name)
+		return "", fmt.Errorf("no %s found with name %q: %w", what, name, errItemNotFound)
 	case 1:
 		asMap, ok := results[0].(map[string]interface{})
 		if !ok {
@@ -144,6 +150,35 @@ func resolveUID(client *cobbler.Client, what, name, uid string) (string, error) 
 	default:
 		return "", fmt.Errorf("multiple %s items found with name %q; use --uid to disambiguate", what, name)
 	}
+}
+
+// resolveUIDs resolves a slice of item names to their Cobbler UIDs, in order.
+// It is used for flags like --profiles/--systems (e.g. on `cobbler buildiso`/`cobbler sync`)
+// that accept a list of names but must forward UIDs to background_buildiso/
+// background_syncsystems as of Cobbler 4.0.0b6.
+//
+// A name that doesn't resolve to exactly one item is skipped (with a warning on stderr)
+// rather than aborting the whole command, mirroring background_buildiso/background_syncsystems's
+// own server-side tolerance of unresolvable entries in these list fields (they're logged and
+// skipped there too, not treated as fatal). Only a genuine lookup error (e.g. an RPC failure)
+// aborts the command.
+func resolveUIDs(client *cobbler.Client, what string, names []string) ([]string, error) {
+	if len(names) == 0 {
+		return names, nil
+	}
+	uids := make([]string, 0, len(names))
+	for _, name := range names {
+		uid, err := resolveUID(client, what, name, "")
+		if err != nil {
+			if errors.Is(err, errItemNotFound) {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: %v, skipping\n", err)
+				continue
+			}
+			return nil, err
+		}
+		uids = append(uids, uid)
+	}
+	return uids, nil
 }
 
 // addUIDFlag registers a --uid sibling flag next to a target-identifying --name flag,
