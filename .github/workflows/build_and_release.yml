@@ -34,7 +34,7 @@ jobs:
         run: ./cobbler --help
       - name: Upload binary Artifact
         # https://github.com/actions/upload-artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cobbler-cli-binary-${{ matrix.go }}-${{ matrix.os }}
           path: ./cobbler
@@ -48,7 +48,7 @@ jobs:
         run: make build-rpm-docker
       - name: Upload RPM Artifact
         # https://github.com/actions/upload-artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cobbler-cli-native-rpm
           path: ./rpms/**/*.rpm
@@ -64,7 +64,7 @@ jobs:
         run: make build-deb-docker
       - name: Upload DEB Artifact
         # https://github.com/actions/upload-artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cobbler-cli-native-deb
           path: ./debs/**/*.deb
