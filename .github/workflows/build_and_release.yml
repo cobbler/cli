@@ -27,7 +27,7 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Checkout code
         # https://github.com/actions/checkout
-        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2.7.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build project
         run: make build
       - name: Execute CLI help
@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: Checkout code
         # https://github.com/actions/checkout
-        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2.7.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build RPM
         run: make build-rpm-docker
       - name: Upload RPM Artifact
@@ -58,7 +58,7 @@ jobs:
     steps:
       - name: Checkout code
         # https://github.com/actions/checkout
-        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2.7.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build DEB
         continue-on-error: true
         run: make build-deb-docker
@@ -82,7 +82,7 @@ jobs:
     steps:
       - name: Check out the repo
         # https://github.com/actions/checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Log in to GHCR
         # https://github.com/docker/login-action
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
@@ -124,7 +124,7 @@ jobs:
     steps:
       - name: Checkout
         # https://github.com/actions/checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Set up Go
