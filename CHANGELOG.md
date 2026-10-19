@@ -37,6 +37,7 @@ Clean break — talks only to Cobbler 4.0.0+. For 3.3.x servers, stay on the
 - `--page` and `--items-per-page` flags on every `find` subcommand
   (routes through `find_items_paged`).
 - `cobbler setting export`.
+- `cobbler check` — reports potential Cobbler server configuration problems.
 
 ### Removed (no longer accepted)
 

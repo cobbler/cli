@@ -16,6 +16,7 @@ Long Usage:
 
    cobbler aclsetup <commands/aclsetup>
    cobbler buildiso <commands/buildiso>
+   cobbler check <commands/check>
    cobbler distro <commands/distro>
    cobbler hardlink <commands/hardlink>
    cobbler image <commands/image>
