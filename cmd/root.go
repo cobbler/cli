@@ -42,6 +42,7 @@ func NewRootCmd() *cobra.Command {
 	// Add sub commands
 	rootCmd.AddCommand(NewAclSetupCmd())
 	rootCmd.AddCommand(NewBuildisoCmd())
+	rootCmd.AddCommand(NewCheckCmd())
 	distroCmd, err := NewDistroCmd()
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(distroCmd)
