@@ -10,9 +10,22 @@ import (
 	"time"
 )
 
+// convertMapStringToMapInterface converts the flat map[string]string produced by a stringToString flag (e.g.
+// --autoinstall-meta) into the map[string]interface{} expected by the XML-RPC API. As a fallback for values that
+// need to carry a list or dict rather than a flat string (e.g. Agama's agama_modules or cloud-init's per-module
+// settings), any value that looks like a JSON array or object (starts with '[' or '{') is decoded as JSON; if it
+// fails to parse, the original string is used unchanged so existing flat-string usage is unaffected.
 func convertMapStringToMapInterface(m map[string]string) map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range m {
+		trimmed := strings.TrimSpace(v)
+		if len(trimmed) > 0 && (trimmed[0] == '[' || trimmed[0] == '{') {
+			var decoded interface{}
+			if err := json.Unmarshal([]byte(trimmed), &decoded); err == nil {
+				result[k] = decoded
+				continue
+			}
+		}
 		result[k] = v
 	}
 	return result
