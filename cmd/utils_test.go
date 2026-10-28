@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 func Test_covertFloatToTime(t *testing.T) {
@@ -33,5 +37,27 @@ func Test_covertFloatToTime(t *testing.T) {
 				t.Errorf("covertFloatToTime() got = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// Test_printDumpVars_defaultCaseDoesNotGarbleUnhandledKinds guards the same %s-in-a-default-case
+// anti-pattern that printField (cmd/root.go) was already fixed for: %s on a value whose kind isn't
+// explicitly handled and doesn't implement Stringer renders as literal "%!s(uint=42)" garbage
+// instead of its content. The switch's explicit cases cover every kind the XML-RPC client's generic
+// interface{} decoder can actually produce today (bool, int64, float64, string, time.Time -
+// which implements Stringer -, []interface{}, map[string]interface{}), so this isn't currently
+// reachable from a real dump_vars response - but %v is a strictly safer default for whatever kind
+// a future Cobbler API field or decoder change adds, with no change in behavior for the one kind
+// (string) that reaches it today.
+func Test_printDumpVars_defaultCaseDoesNotGarbleUnhandledKinds(t *testing.T) {
+	cmd := &cobra.Command{}
+	buf := bytes.NewBufferString("")
+	cmd.SetOut(buf)
+
+	printDumpVars(cmd, map[string]interface{}{"priority": uint(42)})
+
+	got := buf.String()
+	if strings.Contains(got, "%!s(") {
+		t.Fatalf("printDumpVars garbled an unhandled kind: %q", got)
 	}
 }

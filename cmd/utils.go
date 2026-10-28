@@ -74,7 +74,7 @@ func printDumpVars(cmd *cobra.Command, blendedData map[string]interface{}) {
 			res2B, _ := json.Marshal(value)
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s: %s\n", key, string(res2B))
 		default:
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s: %s\n", key, value)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s: %v\n", key, value)
 		}
 	}
 }

@@ -261,7 +261,7 @@ func printField(cmd *cobra.Command, valueType reflect.Kind, name string, value i
 		if value == nil {
 			value = ""
 		}
-		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, value)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %v\n", name, value)
 		// fmt.Fprintf(cmd.OutOrStdout(),"%d: %s %s = %v\n", i, typeOfT.Field(i).Name, f.Type(), f.Interface())
 	}
 }
