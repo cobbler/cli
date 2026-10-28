@@ -18,6 +18,10 @@ build-rpm-docker:
 	@docker build -t localhost/cobbler-cli-pkg:opensuse-tumblewed -f packaging/docker/openSUSE_Tumbleweed/Dockerfile .
 	@docker run --rm -v $(CURDIR)/rpms/openSUSE_Tumbleweed:/root/rpmbuild/RPMS -v $(CURDIR):/workspace localhost/cobbler-cli-pkg:opensuse-tumblewed
 
+build-rpm-docker-leap16:
+	@docker build -t localhost/cobbler-cli-pkg:opensuse-leap16 -f packaging/docker/openSUSE_Leap16/Dockerfile .
+	@docker run --rm -v $(CURDIR)/rpms/openSUSE_Leap16:/root/rpmbuild/RPMS:Z -v $(CURDIR):/workspace:Z localhost/cobbler-cli-pkg:opensuse-leap16
+
 build-deb-docker:
 	@docker build -t localhost/cobbler-cli-pkg:debian-12 -f packaging/docker/Debian_12/Dockerfile .
 	@docker run --rm -v $(CURDIR)/debs/Debian_12:/usr/src/cobbler-cli/deb-build -v $(CURDIR):/workspace localhost/cobbler-cli-pkg:debian-12
@@ -70,4 +74,4 @@ shell_completions:
 	./${BINARY_NAME} completion powershell > config/completions/powershell/cobbler
 	./${BINARY_NAME} completion zsh > config/completions/zsh/cobbler
 
-.PHONY: build build-docker build-rpm-docker build-rpm clean cleandoc doc run test shell_completions
+.PHONY: build build-docker build-rpm-docker build-rpm-docker-leap16 build-rpm clean cleandoc doc run test shell_completions
