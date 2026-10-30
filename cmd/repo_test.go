@@ -189,6 +189,31 @@ func Test_RepoEditCmd(t *testing.T) {
 	}
 }
 
+// Test_UpdateRepoFromFlags_MirrorLocally is a regression test for the
+// rsync-breed repo sync bug: cobbler/modules/serializers-adjacent
+// rsync_sync() hard-requires mirror_locally=True for the rsync breed, but
+// `repo add`/`repo edit` had no --mirror-locally flag at all, so no
+// rsync-breed repo could ever be synced via the documented CLI. This
+// exercises the real flag registration (repoBoolFlagMetadata/addBoolFlags)
+// and updateRepoFromFlags's switch-case directly and does not need a live
+// cobbler server. mirror_locally is a plain (non-inheritable) bool on both
+// the Python item (@LazyProperty, not @InheritableProperty) and the Go
+// client's Repo struct, so this follows the "keep-updated" convention, not
+// the Value[T]/"-inherit" one.
+func Test_UpdateRepoFromFlags_MirrorLocally(t *testing.T) {
+	cmd := NewRepoEditCmd()
+	err := cmd.Flags().Set("mirror-locally", "true")
+	cobbler.FailOnError(t, err)
+
+	repo := cobbler.NewRepo()
+	err = updateRepoFromFlags(cmd, &repo)
+	cobbler.FailOnError(t, err)
+
+	if !repo.MirrorLocally {
+		t.Fatal("repo.MirrorLocally should be true after --mirror-locally=true")
+	}
+}
+
 // Test_RepoCopyCmd_UID exercises the --uid sibling flag on copy.
 func Test_RepoCopyCmd_UID(t *testing.T) {
 	name := "test-repo-copy-uid"

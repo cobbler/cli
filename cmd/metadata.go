@@ -788,6 +788,11 @@ var repoBoolFlagMetadata = map[string]FlagMetadata[bool]{
 		DefaultValue: false,
 		Usage:        "update this repo on next 'cobbler reposync'?",
 	},
+	"mirror-locally": {
+		Name:         "mirror-locally",
+		DefaultValue: false,
+		Usage:        "copy files from the mirror, rather than just referencing it (required for the rsync breed)",
+	},
 }
 
 var repoIntFlagMetadata = map[string]FlagMetadata[int]{

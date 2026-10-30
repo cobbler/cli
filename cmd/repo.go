@@ -114,6 +114,13 @@ func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
 				return
 			}
 			repo.Mirror = repoNewMirror
+		case "mirror-locally":
+			var repoNewMirrorLocally bool
+			repoNewMirrorLocally, err = cmd.Flags().GetBool("mirror-locally")
+			if err != nil {
+				return
+			}
+			repo.MirrorLocally = repoNewMirrorLocally
 		case "mirror-type":
 			var repoNewMirrorType string
 			repoNewMirrorType, err = cmd.Flags().GetString("mirror-type")
