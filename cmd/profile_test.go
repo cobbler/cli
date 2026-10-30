@@ -261,6 +261,50 @@ func Test_ProfileEditCmd_VirtUEFI(t *testing.T) {
 	}
 }
 
+// Test_UpdateProfileFromFlags_EnableIPXE is a regression test for a panic in
+// updateProfileFromFlags: profileBoolFlagMetadata's "enable-ipxe" entry used
+// to be missing IsInheritable, so addBoolFlags never registered its
+// "enable-ipxe-inherit" companion flag, and the shared switch-case's
+// cmd.Flags().Lookup("enable-ipxe-inherit").Changed dereferenced a nil
+// *pflag.Flag. This exercises the real flag registration and switch-case
+// code directly and does not need a live cobbler server.
+func Test_UpdateProfileFromFlags_EnableIPXE(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("enable-ipxe", "true")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.EnableIPXE.IsInherited {
+		t.Fatal("profile.EnableIPXE should not be marked inherited after --enable-ipxe=true")
+	}
+	if !profile.EnableIPXE.Data {
+		t.Fatal("profile.EnableIPXE.Data should be true after --enable-ipxe=true")
+	}
+}
+
+// Test_UpdateProfileFromFlags_EnableMenu is the --enable-menu counterpart of
+// Test_UpdateProfileFromFlags_EnableIPXE; see that test's comment for the
+// panic mechanism being guarded against.
+func Test_UpdateProfileFromFlags_EnableMenu(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("enable-menu", "true")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.EnableMenu.IsInherited {
+		t.Fatal("profile.EnableMenu should not be marked inherited after --enable-menu=true")
+	}
+	if !profile.EnableMenu.Data {
+		t.Fatal("profile.EnableMenu.Data should be true after --enable-menu=true")
+	}
+}
+
 // Test_ProfileCopyCmd_UID exercises the --uid sibling flag on copy.
 func Test_ProfileCopyCmd_UID(t *testing.T) {
 	name := "test-profile-copy-uid"

@@ -200,14 +200,16 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 
 var profileBoolFlagMetadata = map[string]FlagMetadata[bool]{
 	"enable-ipxe": {
-		Name:         "enable-ipxe",
-		DefaultValue: false,
-		Usage:        "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)",
+		Name:          "enable-ipxe",
+		DefaultValue:  false,
+		Usage:         "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)",
+		IsInheritable: true,
 	},
 	"enable-menu": {
-		Name:         "enable-menu",
-		DefaultValue: false,
-		Usage:        "enable PXE Menu? (show this profile in the PXE menu?)",
+		Name:          "enable-menu",
+		DefaultValue:  false,
+		Usage:         "enable PXE Menu? (show this profile in the PXE menu?)",
+		IsInheritable: true,
 	},
 	"virt-auto-boot": {
 		Name:         "virt-auto-boot",
