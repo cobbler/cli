@@ -344,7 +344,12 @@ func NewImageAddCmd() *cobra.Command {
 				return err
 			}
 			// Now create the image via XML-RPC
-			system, err := Client.CreateImage(newImage)
+			var system *cobbler.Image
+			err = withTransaction(func() error {
+				var txErr error
+				system, txErr = Client.CreateImage(newImage)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -390,24 +395,24 @@ func NewImageCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyImage(imageHandle, imageNewName)
-			if err != nil {
-				return err
-			}
-			copiedImageHandle, err := Client.GetImageHandle(imageNewName)
-			if err != nil {
-				return err
-			}
-			copiedImage, err := Client.GetImage(copiedImageHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update image in-memory
-			err = updateImageFromFlags(cmd, copiedImage)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateImage(copiedImage)
+			return withTransaction(func() error {
+				if err := Client.CopyImage(imageHandle, imageNewName); err != nil {
+					return err
+				}
+				copiedImageHandle, err := Client.GetImageHandle(imageNewName)
+				if err != nil {
+					return err
+				}
+				copiedImage, err := Client.GetImage(copiedImageHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update image in-memory
+				if err := updateImageFromFlags(cmd, copiedImage); err != nil {
+					return err
+				}
+				return Client.UpdateImage(copiedImage)
+			})
 		},
 	}
 	addCommonArgs(imageCopyCmd)
@@ -455,7 +460,9 @@ func NewImageEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.UpdateImage(imageToEdit)
+			return withTransaction(func() error {
+				return Client.UpdateImage(imageToEdit)
+			})
 		},
 	}
 	addCommonArgs(imageEditCmd)
@@ -528,7 +535,9 @@ func NewImageRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			return RemoveItemRecursive(cmd, args, "image")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "image")
+			})
 		},
 	}
 	imageRemoveCmd.Flags().String("name", "", "the image name")
@@ -565,24 +574,24 @@ func NewImageRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameImage(imageHandle, imageNewName)
-			if err != nil {
-				return err
-			}
-			renamedImageHandle, err := Client.GetImageHandle(imageNewName)
-			if err != nil {
-				return err
-			}
-			renamedImage, err := Client.GetImage(renamedImageHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update image in-memory
-			err = updateImageFromFlags(cmd, renamedImage)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateImage(renamedImage)
+			return withTransaction(func() error {
+				if err := Client.RenameImage(imageHandle, imageNewName); err != nil {
+					return err
+				}
+				renamedImageHandle, err := Client.GetImageHandle(imageNewName)
+				if err != nil {
+					return err
+				}
+				renamedImage, err := Client.GetImage(renamedImageHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update image in-memory
+				if err := updateImageFromFlags(cmd, renamedImage); err != nil {
+					return err
+				}
+				return Client.UpdateImage(renamedImage)
+			})
 		},
 	}
 	addCommonArgs(imageRenameCmd)

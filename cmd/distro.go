@@ -325,7 +325,12 @@ func NewDistroAddCmd() (*cobra.Command, error) {
 				return err
 			}
 			// Now create the distro via XML-RPC
-			distro, err := Client.CreateDistro(newDistro)
+			var distro *cobbler.Distro
+			err = withTransaction(func() error {
+				var txErr error
+				distro, txErr = Client.CreateDistro(newDistro)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -372,25 +377,25 @@ func NewDistroCopyCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyDistro(dhandle, distroNewName)
-			if err != nil {
-				return err
-			}
-			newDistroHandle, err := Client.GetDistroHandle(distroNewName)
-			if err != nil {
-				return err
-			}
-			newDistro, err := Client.GetDistro(newDistroHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update distro in-memory
-			err = updateDistroFromFlags(cmd, newDistro)
-			if err != nil {
-				return err
-			}
-			// Update the distro via XML-RPC
-			return Client.UpdateDistro(newDistro)
+			return withTransaction(func() error {
+				if err := Client.CopyDistro(dhandle, distroNewName); err != nil {
+					return err
+				}
+				newDistroHandle, err := Client.GetDistroHandle(distroNewName)
+				if err != nil {
+					return err
+				}
+				newDistro, err := Client.GetDistro(newDistroHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update distro in-memory
+				if err := updateDistroFromFlags(cmd, newDistro); err != nil {
+					return err
+				}
+				// Update the distro via XML-RPC
+				return Client.UpdateDistro(newDistro)
+			})
 		},
 	}
 	addCommonArgs(distroCopyCmd)
@@ -448,7 +453,9 @@ func NewDistroEditCmd() (*cobra.Command, error) {
 				}
 			}
 			// Now update distro via XML-RPC
-			return Client.UpdateDistro(updateDistro)
+			return withTransaction(func() error {
+				return Client.UpdateDistro(updateDistro)
+			})
 		},
 	}
 	addCommonArgs(distroEditCmd)
@@ -534,7 +541,9 @@ func NewDistroRemoveCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			return Client.DeleteDistroRecursive(resolvedUID, recursiveDelete)
+			return withTransaction(func() error {
+				return Client.DeleteDistroRecursive(resolvedUID, recursiveDelete)
+			})
 		},
 	}
 	distroRemoveCmd.Flags().String("name", "", "the distro name")
@@ -573,27 +582,27 @@ func NewDistroRenameCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			// Perform the rename operation server-side
-			err = Client.RenameDistro(distroHandle, distroNewName)
-			if err != nil {
-				return err
-			}
-			// Retrieve the renamed distro from the API
-			newDistroHandle, err := Client.GetDistroHandle(distroNewName)
-			if err != nil {
-				return err
-			}
-			newDistro, err := Client.GetDistro(newDistroHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Now edit the distro in-memory
-			err = updateDistroFromFlags(cmd, newDistro)
-			if err != nil {
-				return err
-			}
-			// Now update the distro via XML-RPC
-			return Client.UpdateDistro(newDistro)
+			return withTransaction(func() error {
+				// Perform the rename operation server-side
+				if err := Client.RenameDistro(distroHandle, distroNewName); err != nil {
+					return err
+				}
+				// Retrieve the renamed distro from the API
+				newDistroHandle, err := Client.GetDistroHandle(distroNewName)
+				if err != nil {
+					return err
+				}
+				newDistro, err := Client.GetDistro(newDistroHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Now edit the distro in-memory
+				if err := updateDistroFromFlags(cmd, newDistro); err != nil {
+					return err
+				}
+				// Now update the distro via XML-RPC
+				return Client.UpdateDistro(newDistro)
+			})
 		},
 	}
 	addCommonArgs(distroRenameCmd)

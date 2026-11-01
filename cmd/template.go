@@ -150,7 +150,12 @@ func NewTemplateAddCmd() *cobra.Command {
 			if err := updateTemplateFromFlags(cmd, &t); err != nil {
 				return err
 			}
-			created, err := Client.CreateTemplate(t)
+			var created *cobbler.Template
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateTemplate(t)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -189,7 +194,9 @@ func NewTemplateEditCmd() *cobra.Command {
 			if err := updateTemplateFromFlags(cmd, t); err != nil {
 				return err
 			}
-			return Client.UpdateTemplate(t)
+			return withTransaction(func() error {
+				return Client.UpdateTemplate(t)
+			})
 		},
 	}
 	addTemplateFlagSet(cmd)
@@ -221,7 +228,9 @@ func NewTemplateCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.CopyTemplate(handle, newName)
+			return withTransaction(func() error {
+				return Client.CopyTemplate(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -254,7 +263,9 @@ func NewTemplateRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameTemplate(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameTemplate(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -263,6 +274,12 @@ func NewTemplateRenameCmd() *cobra.Command {
 	return cmd
 }
 
+// NOTE: unlike every other item type's remove command, Template's remove below is
+// deliberately NOT wrapped in withTransaction. This is out of scope for this task (which
+// only covers add/edit/copy/rename); see the task brief for Template's add/edit/copy/rename
+// cleanup for background on the now-fixed server-side crash this guarded against for
+// mutating calls. Whether remove_item is similarly safe under a transaction for a non-
+// InheritableItem type like Template was not verified here.
 func NewTemplateRemoveCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",

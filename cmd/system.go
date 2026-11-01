@@ -482,7 +482,12 @@ func NewSystemAddCmd() *cobra.Command {
 				return err
 			}
 			// Now create the system via XML-RPC
-			system, err := Client.CreateSystem(newSystem)
+			var system *cobbler.System
+			err = withTransaction(func() error {
+				var txErr error
+				system, txErr = Client.CreateSystem(newSystem)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -530,35 +535,35 @@ func NewSystemCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopySystem(systemHandle, systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystemHandle, err := Client.GetSystemHandle(systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystem, err := Client.GetSystem(newSystemHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update the system in-memory
-			err = updateSystemFromFlags(cmd, newSystem)
-			if err != nil {
-				return err
-			}
-			if newSystem.Meta.IsDirty {
-				newSystem, err = Client.GetSystem(
-					newSystem.Uid,
-					newSystem.Meta.IsFlattened,
-					newSystem.Meta.IsResolved,
-				)
+			return withTransaction(func() error {
+				if err := Client.CopySystem(systemHandle, systemNewName); err != nil {
+					return err
+				}
+				newSystemHandle, err := Client.GetSystemHandle(systemNewName)
 				if err != nil {
 					return err
 				}
-			}
-			// Update the system via XML-RPC
-			return Client.UpdateSystem(newSystem)
+				newSystem, err := Client.GetSystem(newSystemHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update the system in-memory
+				if err := updateSystemFromFlags(cmd, newSystem); err != nil {
+					return err
+				}
+				if newSystem.Meta.IsDirty {
+					newSystem, err = Client.GetSystem(
+						newSystem.Uid,
+						newSystem.Meta.IsFlattened,
+						newSystem.Meta.IsResolved,
+					)
+					if err != nil {
+						return err
+					}
+				}
+				// Update the system via XML-RPC
+				return Client.UpdateSystem(newSystem)
+			})
 		},
 	}
 	addCommonArgs(systemCopyCmd)
@@ -657,7 +662,9 @@ func NewSystemEditCmd() *cobra.Command {
 				}
 			}
 			// Update the system via XML-RPC
-			return Client.UpdateSystem(updateSystem)
+			return withTransaction(func() error {
+				return Client.UpdateSystem(updateSystem)
+			})
 		},
 	}
 	addCommonArgs(systemEditCmd)
@@ -913,7 +920,9 @@ func NewSystemRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			return RemoveItemRecursive(cmd, args, "system")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "system")
+			})
 		},
 	}
 	systemRemoveCmd.Flags().String("name", "", "the system name")
@@ -952,33 +961,33 @@ func NewSystemRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameSystem(systemHandle, systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystemHandle, err := Client.GetSystemHandle(systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystem, err := Client.GetSystem(newSystemHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateSystemFromFlags(cmd, newSystem)
-			if err != nil {
-				return err
-			}
-			if newSystem.Meta.IsDirty {
-				newSystem, err = Client.GetSystem(
-					newSystem.Uid,
-					newSystem.Meta.IsFlattened,
-					newSystem.Meta.IsResolved,
-				)
+			return withTransaction(func() error {
+				if err := Client.RenameSystem(systemHandle, systemNewName); err != nil {
+					return err
+				}
+				newSystemHandle, err := Client.GetSystemHandle(systemNewName)
 				if err != nil {
 					return err
 				}
-			}
-			return Client.UpdateSystem(newSystem)
+				newSystem, err := Client.GetSystem(newSystemHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateSystemFromFlags(cmd, newSystem); err != nil {
+					return err
+				}
+				if newSystem.Meta.IsDirty {
+					newSystem, err = Client.GetSystem(
+						newSystem.Uid,
+						newSystem.Meta.IsFlattened,
+						newSystem.Meta.IsResolved,
+					)
+					if err != nil {
+						return err
+					}
+				}
+				return Client.UpdateSystem(newSystem)
+			})
 		},
 	}
 	addCommonArgs(systemRenameCmd)

@@ -80,6 +80,81 @@ func Test_DistroAddCmd(t *testing.T) {
 	}
 }
 
+// Test_DistroAddCmd_FailedAddDoesNotLeakDanglingName is a regression test for cobbler-cli
+// ledger entry 2.8 ("A failed new-mode save_item/add permanently leaks a dangling name
+// claim", the client-side fix for cobbler ledger entry 1.4). Before the fix, cobbler-cli
+// issued its new_distro/modify_distro/save_distro XML-RPC calls directly with no
+// transaction_begin/transaction_commit/transaction_abort wrapping. A failed `distro add`
+// (new_distro succeeds server-side and claims the name, but a later modify_distro call fails
+// validation before save_distro is ever reached) left the half-created distro's name sitting
+// forever in cobblerd's global self.unsaved_items cache (until CACHE_TIMEOUT or a cobblerd
+// restart) - with zero CLI-visible trace (`distro list`/`distro report` correctly show no
+// such distro). The client-visible symptom is that an immediate retry of `distro add` with
+// the same name and otherwise-valid fields fails with "a Distro with the name ... already
+// exists", because cobblerd's has_item/get_item_handle falls back to searching
+// self.unsaved_items. Wrapping the add in a transaction (see withTransaction in cmd/root.go)
+// fixes this: new_distro stages into the server's per-token transaction instead of the
+// global unsaved_items cache, and the wrapper's transaction_abort on error discards that
+// staged state cleanly, so nothing is left behind for the retry to collide with.
+func Test_DistroAddCmd_FailedAddDoesNotLeakDanglingName(t *testing.T) {
+	name := "test-distro-add-dangling-name"
+	setupClient(t)
+	t.Cleanup(func() {
+		// Best-effort: only succeeds if the second (valid) add below actually created the
+		// distro. If the bug has regressed and only the first (failing) add ran, there is
+		// nothing to clean up server-side, so an error here is not itself a test failure.
+		_ = removeDistro(Client, name)
+	})
+
+	// First attempt: a deliberately invalid --initrd path. Client.CreateDistro's new_distro
+	// call succeeds, but the subsequent modify_distro("initrd", ...) call fails server-side
+	// validation ("initrd not found"), so CreateDistro returns an error without ever reaching
+	// save_distro.
+	cobra.OnInitialize(initConfig, setupLogger)
+	failCmd := NewRootCmd()
+	failCmd.SetArgs([]string{
+		"--config", "../testing/.cobbler.yaml",
+		"distro", "add", "--name", name,
+		"--kernel", "/extracted_iso_image/install/vmlinuz",
+		"--initrd", "/extracted_iso_image/install/does-not-exist-initrd.gz",
+	})
+	failStdout := bytes.NewBufferString("")
+	failStderr := bytes.NewBufferString("")
+	failCmd.SetOut(failStdout)
+	failCmd.SetErr(failStderr)
+	if err := failCmd.Execute(); err == nil {
+		t.Fatal("expected the first distro add (nonexistent initrd) to fail")
+	}
+
+	// Second attempt, immediately afterward: same name, valid fields this time. Before the
+	// fix this fails with "a Distro with the name ... already exists" (the dangling name
+	// claim left by the first attempt); after the fix it must succeed right away.
+	cobra.OnInitialize(initConfig, setupLogger)
+	okCmd := NewRootCmd()
+	okCmd.SetArgs([]string{
+		"--config", "../testing/.cobbler.yaml",
+		"distro", "add", "--name", name,
+		"--kernel", "/extracted_iso_image/install/vmlinuz",
+		"--initrd", "/extracted_iso_image/install/initrd.gz",
+	})
+	okStdout := bytes.NewBufferString("")
+	okStderr := bytes.NewBufferString("")
+	okCmd.SetOut(okStdout)
+	okCmd.SetErr(okStderr)
+
+	err := okCmd.Execute()
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, okStderr)
+
+	stdoutBytes, err := io.ReadAll(okStdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), "Distro "+name+" created") {
+		t.Fatalf("expected the immediate retry with the same name to succeed; got stdout: %s", string(stdoutBytes))
+	}
+}
+
 func Test_DistroCopyCmd(t *testing.T) {
 	type args struct {
 		command []string

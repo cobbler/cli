@@ -458,7 +458,12 @@ func NewProfileAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			profile, err := Client.CreateProfile(newProfile)
+			var profile *cobbler.Profile
+			err = withTransaction(func() error {
+				var txErr error
+				profile, txErr = Client.CreateProfile(newProfile)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -507,23 +512,23 @@ func NewProfileCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyProfile(profileHandle, profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfileHandle, err := Client.GetProfileHandle(profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfile, err := Client.GetProfile(newProfileHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateProfileFromFlags(cmd, newProfile)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateProfile(newProfile)
+			return withTransaction(func() error {
+				if err := Client.CopyProfile(profileHandle, profileNewName); err != nil {
+					return err
+				}
+				newProfileHandle, err := Client.GetProfileHandle(profileNewName)
+				if err != nil {
+					return err
+				}
+				newProfile, err := Client.GetProfile(newProfileHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateProfileFromFlags(cmd, newProfile); err != nil {
+					return err
+				}
+				return Client.UpdateProfile(newProfile)
+			})
 		},
 	}
 	addCommonArgs(profileCopyCmd)
@@ -611,7 +616,9 @@ func NewProfileEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.UpdateProfile(updateProfile)
+			return withTransaction(func() error {
+				return Client.UpdateProfile(updateProfile)
+			})
 		},
 	}
 	addCommonArgs(profileEditCmd)
@@ -743,7 +750,9 @@ func NewProfileRemoveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.DeleteProfileRecursive(resolvedUID, recursiveDelete)
+			return withTransaction(func() error {
+				return Client.DeleteProfileRecursive(resolvedUID, recursiveDelete)
+			})
 		},
 	}
 	profileRemoveCmd.Flags().String("name", "", "the profile name")
@@ -781,23 +790,23 @@ func NewProfileRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameProfile(profileHandle, profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfileHandle, err := Client.GetProfileHandle(profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfile, err := Client.GetProfile(newProfileHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateProfileFromFlags(cmd, newProfile)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateProfile(newProfile)
+			return withTransaction(func() error {
+				if err := Client.RenameProfile(profileHandle, profileNewName); err != nil {
+					return err
+				}
+				newProfileHandle, err := Client.GetProfileHandle(profileNewName)
+				if err != nil {
+					return err
+				}
+				newProfile, err := Client.GetProfile(newProfileHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateProfileFromFlags(cmd, newProfile); err != nil {
+					return err
+				}
+				return Client.UpdateProfile(newProfile)
+			})
 		},
 	}
 	addCommonArgs(profileRenameCmd)

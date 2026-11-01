@@ -189,7 +189,17 @@ func addUIDFlag(command *cobra.Command, what string) {
 	command.Flags().String("uid", "", fmt.Sprintf("the %s uid (alternative to --name)", what))
 }
 
-// RemoveItemRecursive accesses the given flags and attempts to remove a given item
+// RemoveItemRecursive accesses the given flags and attempts to remove a given item.
+//
+// Note: this helper deliberately does NOT wrap the RemoveItem call in a server-side
+// transaction itself, even though most of its callers' commands are covered by the
+// transaction wrapping described in cobbler-cli ledger entry 2.8. Cobbler's
+// transaction-aware remove_item path (remote.py) unconditionally accesses
+// attributes (e.g. depth) that only exist on InheritableItem subtypes - for plain
+// BaseItem types like Template and NetworkInterface, wrapping remove in a
+// transaction crashes server-side with an AttributeError. Safe callers (every item
+// type except Template) wrap their own call to this helper instead; see each
+// call site in cmd/*.go.
 func RemoveItemRecursive(cmd *cobra.Command, args []string, what string) error {
 	_ = args
 	itemName, err := cmd.Flags().GetString("name")

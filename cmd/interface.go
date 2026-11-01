@@ -188,7 +188,12 @@ func NewInterfaceAddCommand() *cobra.Command {
 			if err := updateNetworkInterfaceFromFlags(cmd, &iface); err != nil {
 				return err
 			}
-			created, err := Client.CreateNetworkInterface(systemUid, iface)
+			var created *cobbler.NetworkInterface
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateNetworkInterface(systemUid, iface)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -230,7 +235,9 @@ func NewInterfaceEditCommand() *cobra.Command {
 			if err := updateNetworkInterfaceFromFlags(cmd, iface); err != nil {
 				return err
 			}
-			return Client.UpdateNetworkInterface(iface)
+			return withTransaction(func() error {
+				return Client.UpdateNetworkInterface(iface)
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface name")
@@ -263,26 +270,28 @@ func NewInterfaceCopyCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := Client.CopyNetworkInterface(handle, newName); err != nil {
-				return err
-			}
-			// Clear identity-bound fields on the copy by default; users can
-			// re-set them via --mac-address / --ipv4-address / --ipv6-address.
-			newHandle, err := Client.GetNetworkInterfaceHandle(newName)
-			if err != nil {
-				return err
-			}
-			fresh, err := Client.GetNetworkInterface(newHandle, false, false)
-			if err != nil {
-				return err
-			}
-			fresh.MacAddress = ""
-			fresh.IPv4.Address = ""
-			fresh.IPv6.Address = ""
-			if err := updateNetworkInterfaceFromFlags(cmd, fresh); err != nil {
-				return err
-			}
-			return Client.UpdateNetworkInterface(fresh)
+			return withTransaction(func() error {
+				if err := Client.CopyNetworkInterface(handle, newName); err != nil {
+					return err
+				}
+				// Clear identity-bound fields on the copy by default; users can
+				// re-set them via --mac-address / --ipv4-address / --ipv6-address.
+				newHandle, err := Client.GetNetworkInterfaceHandle(newName)
+				if err != nil {
+					return err
+				}
+				fresh, err := Client.GetNetworkInterface(newHandle, false, false)
+				if err != nil {
+					return err
+				}
+				fresh.MacAddress = ""
+				fresh.IPv4.Address = ""
+				fresh.IPv6.Address = ""
+				if err := updateNetworkInterfaceFromFlags(cmd, fresh); err != nil {
+					return err
+				}
+				return Client.UpdateNetworkInterface(fresh)
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface to copy")
@@ -316,7 +325,9 @@ func NewInterfaceRenameCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameNetworkInterface(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameNetworkInterface(handle, newName)
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface to rename")
@@ -325,6 +336,12 @@ func NewInterfaceRenameCommand() *cobra.Command {
 	return cmd
 }
 
+// NOTE: unlike every other item type's remove command, the network interface remove below
+// is deliberately NOT wrapped in withTransaction. This is out of scope for this task (which
+// only covers add/edit/copy/rename); see the task brief for NetworkInterface's add/edit/
+// copy/rename cleanup for background on the now-fixed server-side crash this guarded against
+// for mutating calls. Whether remove_item/delete is similarly safe under a transaction for a
+// non-InheritableItem type like NetworkInterface was not verified here.
 func NewInterfaceRemoveCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",

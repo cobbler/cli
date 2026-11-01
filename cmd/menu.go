@@ -112,7 +112,12 @@ func NewMenuAddCmd() (*cobra.Command, error) {
 				return err
 			}
 			// Now create the menu via XML-RPC
-			menu, err := Client.CreateMenu(newMenu)
+			var menu *cobbler.Menu
+			err = withTransaction(func() error {
+				var txErr error
+				menu, txErr = Client.CreateMenu(newMenu)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -157,23 +162,23 @@ func NewMenuCopyCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyMenu(menuHandle, menuNewName)
-			if err != nil {
-				return err
-			}
-			newMenuHandle, err := Client.GetMenuHandle(menuNewName)
-			if err != nil {
-				return err
-			}
-			newMenu, err := Client.GetMenu(newMenuHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateMenuFromFlags(cmd, newMenu)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateMenu(newMenu)
+			return withTransaction(func() error {
+				if err := Client.CopyMenu(menuHandle, menuNewName); err != nil {
+					return err
+				}
+				newMenuHandle, err := Client.GetMenuHandle(menuNewName)
+				if err != nil {
+					return err
+				}
+				newMenu, err := Client.GetMenu(newMenuHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateMenuFromFlags(cmd, newMenu); err != nil {
+					return err
+				}
+				return Client.UpdateMenu(newMenu)
+			})
 		},
 	}
 	addCommonArgs(menuCopyCmd)
@@ -220,7 +225,9 @@ func NewMenuEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.UpdateMenu(menuToEdit)
+			return withTransaction(func() error {
+				return Client.UpdateMenu(menuToEdit)
+			})
 		},
 	}
 	addCommonArgs(menuEditCmd)
@@ -286,7 +293,9 @@ func NewMenuRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			return RemoveItemRecursive(cmd, args, "menu")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "menu")
+			})
 		},
 	}
 	menuRemoveCmd.Flags().String("name", "", "the menu name")
@@ -323,23 +332,23 @@ func NewMenuRenameCmd() (*cobra.Command, error) {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameMenu(menuHandle, menuNewName)
-			if err != nil {
-				return err
-			}
-			newMenuHandle, err := Client.GetMenuHandle(menuNewName)
-			if err != nil {
-				return err
-			}
-			newMenu, err := Client.GetMenu(newMenuHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateMenuFromFlags(cmd, newMenu)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateMenu(newMenu)
+			return withTransaction(func() error {
+				if err := Client.RenameMenu(menuHandle, menuNewName); err != nil {
+					return err
+				}
+				newMenuHandle, err := Client.GetMenuHandle(menuNewName)
+				if err != nil {
+					return err
+				}
+				newMenu, err := Client.GetMenu(newMenuHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateMenuFromFlags(cmd, newMenu); err != nil {
+					return err
+				}
+				return Client.UpdateMenu(newMenu)
+			})
 		},
 	}
 	addCommonArgs(menuRenameCmd)

@@ -53,7 +53,12 @@ func newDistroGroupAddCmd() *cobra.Command {
 			if itemsSet {
 				g.Members = items
 			}
-			created, err := Client.CreateDistroGroup(g)
+			var created *cobbler.DistroGroup
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateDistroGroup(g)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -99,7 +104,9 @@ func newDistroGroupEditCmd() *cobra.Command {
 			if itemsSet {
 				g.Members = items
 			}
-			return Client.UpdateDistroGroup(g)
+			return withTransaction(func() error {
+				return Client.UpdateDistroGroup(g)
+			})
 		},
 	}
 	addGroupFlagSet(cmd)
@@ -131,7 +138,9 @@ func newDistroGroupCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.CopyDistroGroup(handle, newName)
+			return withTransaction(func() error {
+				return Client.CopyDistroGroup(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -164,7 +173,9 @@ func newDistroGroupRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameDistroGroup(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameDistroGroup(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -181,7 +192,9 @@ func newDistroGroupRemoveCmd() *cobra.Command {
 			if err := generateCobblerClient(); err != nil {
 				return err
 			}
-			return RemoveItemRecursive(cmd, args, "distro_group")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "distro_group")
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the distro group name")
