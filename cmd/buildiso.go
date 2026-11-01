@@ -69,6 +69,10 @@ func NewBuildisoCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			excludeSystemsOption, err := cmd.Flags().GetBool("exclude-systems")
+			if err != nil {
+				return err
+			}
 			if distroOption != "" {
 				distroOption, err = resolveUID(&Client, "distro", distroOption, "")
 				if err != nil {
@@ -76,16 +80,17 @@ func NewBuildisoCmd() *cobra.Command {
 				}
 			}
 			buildisoOptions := cobblerclient.BuildisoOptions{
-				Iso:           isoOption,
-				Profiles:      profilesOption,
-				Systems:       systemsOption,
-				BuildisoDir:   tempdirOption,
-				Distro:        distroOption,
-				Standalone:    standaloneOption,
-				Airgapped:     airgappedOption,
-				Source:        sourceOption,
-				ExcludeDns:    excludeDnsOption,
-				XorrisofsOpts: xorrisofsOption,
+				Iso:            isoOption,
+				Profiles:       profilesOption,
+				Systems:        systemsOption,
+				BuildisoDir:    tempdirOption,
+				Distro:         distroOption,
+				Standalone:     standaloneOption,
+				Airgapped:      airgappedOption,
+				Source:         sourceOption,
+				ExcludeDns:     excludeDnsOption,
+				ExcludeSystems: excludeSystemsOption,
+				XorrisofsOpts:  xorrisofsOption,
 			}
 			eventId, err := Client.BackgroundBuildiso(buildisoOptions)
 			if err != nil {
@@ -98,6 +103,7 @@ func NewBuildisoCmd() *cobra.Command {
 	buildisoCmd.Flags().Bool("airgapped", false, "creates a standalone ISO with all distro and repo files for disconnected system installation")
 	buildisoCmd.Flags().String("distro", "", "used with --standalone and --airgapped to create a distro-based ISO including all associated profiles/systems (name, resolved to a UID)")
 	buildisoCmd.Flags().Bool("exclude-dns", false, "prevents addition of name server addresses to the kernel boot options")
+	buildisoCmd.Flags().Bool("exclude-systems", false, "excludes all systems from the generated ISO, including only the selected profiles")
 	buildisoCmd.Flags().String("iso", "", "output ISO to this file")
 	buildisoCmd.Flags().String("mkisofs-opts", "", "extra options for mkisofs")
 	buildisoCmd.Flags().StringSlice("profiles", []string{}, "use these profiles only (names, resolved to UIDs)")

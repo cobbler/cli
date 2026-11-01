@@ -85,6 +85,22 @@ func Test_BuildisoNetinstallCmd(t *testing.T) {
 			want:    "Event ID:",
 			wantErr: false,
 		},
+		{
+			// Regression test: --exclude-systems used to not exist at all
+			// (NewBuildisoCmd never registered it, even though
+			// cobblerclient.BuildisoOptions.ExcludeSystems and the Python
+			// API's build_iso(exclude_systems=...) already existed
+			// end-to-end), so there was no way to narrow the system list
+			// on a buildiso without explicitly naming every system to
+			// include. This only exercises flag registration/wiring (the
+			// RunE invocation would fail outright with "flag accessed but
+			// not defined: exclude-systems" before the fix); it does not
+			// assert anything about the generated ISO's contents.
+			name:    "excludesystems",
+			args:    args{command: []string{"--config", "../testing/.cobbler.yaml", "buildiso", "--profiles", "test", "--exclude-systems"}},
+			want:    "Event ID:",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
