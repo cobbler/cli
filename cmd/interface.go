@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -401,9 +402,27 @@ func NewInterfaceListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// iface.SystemName is never populated here: cobbler/items/network_interface.py's
+			// system_name is a derived read-only property (computed on access from system_uid),
+			// not a backed attribute, so BaseItem.to_dict() never includes it in the unresolved
+			// get_network_interfaces response - confirmed via a raw XML-RPC call in every
+			// flattened/resolved combination. Resolve each interface's real parent system name
+			// client-side via system_uid instead, which is always present.
+			systems, err := Client.GetSystems()
+			if err != nil {
+				return err
+			}
+			systemNameByUid := make(map[string]string, len(systems))
+			for _, system := range systems {
+				systemNameByUid[system.Uid] = system.Name
+			}
 			grouped := make(map[string][]string)
 			for _, iface := range interfaces {
-				grouped[iface.SystemName] = append(grouped[iface.SystemName], iface.Name)
+				systemName, ok := systemNameByUid[iface.SystemUid]
+				if !ok {
+					systemName = iface.SystemUid
+				}
+				grouped[systemName] = append(grouped[systemName], iface.Name)
 			}
 			systemNames := make([]string, 0, len(grouped))
 			for systemName := range grouped {
@@ -445,11 +464,42 @@ func NewInterfaceReportCommand() *cobra.Command {
 				return err
 			}
 
+			// Network interface names are only unique per-system, not globally (the same
+			// name, e.g. "eth0", can legitimately exist on multiple systems) - see ledger
+			// entry 2.7. Filtering/disambiguating by system is done via system_uid, not the
+			// server's "system_name" criterion: cobbler/items/network_interface.py's
+			// system_name is a derived read-only property with no backing attribute, so
+			// BaseItem.to_dict() never includes it (confirmed via a raw XML-RPC call in every
+			// flattened/resolved combination) - find_network_interface's find_match() compares
+			// against to_dict() data, so a "system_name" criterion never matches anything.
 			var interfaces []*cobbler.NetworkInterface
 			switch {
+			case name != "" && uid == "" && systemName != "":
+				systemUid, err := Client.GetSystemHandle(systemName)
+				if err != nil {
+					return err
+				}
+				matches, err := Client.FindNetworkInterface(map[string]interface{}{
+					"name":       name,
+					"system_uid": systemUid,
+				}, false)
+				if err != nil {
+					return err
+				}
+				switch len(matches) {
+				case 0:
+					return fmt.Errorf("no network interface named %q found on system %q", name, systemName)
+				case 1:
+					interfaces = matches
+				default:
+					return fmt.Errorf("multiple network interfaces named %q found on system %q", name, systemName)
+				}
 			case name != "" || uid != "":
 				resolvedUID, err := resolveUID(&Client, "network_interface", name, uid)
 				if err != nil {
+					if errors.Is(err, errItemAmbiguous) {
+						return fmt.Errorf("multiple interfaces named %q exist across different systems; pass --system-name to disambiguate (or --uid)", name)
+					}
 					return err
 				}
 				iface, err := Client.GetNetworkInterface(resolvedUID, false, false)
@@ -458,8 +508,12 @@ func NewInterfaceReportCommand() *cobra.Command {
 				}
 				interfaces = []*cobbler.NetworkInterface{iface}
 			case systemName != "":
+				systemUid, err := Client.GetSystemHandle(systemName)
+				if err != nil {
+					return err
+				}
 				interfaces, err = Client.FindNetworkInterface(map[string]interface{}{
-					"system_name": systemName,
+					"system_uid": systemUid,
 				}, false)
 				if err != nil {
 					return err
@@ -478,7 +532,7 @@ func NewInterfaceReportCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface name")
-	cmd.Flags().String("system-name", "", "filter by parent system name")
+	cmd.Flags().String("system-name", "", "filter by parent system name; disambiguates --name when the same interface name exists on multiple systems")
 	addUIDFlag(cmd, "network interface")
 	return cmd
 }

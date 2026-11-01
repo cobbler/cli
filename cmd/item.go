@@ -14,6 +14,13 @@ import (
 // like resolveUIDs can distinguish "doesn't exist" from a genuine lookup failure via errors.Is.
 var errItemNotFound = errors.New("item not found")
 
+// errItemAmbiguous is wrapped into resolveUID's "multiple <what> items found with name ..."
+// error so callers can distinguish "name exists but isn't unique" from a genuine not-found
+// error via errors.Is, and react with identifier-specific guidance (e.g. cmd/interface.go's
+// report command suggesting --system-name, since network interface names are only unique
+// per-system, not globally).
+var errItemAmbiguous = errors.New("multiple items found")
+
 var inheritedUsageFormat = "Mark %s as inherited and remove its concrete value"
 
 func addStringFlags(command *cobra.Command, metadata map[string]FlagMetadata[string]) {
@@ -148,7 +155,7 @@ func resolveUID(client *cobbler.Client, what, name, uid string) (string, error) 
 		}
 		return uidValue, nil
 	default:
-		return "", fmt.Errorf("multiple %s items found with name %q; use --uid to disambiguate", what, name)
+		return "", fmt.Errorf("multiple %s items found with name %q; use --uid to disambiguate: %w", what, name, errItemAmbiguous)
 	}
 }
 
