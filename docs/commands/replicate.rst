@@ -7,6 +7,10 @@ locally relevant ``/etc/cobbler/settings.yaml``, as this file is not synced.
 
 This feature is intended for load-balancing, disaster-recovery, backup, or multiple geography support.
 
+**Warning**: ``replicate`` is only tested and supported between a master and a slave Cobbler server running the
+exact same Cobbler version. Replicating between different versions is untested at this time and may fail outright
+or silently transfer incompatible/incomplete data.
+
 Cobbler can replicate data from a central server.
 
 Objects that need to be replicated should be specified with a pattern, such as ``--profiles="webservers* dbservers*"``
