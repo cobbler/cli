@@ -334,6 +334,26 @@ func NewTemplateListCmd() *cobra.Command {
 	return cmd
 }
 
+// templateReportContentIndicator returns the value `template report` should
+// print for a Template's content field. Content can be arbitrarily large
+// (it's a whole autoinstall template body), so report deliberately never
+// prints it inline -- that would make report's output unusable for exactly
+// the templates where content's presence matters most. When content is
+// empty it's returned unchanged, matching every other field's existing
+// convention of printing an empty value rather than omitting the field.
+// When content is non-empty, a short indicator is returned instead,
+// pointing at the dedicated `template content` subcommand that already
+// prints the real (and possibly very long) text.
+func templateReportContentIndicator(t *cobbler.Template) string {
+	if t.Content == "" {
+		return t.Content
+	}
+	return fmt.Sprintf(
+		"<%d bytes, not shown -- see 'cobbler template content --name %s'>",
+		len(t.Content), t.Name,
+	)
+}
+
 func NewTemplateReportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "report",
@@ -368,7 +388,13 @@ func NewTemplateReportCmd() *cobra.Command {
 				templates = []*cobbler.Template{t}
 			}
 			for _, t := range templates {
-				printStructured(cmd, t)
+				// Print a shallow copy with content replaced by a short indicator
+				// (see templateReportContentIndicator) rather than the real
+				// struct, so the full -- potentially huge -- content is never
+				// dumped inline by report.
+				display := *t
+				display.Content = templateReportContentIndicator(t)
+				printStructured(cmd, &display)
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
 			return nil
