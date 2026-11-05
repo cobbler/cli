@@ -305,6 +305,53 @@ func Test_UpdateProfileFromFlags_EnableMenu(t *testing.T) {
 	}
 }
 
+// Test_UpdateProfileFromFlags_VirtRam is a regression test for a panic in
+// updateProfileFromFlags: the "virt-ram"/"virt-ram-inherit" case's
+// cmd.Flags().Lookup(...).Changed check was copy-pasted from the
+// "virt-auto-boot-inherit" case and never updated to look up its own
+// "virt-ram-inherit" flag, so setting --virt-ram alone (without
+// --virt-auto-boot-inherit also being a registered/resolvable flag at that
+// point) dereferenced a nil *pflag.Flag. This exercises the real flag
+// registration and switch-case code directly and does not need a live
+// cobbler server.
+func Test_UpdateProfileFromFlags_VirtRam(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("virt-ram", "2048")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.Virt.Ram.IsInherited {
+		t.Fatal("profile.Virt.Ram should not be marked inherited after --virt-ram=2048")
+	}
+	if profile.Virt.Ram.Data != 2048 {
+		t.Fatalf("profile.Virt.Ram.Data should be 2048 after --virt-ram=2048, got %d", profile.Virt.Ram.Data)
+	}
+}
+
+// Test_UpdateProfileFromFlags_VirtFileSize is the --virt-file-size
+// counterpart of Test_UpdateProfileFromFlags_VirtRam; see that test's
+// comment for the panic mechanism being guarded against (the same
+// copy-pasted "virt-auto-boot-inherit" lookup).
+func Test_UpdateProfileFromFlags_VirtFileSize(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("virt-file-size", "10")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.Virt.FileSize.IsInherited {
+		t.Fatal("profile.Virt.FileSize should not be marked inherited after --virt-file-size=10")
+	}
+	if profile.Virt.FileSize.Data != 10 {
+		t.Fatalf("profile.Virt.FileSize.Data should be 10 after --virt-file-size=10, got %f", profile.Virt.FileSize.Data)
+	}
+}
+
 // Test_ProfileCopyCmd_UID exercises the --uid sibling flag on copy.
 func Test_ProfileCopyCmd_UID(t *testing.T) {
 	name := "test-profile-copy-uid"

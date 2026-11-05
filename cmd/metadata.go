@@ -245,17 +245,19 @@ var profileIntFlagMetadata = map[string]FlagMetadata[int]{
 		Usage:        "virt CPUs",
 	},
 	"virt-ram": {
-		Name:         "virt-ram",
-		DefaultValue: 0,
-		Usage:        "virt RAM size in MB",
+		Name:          "virt-ram",
+		DefaultValue:  0,
+		Usage:         "virt RAM size in MB",
+		IsInheritable: true,
 	},
 }
 
 var profileFloatFlagMetadata = map[string]FlagMetadata[float64]{
 	"virt-file-size": {
-		Name:         "virt-file-size",
-		DefaultValue: float64(0),
-		Usage:        "virt file size in GB",
+		Name:          "virt-file-size",
+		DefaultValue:  float64(0),
+		Usage:         "virt file size in GB",
+		IsInheritable: true,
 	},
 }
 
@@ -410,14 +412,16 @@ var systemBoolFlagMetadata = map[string]FlagMetadata[bool]{
 
 var systemIntFlagMetadata = map[string]FlagMetadata[int]{
 	"virt-cpus": {
-		Name:         "virt-cpus",
-		DefaultValue: 0,
-		Usage:        "virt CPUs",
+		Name:          "virt-cpus",
+		DefaultValue:  0,
+		Usage:         "virt CPUs",
+		IsInheritable: true,
 	},
 	"virt-ram": {
-		Name:         "virt-ram",
-		DefaultValue: 0,
-		Usage:        "virt RAM size in MB",
+		Name:          "virt-ram",
+		DefaultValue:  0,
+		Usage:         "virt RAM size in MB",
+		IsInheritable: true,
 	},
 	"serial-device": {
 		Name:         "serial-device",
@@ -433,9 +437,10 @@ var systemIntFlagMetadata = map[string]FlagMetadata[int]{
 
 var systemFloatFlagMetadata = map[string]FlagMetadata[float64]{
 	"virt-file-size": {
-		Name:         "virt-file-size",
-		DefaultValue: float64(0),
-		Usage:        "virt file size in GB",
+		Name:          "virt-file-size",
+		DefaultValue:  float64(0),
+		Usage:         "virt file size in GB",
+		IsInheritable: true,
 	},
 }
 
@@ -786,9 +791,10 @@ var repoStringFlagMetadata = map[string]FlagMetadata[string]{
 		Usage:        "Breed (valid options: none,rsync,rhn,yum,apt,wget)",
 	},
 	"createrepo-flags": {
-		Name:         "createrepo-flags",
-		DefaultValue: "",
-		Usage:        "flags to use with createrepo",
+		Name:          "createrepo-flags",
+		DefaultValue:  "",
+		Usage:         "flags to use with createrepo",
+		IsInheritable: true,
 	},
 	"mirror": {
 		Name:         "mirror",
@@ -801,9 +807,10 @@ var repoStringFlagMetadata = map[string]FlagMetadata[string]{
 		Usage:        "mirror type. Valid options: metalink,mirrorlist,baseurl",
 	},
 	"proxy": {
-		Name:         "proxy",
-		DefaultValue: "",
-		Usage:        "proxy URL (<<inherit>> to use proxy_url_ext from settings, blank or <<None>> for no proxy)",
+		Name:          "proxy",
+		DefaultValue:  "",
+		IsInheritable: true,
+		Usage:         "proxy URL (<<inherit>> to use proxy_url_ext from settings, blank or <<None>> for no proxy)",
 	},
 }
 

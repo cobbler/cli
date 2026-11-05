@@ -25,7 +25,17 @@ var inheritedUsageFormat = "Mark %s as inherited and remove its concrete value"
 
 func addStringFlags(command *cobra.Command, metadata map[string]FlagMetadata[string]) {
 	for _, value := range metadata {
-		command.Flags().String(value.Name, value.DefaultValue, value.Usage)
+		if value.IsInheritable {
+			var inheritFlagName = value.Name + "-inherit"
+			command.Flags().String(value.Name, value.DefaultValue, value.Usage)
+			command.Flags().Bool(
+				inheritFlagName,
+				false,
+				fmt.Sprintf(inheritedUsageFormat, value.Name),
+			)
+		} else {
+			command.Flags().String(value.Name, value.DefaultValue, value.Usage)
+		}
 	}
 }
 

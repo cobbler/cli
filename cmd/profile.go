@@ -378,8 +378,8 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 		case "virt-file-size":
 			fallthrough
 		case "virt-file-size-inherit":
-			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
-				profile.Virt.AutoBoot.IsInherited = true
+			if cmd.Flags().Lookup("virt-file-size-inherit").Changed {
+				profile.Virt.FileSize.IsInherited = true
 			} else {
 				var profileNewVirtFileSize float64
 				profileNewVirtFileSize, err = cmd.Flags().GetFloat64("virt-file-size")
@@ -399,7 +399,7 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 		case "virt-ram":
 			fallthrough
 		case "virt-ram-inherit":
-			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
+			if cmd.Flags().Lookup("virt-ram-inherit").Changed {
 				profile.Virt.Ram.IsInherited = true
 			} else {
 				var profileNewVirtRam int

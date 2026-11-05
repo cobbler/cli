@@ -6,8 +6,10 @@ import (
 	cobbler "github.com/cobbler/cobblerclient"
 	"github.com/spf13/cobra"
 	"io"
+	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 func createSystem(client cobbler.Client, name string) (*cobbler.System, error) {
@@ -202,6 +204,152 @@ func Test_SystemEditCmd(t *testing.T) {
 				t.Fatal("system update wasn't successful")
 			}
 		})
+	}
+}
+
+// restartCobblerd restarts the Cobbler test container (re-running its `cobblerd
+// -F` entrypoint from scratch) and waits for it to accept XML-RPC calls again.
+// Restarting the whole container -- rather than e.g. signalling the cobblerd
+// process -- is used because testing/compose.yml runs cobblerd directly as
+// PID 1 (no supervisord/init in the image), so `docker restart` is the only
+// generic way to force a clean reload of every collection from its on-disk
+// serialized state. That reload is what tells apart a change that was
+// actually persisted (via save_<item>) from one that only ever lived in
+// cobblerd's in-memory copy of the object (applied via modify_<item>, e.g.
+// through Client.UpdateSystem, but never saved).
+func restartCobblerd(t *testing.T) {
+	t.Helper()
+	restartCmd := exec.Command("docker", "restart", templateContainerName)
+	if out, err := restartCmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to restart container %s: %v: %s", templateContainerName, err, out)
+	}
+
+	deadline := time.Now().Add(90 * time.Second)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		if lastErr = generateCobblerClient(); lastErr == nil {
+			return
+		}
+	}
+	t.Fatalf("cobblerd did not become available again after restart: %v", lastErr)
+}
+
+// Test_SystemEditCmd_PersistsAcrossRestart is a regression test for a bug where
+// `cobbler system edit` appeared to succeed (and the edited field was visible on
+// an immediate re-read) but was silently lost the next time cobblerd restarted.
+//
+// The root cause: cobblerclient's UpdateSystem only issues the modify_system
+// XML-RPC calls that mutate cobblerd's in-memory object; unlike every other
+// item type's Update<Item> (UpdateProfile, UpdateDistro, ...), it never calls
+// the matching SaveSystem (save_system), which is what actually serializes the
+// change to disk. Without a restart, modify_system's in-memory mutation is
+// enough to make the change readable again, hiding the bug from tests that
+// only check an immediate re-read (such as Test_SystemEditCmd above).
+func Test_SystemEditCmd_PersistsAcrossRestart(t *testing.T) {
+	name := "test-system-edit-persist-restart"
+	const wantComment = "should-survive-a-cobblerd-restart"
+
+	setupClient(t)
+	_, err := createSystem(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if cleanupErr := removeSystem(Client, name); cleanupErr != nil {
+			t.Errorf("cleanup: remove system %s: %v", name, cleanupErr)
+		}
+	})
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{
+		"--config", "../testing/.cobbler.yaml",
+		"system", "edit", "--name", name, "--comment", wantComment,
+	})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+
+	restartCobblerd(t)
+
+	editedHandle, err := Client.GetSystemHandle(name)
+	cobbler.FailOnError(t, err)
+	reloadedSystem, err := Client.GetSystem(editedHandle, false, false)
+	cobbler.FailOnError(t, err)
+	if reloadedSystem.Comment != wantComment {
+		t.Fatalf("system edit did not persist across a cobblerd restart: got comment %q, want %q",
+			reloadedSystem.Comment, wantComment)
+	}
+}
+
+// Test_UpdateSystemFromFlags_VirtRam is a regression test for a panic in
+// updateSystemFromFlags: systemIntFlagMetadata's "virt-ram" entry was
+// missing IsInheritable, so addIntFlags never registered its
+// "virt-ram-inherit" companion flag, and the shared switch-case's
+// cmd.Flags().Lookup("virt-ram-inherit").Changed dereferenced a nil
+// *pflag.Flag. This exercises the real flag registration and switch-case
+// code directly and does not need a live cobbler server.
+func Test_UpdateSystemFromFlags_VirtRam(t *testing.T) {
+	cmd := NewSystemEditCmd()
+	err := cmd.Flags().Set("virt-ram", "2048")
+	cobbler.FailOnError(t, err)
+
+	system := cobbler.NewSystem()
+	err = updateSystemFromFlags(cmd, &system)
+	cobbler.FailOnError(t, err)
+
+	if system.Virt.Ram.IsInherited {
+		t.Fatal("system.Virt.Ram should not be marked inherited after --virt-ram=2048")
+	}
+	if system.Virt.Ram.Data != 2048 {
+		t.Fatalf("system.Virt.Ram.Data should be 2048 after --virt-ram=2048, got %d", system.Virt.Ram.Data)
+	}
+}
+
+// Test_UpdateSystemFromFlags_VirtFileSize is the --virt-file-size
+// counterpart of Test_UpdateSystemFromFlags_VirtRam; see that test's
+// comment for the panic mechanism being guarded against.
+func Test_UpdateSystemFromFlags_VirtFileSize(t *testing.T) {
+	cmd := NewSystemEditCmd()
+	err := cmd.Flags().Set("virt-file-size", "10")
+	cobbler.FailOnError(t, err)
+
+	system := cobbler.NewSystem()
+	err = updateSystemFromFlags(cmd, &system)
+	cobbler.FailOnError(t, err)
+
+	if system.Virt.FileSize.IsInherited {
+		t.Fatal("system.Virt.FileSize should not be marked inherited after --virt-file-size=10")
+	}
+	if system.Virt.FileSize.Data != 10 {
+		t.Fatalf("system.Virt.FileSize.Data should be 10 after --virt-file-size=10, got %f", system.Virt.FileSize.Data)
+	}
+}
+
+// Test_UpdateSystemFromFlags_VirtCpus is the --virt-cpus counterpart of
+// Test_UpdateSystemFromFlags_VirtRam: systemIntFlagMetadata's "virt-cpus"
+// entry was missing IsInheritable, so addIntFlags never registered its
+// "virt-cpus-inherit" companion flag, and the shared switch-case's
+// cmd.Flags().Lookup("virt-cpus-inherit").Changed dereferenced a nil
+// *pflag.Flag.
+func Test_UpdateSystemFromFlags_VirtCpus(t *testing.T) {
+	cmd := NewSystemEditCmd()
+	err := cmd.Flags().Set("virt-cpus", "4")
+	cobbler.FailOnError(t, err)
+
+	system := cobbler.NewSystem()
+	err = updateSystemFromFlags(cmd, &system)
+	cobbler.FailOnError(t, err)
+
+	if system.Virt.Cpus.IsInherited {
+		t.Fatal("system.Virt.Cpus should not be marked inherited after --virt-cpus=4")
+	}
+	if system.Virt.Cpus.Data != 4 {
+		t.Fatalf("system.Virt.Cpus.Data should be 4 after --virt-cpus=4, got %d", system.Virt.Cpus.Data)
 	}
 }
 
