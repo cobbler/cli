@@ -47,6 +47,30 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 			if err != nil {
 				return err
 			}
+			menusOption, err := cmd.Flags().GetString("menus")
+			if err != nil {
+				return err
+			}
+			templatesOption, err := cmd.Flags().GetString("templates")
+			if err != nil {
+				return err
+			}
+			networkInterfacesOption, err := cmd.Flags().GetString("network-interfaces")
+			if err != nil {
+				return err
+			}
+			distroGroupsOption, err := cmd.Flags().GetString("distro-groups")
+			if err != nil {
+				return err
+			}
+			profileGroupsOption, err := cmd.Flags().GetString("profile-groups")
+			if err != nil {
+				return err
+			}
+			systemGroupsOption, err := cmd.Flags().GetString("system-groups")
+			if err != nil {
+				return err
+			}
 			portOption, err := cmd.Flags().GetString("port")
 			if err != nil {
 				return err
@@ -72,17 +96,23 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 				return err
 			}
 			replicateOptions := cobblerclient.ReplicateOptions{
-				Master:          masterOption,
-				Port:            portOption,
-				DistroPatterns:  distrosOption,
-				ProfilePatterns: profilesOption,
-				SystemPatterns:  systemsOption,
-				RepoPatterns:    reposOption,
-				Imagepatterns:   imagesOption,
-				Prune:           pruneOption,
-				OmitData:        omitDataOption,
-				SyncAll:         syncAllOption,
-				UseSsl:          useSslOption,
+				Master:                   masterOption,
+				Port:                     portOption,
+				DistroPatterns:           distrosOption,
+				ProfilePatterns:          profilesOption,
+				SystemPatterns:           systemsOption,
+				RepoPatterns:             reposOption,
+				Imagepatterns:            imagesOption,
+				MenuPatterns:             menusOption,
+				TemplatePatterns:         templatesOption,
+				NetworkInterfacePatterns: networkInterfacesOption,
+				DistroGroupPatterns:      distroGroupsOption,
+				ProfileGroupPatterns:     profileGroupsOption,
+				SystemGroupPatterns:      systemGroupsOption,
+				Prune:                    pruneOption,
+				OmitData:                 omitDataOption,
+				SyncAll:                  syncAllOption,
+				UseSsl:                   useSslOption,
 			}
 			eventId, err := Client.BackgroundReplicate(replicateOptions)
 			if err != nil {
@@ -103,5 +133,11 @@ See https://cobbler.readthedocs.io/en/latest/cobbler.html#cobbler-replicate for 
 	replicateCmd.Flags().Bool("sync-all", false, "sync all data")
 	replicateCmd.Flags().String("systems", "", "patterns of systems to replicate")
 	replicateCmd.Flags().Bool("use-ssl", false, "use SSL to access the Cobbler master server API")
+	replicateCmd.Flags().String("menus", "", "patterns of menus to replicate")
+	replicateCmd.Flags().String("templates", "", "patterns of (non built-in) templates to replicate")
+	replicateCmd.Flags().String("network-interfaces", "", "patterns of network interfaces to replicate")
+	replicateCmd.Flags().String("distro-groups", "", "patterns of distro groups to replicate")
+	replicateCmd.Flags().String("profile-groups", "", "patterns of profile groups to replicate")
+	replicateCmd.Flags().String("system-groups", "", "patterns of system groups to replicate")
 	return replicateCmd
 }
