@@ -60,19 +60,8 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 					return
 				}
 				newMeta := convertMapStringToMapInterface(profileNewAutoinstallMeta)
-				if cmd.Flags().Lookup("autoinstall-meta-json").Changed {
-					var autoinstallMetaJSON string
-					autoinstallMetaJSON, err = cmd.Flags().GetString("autoinstall-meta-json")
-					if err != nil {
-						return
-					}
-					jsonMeta := map[string]interface{}{}
-					if err = json.Unmarshal([]byte(autoinstallMetaJSON), &jsonMeta); err != nil {
-						return
-					}
-					for k, v := range jsonMeta {
-						newMeta[k] = v
-					}
+				if err = mergeJSONObjectFlag(cmd, "autoinstall-meta-json", newMeta); err != nil {
+					return
 				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
@@ -123,6 +112,8 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			profile.Comment = profileNewComment
 		case "kernel-options":
 			fallthrough
+		case "kernel-options-json":
+			fallthrough
 		case "kernel-options-inherit":
 			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
 				profile.KernelOptions.Data = make(map[string]interface{})
@@ -136,22 +127,28 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
+				newOptions := convertMapStringToMapInterface(profileNewKernelOptions)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-json", newOptions); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"profile",
 						profile.Name,
 						"kernel_options",
-						convertMapStringToMapInterface(profileNewKernelOptions),
+						newOptions,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					profile.KernelOptions.IsInherited = false
-					profile.KernelOptions.Data = convertMapStringToMapInterface(profileNewKernelOptions)
+					profile.KernelOptions.Data = newOptions
 				}
 			}
 		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-json":
 			fallthrough
 		case "kernel-options-post-inherit":
 			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
@@ -166,19 +163,23 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
+				newOptionsPost := convertMapStringToMapInterface(profileNewKernelOptionsPost)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-post-json", newOptionsPost); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"profile",
 						profile.Name,
 						"kernel_options_post",
-						convertMapStringToMapInterface(profileNewKernelOptionsPost),
+						newOptionsPost,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					profile.KernelOptionsPost.IsInherited = false
-					profile.KernelOptionsPost.Data = convertMapStringToMapInterface(profileNewKernelOptionsPost)
+					profile.KernelOptionsPost.Data = newOptionsPost
 				}
 			}
 		case "owners":
@@ -207,9 +208,14 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			}
 			profile.RedhatManagementKey = profileNewRedhatManagementKey
 		case "template-files":
+			fallthrough
+		case "template-files-json":
 			var profileNewTemplateFiles map[string]string
 			profileNewTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
 			if err != nil {
+				return
+			}
+			if err = mergeJSONStringMapFlag(cmd, "template-files-json", profileNewTemplateFiles); err != nil {
 				return
 			}
 			if inPlace {

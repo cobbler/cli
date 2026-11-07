@@ -1300,3 +1300,63 @@ func Test_SystemExportCmd_All(t *testing.T) {
 		t.Fatal("system name missing from yaml export --all output")
 	}
 }
+
+// Test_UpdateSystemFromFlags_JSONFlags is the system counterpart of
+// Test_UpdateDistroFromFlags_JSONFlags; see that test's comment for intent and precedence rules.
+func Test_UpdateSystemFromFlags_JSONFlags(t *testing.T) {
+	t.Run("kernel-options-json", func(t *testing.T) {
+		cmd := NewSystemEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		system := cobbler.NewSystem()
+		cobbler.FailOnError(t, updateSystemFromFlags(cmd, &system))
+
+		if system.KernelOptions.IsInherited {
+			t.Fatal("system.KernelOptions should not be marked inherited")
+		}
+		if got := system.KernelOptions.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := system.KernelOptions.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", system.KernelOptions.Data["nested"])
+		}
+	})
+
+	t.Run("kernel-options-post-json", func(t *testing.T) {
+		cmd := NewSystemEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		system := cobbler.NewSystem()
+		cobbler.FailOnError(t, updateSystemFromFlags(cmd, &system))
+
+		if system.KernelOptionsPost.IsInherited {
+			t.Fatal("system.KernelOptionsPost should not be marked inherited")
+		}
+		if got := system.KernelOptionsPost.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-post-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := system.KernelOptionsPost.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", system.KernelOptionsPost.Data["nested"])
+		}
+	})
+
+	t.Run("template-files-json", func(t *testing.T) {
+		cmd := NewSystemEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files", "motd=snippets/motd"))
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files-json", `{"motd": "snippets/motd-v2", "banner": "snippets/banner"}`))
+
+		system := cobbler.NewSystem()
+		cobbler.FailOnError(t, updateSystemFromFlags(cmd, &system))
+
+		if got := system.TemplateFiles["motd"]; got != "snippets/motd-v2" {
+			t.Errorf("expected --template-files-json to override the flat \"motd\" value, got %q", got)
+		}
+		if got := system.TemplateFiles["banner"]; got != "snippets/banner" {
+			t.Errorf("expected --template-files-json to add \"banner\", got %q", got)
+		}
+	})
+}

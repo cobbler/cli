@@ -914,3 +914,69 @@ func Test_DistroExportCmd_All(t *testing.T) {
 		t.Fatal("distro name missing from yaml export --all output")
 	}
 }
+
+// Test_UpdateDistroFromFlags_JSONFlags confirms --kernel-options-json, --kernel-options-post-json,
+// and --template-files-json each merge on top of their flat stringToString counterpart and can
+// carry a value the flat flag's key=value syntax can't represent, mirroring the pre-existing
+// --autoinstall-meta-json. Exercises the real flag registration and switch-case code directly and
+// does not need a live cobbler server.
+func Test_UpdateDistroFromFlags_JSONFlags(t *testing.T) {
+	t.Run("kernel-options-json", func(t *testing.T) {
+		cmd, err := NewDistroEditCmd()
+		cobbler.FailOnError(t, err)
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		distro := cobbler.NewDistro()
+		cobbler.FailOnError(t, updateDistroFromFlags(cmd, &distro))
+
+		if distro.KernelOptions.IsInherited {
+			t.Fatal("distro.KernelOptions should not be marked inherited")
+		}
+		if got := distro.KernelOptions.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := distro.KernelOptions.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", distro.KernelOptions.Data["nested"])
+		}
+	})
+
+	t.Run("kernel-options-post-json", func(t *testing.T) {
+		cmd, err := NewDistroEditCmd()
+		cobbler.FailOnError(t, err)
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		distro := cobbler.NewDistro()
+		cobbler.FailOnError(t, updateDistroFromFlags(cmd, &distro))
+
+		if distro.KernelOptionsPost.IsInherited {
+			t.Fatal("distro.KernelOptionsPost should not be marked inherited")
+		}
+		if got := distro.KernelOptionsPost.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-post-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := distro.KernelOptionsPost.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", distro.KernelOptionsPost.Data["nested"])
+		}
+	})
+
+	t.Run("template-files-json", func(t *testing.T) {
+		cmd, err := NewDistroEditCmd()
+		cobbler.FailOnError(t, err)
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files", "motd=snippets/motd"))
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files-json", `{"motd": "snippets/motd-v2", "banner": "snippets/banner"}`))
+
+		distro := cobbler.NewDistro()
+		cobbler.FailOnError(t, updateDistroFromFlags(cmd, &distro))
+
+		if got := distro.TemplateFiles["motd"]; got != "snippets/motd-v2" {
+			t.Errorf("expected --template-files-json to override the flat \"motd\" value, got %q", got)
+		}
+		if got := distro.TemplateFiles["banner"]; got != "snippets/banner" {
+			t.Errorf("expected --template-files-json to add \"banner\", got %q", got)
+		}
+	})
+}

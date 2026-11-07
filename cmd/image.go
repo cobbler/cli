@@ -24,6 +24,8 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 		// Any rename & copy operation must be handled outside of this method.
 		case "kernel-options":
 			fallthrough
+		case "kernel-options-json":
+			fallthrough
 		case "kernel-options-inherit":
 			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
 				image.KernelOptions.Data = make(map[string]interface{})
@@ -37,22 +39,28 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				if err != nil {
 					return
 				}
+				newOptions := convertMapStringToMapInterface(newKernelOptions)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-json", newOptions); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"image",
 						image.Name,
 						"kernel_options",
-						convertMapStringToMapInterface(newKernelOptions),
+						newOptions,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					image.KernelOptions.IsInherited = false
-					image.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptions)
+					image.KernelOptions.Data = newOptions
 				}
 			}
 		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-json":
 			fallthrough
 		case "kernel-options-post-inherit":
 			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
@@ -67,19 +75,23 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				if err != nil {
 					return
 				}
+				newOptionsPost := convertMapStringToMapInterface(newKernelOptionsPost)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-post-json", newOptionsPost); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"image",
 						image.Name,
 						"kernel_options_post",
-						convertMapStringToMapInterface(newKernelOptionsPost),
+						newOptionsPost,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					image.KernelOptionsPost.IsInherited = false
-					image.KernelOptionsPost.Data = convertMapStringToMapInterface(newKernelOptionsPost)
+					image.KernelOptionsPost.Data = newOptionsPost
 				}
 			}
 		case "autoinstall-meta":
@@ -100,27 +112,21 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 					return
 				}
 				newMeta := convertMapStringToMapInterface(imageNewAutoinstallMeta)
-				if cmd.Flags().Lookup("autoinstall-meta-json").Changed {
-					var autoinstallMetaJSON string
-					autoinstallMetaJSON, err = cmd.Flags().GetString("autoinstall-meta-json")
-					if err != nil {
-						return
-					}
-					jsonMeta := map[string]interface{}{}
-					if err = json.Unmarshal([]byte(autoinstallMetaJSON), &jsonMeta); err != nil {
-						return
-					}
-					for k, v := range jsonMeta {
-						newMeta[k] = v
-					}
+				if err = mergeJSONObjectFlag(cmd, "autoinstall-meta-json", newMeta); err != nil {
+					return
 				}
 				image.AutoinstallMeta.IsInherited = false
 				image.AutoinstallMeta.Data = newMeta
 			}
 		case "template-files":
+			fallthrough
+		case "template-files-json":
 			var newTemplateFiles map[string]string
 			newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
 			if err != nil {
+				return
+			}
+			if err = mergeJSONStringMapFlag(cmd, "template-files-json", newTemplateFiles); err != nil {
 				return
 			}
 			if inPlace {

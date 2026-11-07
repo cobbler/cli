@@ -1074,3 +1074,63 @@ func Test_ProfileExportCmd_All(t *testing.T) {
 		t.Fatal("profile name missing from yaml export --all output")
 	}
 }
+
+// Test_UpdateProfileFromFlags_JSONFlags is the profile counterpart of
+// Test_UpdateDistroFromFlags_JSONFlags; see that test's comment for intent and precedence rules.
+func Test_UpdateProfileFromFlags_JSONFlags(t *testing.T) {
+	t.Run("kernel-options-json", func(t *testing.T) {
+		cmd := NewProfileEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		profile := cobbler.NewProfile()
+		cobbler.FailOnError(t, updateProfileFromFlags(cmd, &profile))
+
+		if profile.KernelOptions.IsInherited {
+			t.Fatal("profile.KernelOptions should not be marked inherited")
+		}
+		if got := profile.KernelOptions.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := profile.KernelOptions.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", profile.KernelOptions.Data["nested"])
+		}
+	})
+
+	t.Run("kernel-options-post-json", func(t *testing.T) {
+		cmd := NewProfileEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		profile := cobbler.NewProfile()
+		cobbler.FailOnError(t, updateProfileFromFlags(cmd, &profile))
+
+		if profile.KernelOptionsPost.IsInherited {
+			t.Fatal("profile.KernelOptionsPost should not be marked inherited")
+		}
+		if got := profile.KernelOptionsPost.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-post-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := profile.KernelOptionsPost.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", profile.KernelOptionsPost.Data["nested"])
+		}
+	})
+
+	t.Run("template-files-json", func(t *testing.T) {
+		cmd := NewProfileEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files", "motd=snippets/motd"))
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files-json", `{"motd": "snippets/motd-v2", "banner": "snippets/banner"}`))
+
+		profile := cobbler.NewProfile()
+		cobbler.FailOnError(t, updateProfileFromFlags(cmd, &profile))
+
+		if got := profile.TemplateFiles["motd"]; got != "snippets/motd-v2" {
+			t.Errorf("expected --template-files-json to override the flat \"motd\" value, got %q", got)
+		}
+		if got := profile.TemplateFiles["banner"]; got != "snippets/banner" {
+			t.Errorf("expected --template-files-json to add \"banner\", got %q", got)
+		}
+	})
+}

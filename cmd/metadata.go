@@ -48,6 +48,21 @@ var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
 	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
+	},
 	"initrd": {
 		Name:         "initrd",
 		DefaultValue: "",
@@ -140,6 +155,21 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall-meta-json",
 		DefaultValue: "",
 		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
 	},
 	"distro": {
 		Name:         "distro",
@@ -292,6 +322,21 @@ var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall-meta-json",
 		DefaultValue: "",
 		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
 	},
 	"redhat-management-key": {
 		Name:         "redhat-management-key",
@@ -666,6 +711,21 @@ var imageStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall-meta-json",
 		DefaultValue: "",
 		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
 	},
 	"breed": {
 		Name:         "breed",
