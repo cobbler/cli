@@ -43,6 +43,11 @@ var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "Kernel (absolute path on filesystem)",
 	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
 	"initrd": {
 		Name:         "initrd",
 		DefaultValue: "",
@@ -72,6 +77,11 @@ var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "remote-boot-initrd",
 		DefaultValue: "",
 		Usage:        "remote boot initrd (URL the bootloader directly retrieves and boots from)",
+	},
+	"remote-boot-iso": {
+		Name:         "remote-boot-iso",
+		DefaultValue: "",
+		Usage:        "remote boot ISO (URL casper/Subiquity directly retrieves to locate the live filesystem)",
 	},
 	"redhat-management-key": {
 		Name:         "redhat-management-key",
@@ -125,6 +135,11 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall",
 		DefaultValue: "",
 		Usage:        "path to automatic installation template",
+	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
 	},
 	"distro": {
 		Name:         "distro",
@@ -270,6 +285,11 @@ var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall",
 		DefaultValue: "",
 		Usage:        "path to automatic installation template",
+	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
 	},
 	"redhat-management-key": {
 		Name:         "redhat-management-key",
@@ -636,6 +656,11 @@ var imageStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "arch",
 		DefaultValue: "",
 		Usage:        "Architecture",
+	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
 	},
 	"breed": {
 		Name:         "breed",

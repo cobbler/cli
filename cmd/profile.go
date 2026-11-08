@@ -44,10 +44,12 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			profile.Autoinstall = profileNewAutoinstall
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
-			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
 				profile.AutoinstallMeta.Data = make(map[string]interface{})
-				profile.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				profile.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("autoinstall-meta-inherit")
 				if err != nil {
 					return
 				}
@@ -57,19 +59,34 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
+				newMeta := convertMapStringToMapInterface(profileNewAutoinstallMeta)
+				if cmd.Flags().Lookup("autoinstall-meta-json").Changed {
+					var autoinstallMetaJSON string
+					autoinstallMetaJSON, err = cmd.Flags().GetString("autoinstall-meta-json")
+					if err != nil {
+						return
+					}
+					jsonMeta := map[string]interface{}{}
+					if err = json.Unmarshal([]byte(autoinstallMetaJSON), &jsonMeta); err != nil {
+						return
+					}
+					for k, v := range jsonMeta {
+						newMeta[k] = v
+					}
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"profile",
 						profile.Name,
 						"autoinstall_meta",
-						convertMapStringToMapInterface(profileNewAutoinstallMeta),
+						newMeta,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					profile.AutoinstallMeta.IsInherited = false
-					profile.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+					profile.AutoinstallMeta.Data = newMeta
 				}
 			}
 		case "boot-loaders":

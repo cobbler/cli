@@ -39,25 +39,50 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 			distro.Arch = distroNewArch
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
-			var distroNewAutoinstallMeta map[string]string
-			distroNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
-			if err != nil {
-				return
-			}
-			if inPlace {
-				err = Client.ModifyItemInPlace(
-					"distro",
-					distro.Name,
-					"autoinstall_meta",
-					convertMapStringToMapInterface(distroNewAutoinstallMeta),
-				)
+			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
+				distro.AutoinstallMeta.Data = make(map[string]interface{})
+				distro.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("autoinstall-meta-inherit")
 				if err != nil {
 					return
 				}
 			} else {
-				distro.AutoinstallMeta.IsInherited = false
-				distro.AutoinstallMeta.Data = convertMapStringToMapInterface(distroNewAutoinstallMeta)
+				var distroNewAutoinstallMeta map[string]string
+				distroNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
+				if err != nil {
+					return
+				}
+				newMeta := convertMapStringToMapInterface(distroNewAutoinstallMeta)
+				if cmd.Flags().Lookup("autoinstall-meta-json").Changed {
+					var autoinstallMetaJSON string
+					autoinstallMetaJSON, err = cmd.Flags().GetString("autoinstall-meta-json")
+					if err != nil {
+						return
+					}
+					jsonMeta := map[string]interface{}{}
+					if err = json.Unmarshal([]byte(autoinstallMetaJSON), &jsonMeta); err != nil {
+						return
+					}
+					for k, v := range jsonMeta {
+						newMeta[k] = v
+					}
+				}
+				if inPlace {
+					err = Client.ModifyItemInPlace(
+						"distro",
+						distro.Name,
+						"autoinstall_meta",
+						newMeta,
+					)
+					if err != nil {
+						return
+					}
+				} else {
+					distro.AutoinstallMeta.IsInherited = false
+					distro.AutoinstallMeta.Data = newMeta
+				}
 			}
 		case "boot-loaders":
 			fallthrough
@@ -119,6 +144,13 @@ func updateDistroFromFlags(cmd *cobra.Command, distro *cobbler.Distro) error {
 				return
 			}
 			distro.RemoteBootKernel = distroNewRemoteBootKernel
+		case "remote-boot-iso":
+			var distroNewRemoteBootIso string
+			distroNewRemoteBootIso, err = cmd.Flags().GetString("remote-boot-iso")
+			if err != nil {
+				return
+			}
+			distro.RemoteBootIso = distroNewRemoteBootIso
 		case "kernel-options":
 			fallthrough
 		case "kernel-options-inherit":

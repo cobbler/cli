@@ -79,26 +79,43 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 					}
 				} else {
 					image.KernelOptionsPost.IsInherited = false
-					image.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptionsPost)
+					image.KernelOptionsPost.Data = convertMapStringToMapInterface(newKernelOptionsPost)
 				}
 			}
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
-			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
 				image.AutoinstallMeta.Data = make(map[string]interface{})
-				image.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				image.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("autoinstall-meta-inherit")
 				if err != nil {
 					return
 				}
 			} else {
-				var profileNewAutoinstallMeta map[string]string
-				profileNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
+				var imageNewAutoinstallMeta map[string]string
+				imageNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
 				if err != nil {
 					return
 				}
+				newMeta := convertMapStringToMapInterface(imageNewAutoinstallMeta)
+				if cmd.Flags().Lookup("autoinstall-meta-json").Changed {
+					var autoinstallMetaJSON string
+					autoinstallMetaJSON, err = cmd.Flags().GetString("autoinstall-meta-json")
+					if err != nil {
+						return
+					}
+					jsonMeta := map[string]interface{}{}
+					if err = json.Unmarshal([]byte(autoinstallMetaJSON), &jsonMeta); err != nil {
+						return
+					}
+					for k, v := range jsonMeta {
+						newMeta[k] = v
+					}
+				}
 				image.AutoinstallMeta.IsInherited = false
-				image.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+				image.AutoinstallMeta.Data = newMeta
 			}
 		case "template-files":
 			var newTemplateFiles map[string]string
@@ -359,6 +376,7 @@ func NewImageAddCmd() *cobra.Command {
 	}
 	addCommonArgs(imageAddCmd)
 	addStringFlags(imageAddCmd, imageStringFlagMetadata)
+	addMapFlags(imageAddCmd, distroMapFlagMetadata)
 	addIntFlags(imageAddCmd, imageIntFlagMetadata)
 	addFloatFlags(imageAddCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageAddCmd, imageBoolFlagMetadata)
@@ -417,6 +435,7 @@ func NewImageCopyCmd() *cobra.Command {
 	}
 	addCommonArgs(imageCopyCmd)
 	addStringFlags(imageCopyCmd, imageStringFlagMetadata)
+	addMapFlags(imageCopyCmd, distroMapFlagMetadata)
 	addIntFlags(imageCopyCmd, imageIntFlagMetadata)
 	addFloatFlags(imageCopyCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageCopyCmd, imageBoolFlagMetadata)
@@ -467,6 +486,7 @@ func NewImageEditCmd() *cobra.Command {
 	}
 	addCommonArgs(imageEditCmd)
 	addStringFlags(imageEditCmd, imageStringFlagMetadata)
+	addMapFlags(imageEditCmd, distroMapFlagMetadata)
 	addIntFlags(imageEditCmd, imageIntFlagMetadata)
 	addFloatFlags(imageEditCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageEditCmd, imageBoolFlagMetadata)
@@ -491,6 +511,7 @@ func NewImageFindCmd() *cobra.Command {
 	}
 	addCommonArgs(imageFindCmd)
 	addStringFlags(imageFindCmd, imageStringFlagMetadata)
+	addMapFlags(imageFindCmd, distroMapFlagMetadata)
 	addIntFlags(imageFindCmd, imageIntFlagMetadata)
 	addFloatFlags(imageFindCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageFindCmd, imageBoolFlagMetadata)
@@ -596,6 +617,7 @@ func NewImageRenameCmd() *cobra.Command {
 	}
 	addCommonArgs(imageRenameCmd)
 	addStringFlags(imageRenameCmd, imageStringFlagMetadata)
+	addMapFlags(imageRenameCmd, distroMapFlagMetadata)
 	addIntFlags(imageRenameCmd, imageIntFlagMetadata)
 	addFloatFlags(imageRenameCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageRenameCmd, imageBoolFlagMetadata)

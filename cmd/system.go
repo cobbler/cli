@@ -35,6 +35,8 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			system.Autoinstall = systemNewAutoinstall
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
 			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
 				system.AutoinstallMeta.Data = make(map[string]interface{})
@@ -48,8 +50,23 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				if err != nil {
 					return
 				}
+				newMeta := convertMapStringToMapInterface(systemNewAutoinstallMeta)
+				if cmd.Flags().Lookup("autoinstall-meta-json").Changed {
+					var autoinstallMetaJSON string
+					autoinstallMetaJSON, err = cmd.Flags().GetString("autoinstall-meta-json")
+					if err != nil {
+						return
+					}
+					jsonMeta := map[string]interface{}{}
+					if err = json.Unmarshal([]byte(autoinstallMetaJSON), &jsonMeta); err != nil {
+						return
+					}
+					for k, v := range jsonMeta {
+						newMeta[k] = v
+					}
+				}
 				system.AutoinstallMeta.IsInherited = false
-				system.AutoinstallMeta.Data = convertMapStringToMapInterface(systemNewAutoinstallMeta)
+				system.AutoinstallMeta.Data = newMeta
 			}
 		case "boot-loaders":
 			fallthrough
