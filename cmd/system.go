@@ -408,7 +408,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			if err != nil {
 				return
 			}
-			system.VirtPXEBoot = systemNewVirtPxeBoot
+			system.Virt.PxeBoot = systemNewVirtPxeBoot
 		case "serial-device":
 			var systemNewSerialDevice int
 			systemNewSerialDevice, err = cmd.Flags().GetInt("serial-device")
