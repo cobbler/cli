@@ -35,6 +35,8 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			system.Autoinstall = systemNewAutoinstall
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
 			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
 				system.AutoinstallMeta.Data = make(map[string]interface{})
@@ -48,8 +50,12 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				if err != nil {
 					return
 				}
+				newMeta := convertMapStringToMapInterface(systemNewAutoinstallMeta)
+				if err = mergeJSONObjectFlag(cmd, "autoinstall-meta-json", newMeta); err != nil {
+					return
+				}
 				system.AutoinstallMeta.IsInherited = false
-				system.AutoinstallMeta.Data = convertMapStringToMapInterface(systemNewAutoinstallMeta)
+				system.AutoinstallMeta.Data = newMeta
 			}
 		case "boot-loaders":
 			fallthrough
@@ -78,6 +84,8 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			system.Comment = systemNewComment
 		case "kernel-options":
 			fallthrough
+		case "kernel-options-json":
+			fallthrough
 		case "kernel-options-inherit":
 			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
 				system.KernelOptions.Data = make(map[string]interface{})
@@ -91,10 +99,16 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				if err != nil {
 					return
 				}
+				newOptions := convertMapStringToMapInterface(systemNewKernelOptions)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-json", newOptions); err != nil {
+					return
+				}
 				system.KernelOptions.IsInherited = false
-				system.KernelOptions.Data = convertMapStringToMapInterface(systemNewKernelOptions)
+				system.KernelOptions.Data = newOptions
 			}
 		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-json":
 			fallthrough
 		case "kernel-options-post-inherit":
 			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
@@ -109,8 +123,12 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 				if err != nil {
 					return
 				}
+				newOptionsPost := convertMapStringToMapInterface(systemNewKernelOptionsPost)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-post-json", newOptionsPost); err != nil {
+					return
+				}
 				system.KernelOptionsPost.IsInherited = false
-				system.KernelOptionsPost.Data = convertMapStringToMapInterface(systemNewKernelOptionsPost)
+				system.KernelOptionsPost.Data = newOptionsPost
 			}
 		case "owners":
 			fallthrough
@@ -138,9 +156,14 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			}
 			system.RedhatManagementKey = systemNewRedhatManagementKey
 		case "template-files":
+			fallthrough
+		case "template-files-json":
 			var systemNewTemplateFiles map[string]string
 			systemNewTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
 			if err != nil {
+				return
+			}
+			if err = mergeJSONStringMapFlag(cmd, "template-files-json", systemNewTemplateFiles); err != nil {
 				return
 			}
 			system.TemplateFiles = systemNewTemplateFiles
@@ -408,7 +431,7 @@ func updateSystemFromFlags(cmd *cobra.Command, system *cobbler.System) error {
 			if err != nil {
 				return
 			}
-			system.VirtPXEBoot = systemNewVirtPxeBoot
+			system.Virt.PxeBoot = systemNewVirtPxeBoot
 		case "serial-device":
 			var systemNewSerialDevice int
 			systemNewSerialDevice, err = cmd.Flags().GetInt("serial-device")
@@ -482,7 +505,12 @@ func NewSystemAddCmd() *cobra.Command {
 				return err
 			}
 			// Now create the system via XML-RPC
-			system, err := Client.CreateSystem(newSystem)
+			var system *cobbler.System
+			err = withTransaction(func() error {
+				var txErr error
+				system, txErr = Client.CreateSystem(newSystem)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -530,35 +558,35 @@ func NewSystemCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopySystem(systemHandle, systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystemHandle, err := Client.GetSystemHandle(systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystem, err := Client.GetSystem(newSystemHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update the system in-memory
-			err = updateSystemFromFlags(cmd, newSystem)
-			if err != nil {
-				return err
-			}
-			if newSystem.Meta.IsDirty {
-				newSystem, err = Client.GetSystem(
-					newSystem.Uid,
-					newSystem.Meta.IsFlattened,
-					newSystem.Meta.IsResolved,
-				)
+			return withTransaction(func() error {
+				if err := Client.CopySystem(systemHandle, systemNewName); err != nil {
+					return err
+				}
+				newSystemHandle, err := Client.GetSystemHandle(systemNewName)
 				if err != nil {
 					return err
 				}
-			}
-			// Update the system via XML-RPC
-			return Client.UpdateSystem(newSystem)
+				newSystem, err := Client.GetSystem(newSystemHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update the system in-memory
+				if err := updateSystemFromFlags(cmd, newSystem); err != nil {
+					return err
+				}
+				if newSystem.Meta.IsDirty {
+					newSystem, err = Client.GetSystem(
+						newSystem.Uid,
+						newSystem.Meta.IsFlattened,
+						newSystem.Meta.IsResolved,
+					)
+					if err != nil {
+						return err
+					}
+				}
+				// Update the system via XML-RPC
+				return Client.UpdateSystem(newSystem)
+			})
 		},
 	}
 	addCommonArgs(systemCopyCmd)
@@ -657,7 +685,9 @@ func NewSystemEditCmd() *cobra.Command {
 				}
 			}
 			// Update the system via XML-RPC
-			return Client.UpdateSystem(updateSystem)
+			return withTransaction(func() error {
+				return Client.UpdateSystem(updateSystem)
+			})
 		},
 	}
 	addCommonArgs(systemEditCmd)
@@ -913,7 +943,9 @@ func NewSystemRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			return RemoveItemRecursive(cmd, args, "system")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "system")
+			})
 		},
 	}
 	systemRemoveCmd.Flags().String("name", "", "the system name")
@@ -952,33 +984,33 @@ func NewSystemRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameSystem(systemHandle, systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystemHandle, err := Client.GetSystemHandle(systemNewName)
-			if err != nil {
-				return err
-			}
-			newSystem, err := Client.GetSystem(newSystemHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateSystemFromFlags(cmd, newSystem)
-			if err != nil {
-				return err
-			}
-			if newSystem.Meta.IsDirty {
-				newSystem, err = Client.GetSystem(
-					newSystem.Uid,
-					newSystem.Meta.IsFlattened,
-					newSystem.Meta.IsResolved,
-				)
+			return withTransaction(func() error {
+				if err := Client.RenameSystem(systemHandle, systemNewName); err != nil {
+					return err
+				}
+				newSystemHandle, err := Client.GetSystemHandle(systemNewName)
 				if err != nil {
 					return err
 				}
-			}
-			return Client.UpdateSystem(newSystem)
+				newSystem, err := Client.GetSystem(newSystemHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateSystemFromFlags(cmd, newSystem); err != nil {
+					return err
+				}
+				if newSystem.Meta.IsDirty {
+					newSystem, err = Client.GetSystem(
+						newSystem.Uid,
+						newSystem.Meta.IsFlattened,
+						newSystem.Meta.IsResolved,
+					)
+					if err != nil {
+						return err
+					}
+				}
+				return Client.UpdateSystem(newSystem)
+			})
 		},
 	}
 	addCommonArgs(systemRenameCmd)

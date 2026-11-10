@@ -44,10 +44,12 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			profile.Autoinstall = profileNewAutoinstall
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
-			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
 				profile.AutoinstallMeta.Data = make(map[string]interface{})
-				profile.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				profile.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("autoinstall-meta-inherit")
 				if err != nil {
 					return
 				}
@@ -57,19 +59,23 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
+				newMeta := convertMapStringToMapInterface(profileNewAutoinstallMeta)
+				if err = mergeJSONObjectFlag(cmd, "autoinstall-meta-json", newMeta); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"profile",
 						profile.Name,
 						"autoinstall_meta",
-						convertMapStringToMapInterface(profileNewAutoinstallMeta),
+						newMeta,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					profile.AutoinstallMeta.IsInherited = false
-					profile.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+					profile.AutoinstallMeta.Data = newMeta
 				}
 			}
 		case "boot-loaders":
@@ -106,6 +112,8 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			profile.Comment = profileNewComment
 		case "kernel-options":
 			fallthrough
+		case "kernel-options-json":
+			fallthrough
 		case "kernel-options-inherit":
 			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
 				profile.KernelOptions.Data = make(map[string]interface{})
@@ -119,22 +127,28 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
+				newOptions := convertMapStringToMapInterface(profileNewKernelOptions)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-json", newOptions); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"profile",
 						profile.Name,
 						"kernel_options",
-						convertMapStringToMapInterface(profileNewKernelOptions),
+						newOptions,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					profile.KernelOptions.IsInherited = false
-					profile.KernelOptions.Data = convertMapStringToMapInterface(profileNewKernelOptions)
+					profile.KernelOptions.Data = newOptions
 				}
 			}
 		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-json":
 			fallthrough
 		case "kernel-options-post-inherit":
 			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
@@ -149,19 +163,23 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 				if err != nil {
 					return
 				}
+				newOptionsPost := convertMapStringToMapInterface(profileNewKernelOptionsPost)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-post-json", newOptionsPost); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"profile",
 						profile.Name,
 						"kernel_options_post",
-						convertMapStringToMapInterface(profileNewKernelOptionsPost),
+						newOptionsPost,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					profile.KernelOptionsPost.IsInherited = false
-					profile.KernelOptionsPost.Data = convertMapStringToMapInterface(profileNewKernelOptionsPost)
+					profile.KernelOptionsPost.Data = newOptionsPost
 				}
 			}
 		case "owners":
@@ -190,9 +208,14 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 			}
 			profile.RedhatManagementKey = profileNewRedhatManagementKey
 		case "template-files":
+			fallthrough
+		case "template-files-json":
 			var profileNewTemplateFiles map[string]string
 			profileNewTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
 			if err != nil {
+				return
+			}
+			if err = mergeJSONStringMapFlag(cmd, "template-files-json", profileNewTemplateFiles); err != nil {
 				return
 			}
 			if inPlace {
@@ -361,8 +384,8 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 		case "virt-file-size":
 			fallthrough
 		case "virt-file-size-inherit":
-			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
-				profile.Virt.AutoBoot.IsInherited = true
+			if cmd.Flags().Lookup("virt-file-size-inherit").Changed {
+				profile.Virt.FileSize.IsInherited = true
 			} else {
 				var profileNewVirtFileSize float64
 				profileNewVirtFileSize, err = cmd.Flags().GetFloat64("virt-file-size")
@@ -382,7 +405,7 @@ func updateProfileFromFlags(cmd *cobra.Command, profile *cobbler.Profile) error 
 		case "virt-ram":
 			fallthrough
 		case "virt-ram-inherit":
-			if cmd.Flags().Lookup("virt-auto-boot-inherit").Changed {
+			if cmd.Flags().Lookup("virt-ram-inherit").Changed {
 				profile.Virt.Ram.IsInherited = true
 			} else {
 				var profileNewVirtRam int
@@ -458,7 +481,12 @@ func NewProfileAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			profile, err := Client.CreateProfile(newProfile)
+			var profile *cobbler.Profile
+			err = withTransaction(func() error {
+				var txErr error
+				profile, txErr = Client.CreateProfile(newProfile)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -507,23 +535,23 @@ func NewProfileCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyProfile(profileHandle, profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfileHandle, err := Client.GetProfileHandle(profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfile, err := Client.GetProfile(newProfileHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateProfileFromFlags(cmd, newProfile)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateProfile(newProfile)
+			return withTransaction(func() error {
+				if err := Client.CopyProfile(profileHandle, profileNewName); err != nil {
+					return err
+				}
+				newProfileHandle, err := Client.GetProfileHandle(profileNewName)
+				if err != nil {
+					return err
+				}
+				newProfile, err := Client.GetProfile(newProfileHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateProfileFromFlags(cmd, newProfile); err != nil {
+					return err
+				}
+				return Client.UpdateProfile(newProfile)
+			})
 		},
 	}
 	addCommonArgs(profileCopyCmd)
@@ -611,7 +639,9 @@ func NewProfileEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.UpdateProfile(updateProfile)
+			return withTransaction(func() error {
+				return Client.UpdateProfile(updateProfile)
+			})
 		},
 	}
 	addCommonArgs(profileEditCmd)
@@ -743,7 +773,9 @@ func NewProfileRemoveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.DeleteProfileRecursive(resolvedUID, recursiveDelete)
+			return withTransaction(func() error {
+				return Client.DeleteProfileRecursive(resolvedUID, recursiveDelete)
+			})
 		},
 	}
 	profileRemoveCmd.Flags().String("name", "", "the profile name")
@@ -781,23 +813,23 @@ func NewProfileRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameProfile(profileHandle, profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfileHandle, err := Client.GetProfileHandle(profileNewName)
-			if err != nil {
-				return err
-			}
-			newProfile, err := Client.GetProfile(newProfileHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateProfileFromFlags(cmd, newProfile)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateProfile(newProfile)
+			return withTransaction(func() error {
+				if err := Client.RenameProfile(profileHandle, profileNewName); err != nil {
+					return err
+				}
+				newProfileHandle, err := Client.GetProfileHandle(profileNewName)
+				if err != nil {
+					return err
+				}
+				newProfile, err := Client.GetProfile(newProfileHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateProfileFromFlags(cmd, newProfile); err != nil {
+					return err
+				}
+				return Client.UpdateProfile(newProfile)
+			})
 		},
 	}
 	addCommonArgs(profileRenameCmd)

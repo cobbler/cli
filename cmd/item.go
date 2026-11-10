@@ -14,11 +14,28 @@ import (
 // like resolveUIDs can distinguish "doesn't exist" from a genuine lookup failure via errors.Is.
 var errItemNotFound = errors.New("item not found")
 
+// errItemAmbiguous is wrapped into resolveUID's "multiple <what> items found with name ..."
+// error so callers can distinguish "name exists but isn't unique" from a genuine not-found
+// error via errors.Is, and react with identifier-specific guidance (e.g. cmd/interface.go's
+// report command suggesting --system-name, since network interface names are only unique
+// per-system, not globally).
+var errItemAmbiguous = errors.New("multiple items found")
+
 var inheritedUsageFormat = "Mark %s as inherited and remove its concrete value"
 
 func addStringFlags(command *cobra.Command, metadata map[string]FlagMetadata[string]) {
 	for _, value := range metadata {
-		command.Flags().String(value.Name, value.DefaultValue, value.Usage)
+		if value.IsInheritable {
+			var inheritFlagName = value.Name + "-inherit"
+			command.Flags().String(value.Name, value.DefaultValue, value.Usage)
+			command.Flags().Bool(
+				inheritFlagName,
+				false,
+				fmt.Sprintf(inheritedUsageFormat, value.Name),
+			)
+		} else {
+			command.Flags().String(value.Name, value.DefaultValue, value.Usage)
+		}
 	}
 }
 
@@ -148,7 +165,7 @@ func resolveUID(client *cobbler.Client, what, name, uid string) (string, error) 
 		}
 		return uidValue, nil
 	default:
-		return "", fmt.Errorf("multiple %s items found with name %q; use --uid to disambiguate", what, name)
+		return "", fmt.Errorf("multiple %s items found with name %q; use --uid to disambiguate: %w", what, name, errItemAmbiguous)
 	}
 }
 
@@ -189,7 +206,17 @@ func addUIDFlag(command *cobra.Command, what string) {
 	command.Flags().String("uid", "", fmt.Sprintf("the %s uid (alternative to --name)", what))
 }
 
-// RemoveItemRecursive accesses the given flags and attempts to remove a given item
+// RemoveItemRecursive accesses the given flags and attempts to remove a given item.
+//
+// Note: this helper deliberately does NOT wrap the RemoveItem call in a server-side
+// transaction itself, even though most of its callers' commands are covered by the
+// transaction wrapping described in cobbler-cli ledger entry 2.8. Cobbler's
+// transaction-aware remove_item path (remote.py) unconditionally accesses
+// attributes (e.g. depth) that only exist on InheritableItem subtypes - for plain
+// BaseItem types like Template and NetworkInterface, wrapping remove in a
+// transaction crashes server-side with an AttributeError. Safe callers (every item
+// type except Template) wrap their own call to this helper instead; see each
+// call site in cmd/*.go.
 func RemoveItemRecursive(cmd *cobra.Command, args []string, what string) error {
 	_ = args
 	itemName, err := cmd.Flags().GetString("name")

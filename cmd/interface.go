@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -90,7 +91,7 @@ func updateNetworkInterfaceFromFlags(cmd *cobra.Command, iface *cobbler.NetworkI
 		case "ipv4-netmask":
 			iface.IPv4.Netmask, err = cmd.Flags().GetString("ipv4-netmask")
 		case "ipv4-gateway":
-			iface.IfGateway, err = cmd.Flags().GetString("ipv4-gateway")
+			iface.IPv4.DefaultGateway, err = cmd.Flags().GetString("ipv4-gateway")
 		case "ipv4-static-routes":
 			iface.IPv4.StaticRoutes, err = cmd.Flags().GetStringSlice("ipv4-static-routes")
 		// IPv6
@@ -105,7 +106,7 @@ func updateNetworkInterfaceFromFlags(cmd *cobra.Command, iface *cobbler.NetworkI
 		case "ipv6-static-routes":
 			iface.IPv6.StaticRoutes, err = cmd.Flags().GetStringSlice("ipv6-static-routes")
 		case "ipv6-default-gateway":
-			iface.Ipv6DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
+			iface.IPv6.DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
 		// DNS
 		case "dns-name":
 			iface.DNS.Name, err = cmd.Flags().GetString("dns-name")
@@ -188,7 +189,12 @@ func NewInterfaceAddCommand() *cobra.Command {
 			if err := updateNetworkInterfaceFromFlags(cmd, &iface); err != nil {
 				return err
 			}
-			created, err := Client.CreateNetworkInterface(systemUid, iface)
+			var created *cobbler.NetworkInterface
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateNetworkInterface(systemUid, iface)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -230,7 +236,9 @@ func NewInterfaceEditCommand() *cobra.Command {
 			if err := updateNetworkInterfaceFromFlags(cmd, iface); err != nil {
 				return err
 			}
-			return Client.UpdateNetworkInterface(iface)
+			return withTransaction(func() error {
+				return Client.UpdateNetworkInterface(iface)
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface name")
@@ -263,26 +271,28 @@ func NewInterfaceCopyCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := Client.CopyNetworkInterface(handle, newName); err != nil {
-				return err
-			}
-			// Clear identity-bound fields on the copy by default; users can
-			// re-set them via --mac-address / --ipv4-address / --ipv6-address.
-			newHandle, err := Client.GetNetworkInterfaceHandle(newName)
-			if err != nil {
-				return err
-			}
-			fresh, err := Client.GetNetworkInterface(newHandle, false, false)
-			if err != nil {
-				return err
-			}
-			fresh.MacAddress = ""
-			fresh.IPv4.Address = ""
-			fresh.IPv6.Address = ""
-			if err := updateNetworkInterfaceFromFlags(cmd, fresh); err != nil {
-				return err
-			}
-			return Client.UpdateNetworkInterface(fresh)
+			return withTransaction(func() error {
+				if err := Client.CopyNetworkInterface(handle, newName); err != nil {
+					return err
+				}
+				// Clear identity-bound fields on the copy by default; users can
+				// re-set them via --mac-address / --ipv4-address / --ipv6-address.
+				newHandle, err := Client.GetNetworkInterfaceHandle(newName)
+				if err != nil {
+					return err
+				}
+				fresh, err := Client.GetNetworkInterface(newHandle, false, false)
+				if err != nil {
+					return err
+				}
+				fresh.MacAddress = ""
+				fresh.IPv4.Address = ""
+				fresh.IPv6.Address = ""
+				if err := updateNetworkInterfaceFromFlags(cmd, fresh); err != nil {
+					return err
+				}
+				return Client.UpdateNetworkInterface(fresh)
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface to copy")
@@ -316,7 +326,9 @@ func NewInterfaceRenameCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameNetworkInterface(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameNetworkInterface(handle, newName)
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface to rename")
@@ -325,6 +337,12 @@ func NewInterfaceRenameCommand() *cobra.Command {
 	return cmd
 }
 
+// NOTE: unlike every other item type's remove command, the network interface remove below
+// is deliberately NOT wrapped in withTransaction. This is out of scope for this task (which
+// only covers add/edit/copy/rename); see the task brief for NetworkInterface's add/edit/
+// copy/rename cleanup for background on the now-fixed server-side crash this guarded against
+// for mutating calls. Whether remove_item/delete is similarly safe under a transaction for a
+// non-InheritableItem type like NetworkInterface was not verified here.
 func NewInterfaceRemoveCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
@@ -384,9 +402,27 @@ func NewInterfaceListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// iface.SystemName is never populated here: cobbler/items/network_interface.py's
+			// system_name is a derived read-only property (computed on access from system_uid),
+			// not a backed attribute, so BaseItem.to_dict() never includes it in the unresolved
+			// get_network_interfaces response - confirmed via a raw XML-RPC call in every
+			// flattened/resolved combination. Resolve each interface's real parent system name
+			// client-side via system_uid instead, which is always present.
+			systems, err := Client.GetSystems()
+			if err != nil {
+				return err
+			}
+			systemNameByUid := make(map[string]string, len(systems))
+			for _, system := range systems {
+				systemNameByUid[system.Uid] = system.Name
+			}
 			grouped := make(map[string][]string)
 			for _, iface := range interfaces {
-				grouped[iface.SystemName] = append(grouped[iface.SystemName], iface.Name)
+				systemName, ok := systemNameByUid[iface.SystemUid]
+				if !ok {
+					systemName = iface.SystemUid
+				}
+				grouped[systemName] = append(grouped[systemName], iface.Name)
 			}
 			systemNames := make([]string, 0, len(grouped))
 			for systemName := range grouped {
@@ -428,11 +464,42 @@ func NewInterfaceReportCommand() *cobra.Command {
 				return err
 			}
 
+			// Network interface names are only unique per-system, not globally (the same
+			// name, e.g. "eth0", can legitimately exist on multiple systems) - see ledger
+			// entry 2.7. Filtering/disambiguating by system is done via system_uid, not the
+			// server's "system_name" criterion: cobbler/items/network_interface.py's
+			// system_name is a derived read-only property with no backing attribute, so
+			// BaseItem.to_dict() never includes it (confirmed via a raw XML-RPC call in every
+			// flattened/resolved combination) - find_network_interface's find_match() compares
+			// against to_dict() data, so a "system_name" criterion never matches anything.
 			var interfaces []*cobbler.NetworkInterface
 			switch {
+			case name != "" && uid == "" && systemName != "":
+				systemUid, err := Client.GetSystemHandle(systemName)
+				if err != nil {
+					return err
+				}
+				matches, err := Client.FindNetworkInterface(map[string]interface{}{
+					"name":       name,
+					"system_uid": systemUid,
+				}, false)
+				if err != nil {
+					return err
+				}
+				switch len(matches) {
+				case 0:
+					return fmt.Errorf("no network interface named %q found on system %q", name, systemName)
+				case 1:
+					interfaces = matches
+				default:
+					return fmt.Errorf("multiple network interfaces named %q found on system %q", name, systemName)
+				}
 			case name != "" || uid != "":
 				resolvedUID, err := resolveUID(&Client, "network_interface", name, uid)
 				if err != nil {
+					if errors.Is(err, errItemAmbiguous) {
+						return fmt.Errorf("multiple interfaces named %q exist across different systems; pass --system-name to disambiguate (or --uid)", name)
+					}
 					return err
 				}
 				iface, err := Client.GetNetworkInterface(resolvedUID, false, false)
@@ -441,8 +508,12 @@ func NewInterfaceReportCommand() *cobra.Command {
 				}
 				interfaces = []*cobbler.NetworkInterface{iface}
 			case systemName != "":
+				systemUid, err := Client.GetSystemHandle(systemName)
+				if err != nil {
+					return err
+				}
 				interfaces, err = Client.FindNetworkInterface(map[string]interface{}{
-					"system_name": systemName,
+					"system_uid": systemUid,
 				}, false)
 				if err != nil {
 					return err
@@ -461,7 +532,7 @@ func NewInterfaceReportCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("name", "", "the network interface name")
-	cmd.Flags().String("system-name", "", "filter by parent system name")
+	cmd.Flags().String("system-name", "", "filter by parent system name; disambiguates --name when the same interface name exists on multiple systems")
 	addUIDFlag(cmd, "network interface")
 	return cmd
 }

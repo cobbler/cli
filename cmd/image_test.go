@@ -826,3 +826,63 @@ func Test_ImageExportCmd_All(t *testing.T) {
 		t.Fatal("image name missing from yaml export --all output")
 	}
 }
+
+// Test_UpdateImageFromFlags_JSONFlags is the image counterpart of
+// Test_UpdateDistroFromFlags_JSONFlags; see that test's comment for intent and precedence rules.
+func Test_UpdateImageFromFlags_JSONFlags(t *testing.T) {
+	t.Run("kernel-options-json", func(t *testing.T) {
+		cmd := NewImageEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		image := cobbler.NewImage()
+		cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+		if image.KernelOptions.IsInherited {
+			t.Fatal("image.KernelOptions should not be marked inherited")
+		}
+		if got := image.KernelOptions.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := image.KernelOptions.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", image.KernelOptions.Data["nested"])
+		}
+	})
+
+	t.Run("kernel-options-post-json", func(t *testing.T) {
+		cmd := NewImageEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		image := cobbler.NewImage()
+		cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+		if image.KernelOptionsPost.IsInherited {
+			t.Fatal("image.KernelOptionsPost should not be marked inherited")
+		}
+		if got := image.KernelOptionsPost.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-post-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := image.KernelOptionsPost.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", image.KernelOptionsPost.Data["nested"])
+		}
+	})
+
+	t.Run("template-files-json", func(t *testing.T) {
+		cmd := NewImageEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files", "motd=snippets/motd"))
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files-json", `{"motd": "snippets/motd-v2", "banner": "snippets/banner"}`))
+
+		image := cobbler.NewImage()
+		cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+		if got := image.TemplateFiles["motd"]; got != "snippets/motd-v2" {
+			t.Errorf("expected --template-files-json to override the flat \"motd\" value, got %q", got)
+		}
+		if got := image.TemplateFiles["banner"]; got != "snippets/banner" {
+			t.Errorf("expected --template-files-json to add \"banner\", got %q", got)
+		}
+	})
+}

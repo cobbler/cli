@@ -150,7 +150,12 @@ func NewTemplateAddCmd() *cobra.Command {
 			if err := updateTemplateFromFlags(cmd, &t); err != nil {
 				return err
 			}
-			created, err := Client.CreateTemplate(t)
+			var created *cobbler.Template
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateTemplate(t)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -189,7 +194,9 @@ func NewTemplateEditCmd() *cobra.Command {
 			if err := updateTemplateFromFlags(cmd, t); err != nil {
 				return err
 			}
-			return Client.UpdateTemplate(t)
+			return withTransaction(func() error {
+				return Client.UpdateTemplate(t)
+			})
 		},
 	}
 	addTemplateFlagSet(cmd)
@@ -221,7 +228,9 @@ func NewTemplateCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.CopyTemplate(handle, newName)
+			return withTransaction(func() error {
+				return Client.CopyTemplate(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -254,7 +263,9 @@ func NewTemplateRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameTemplate(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameTemplate(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -263,6 +274,12 @@ func NewTemplateRenameCmd() *cobra.Command {
 	return cmd
 }
 
+// NOTE: unlike every other item type's remove command, Template's remove below is
+// deliberately NOT wrapped in withTransaction. This is out of scope for this task (which
+// only covers add/edit/copy/rename); see the task brief for Template's add/edit/copy/rename
+// cleanup for background on the now-fixed server-side crash this guarded against for
+// mutating calls. Whether remove_item is similarly safe under a transaction for a non-
+// InheritableItem type like Template was not verified here.
 func NewTemplateRemoveCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
@@ -317,6 +334,26 @@ func NewTemplateListCmd() *cobra.Command {
 	return cmd
 }
 
+// templateReportContentIndicator returns the value `template report` should
+// print for a Template's content field. Content can be arbitrarily large
+// (it's a whole autoinstall template body), so report deliberately never
+// prints it inline -- that would make report's output unusable for exactly
+// the templates where content's presence matters most. When content is
+// empty it's returned unchanged, matching every other field's existing
+// convention of printing an empty value rather than omitting the field.
+// When content is non-empty, a short indicator is returned instead,
+// pointing at the dedicated `template content` subcommand that already
+// prints the real (and possibly very long) text.
+func templateReportContentIndicator(t *cobbler.Template) string {
+	if t.Content == "" {
+		return t.Content
+	}
+	return fmt.Sprintf(
+		"<%d bytes, not shown -- see 'cobbler template content --name %s'>",
+		len(t.Content), t.Name,
+	)
+}
+
 func NewTemplateReportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "report",
@@ -351,7 +388,13 @@ func NewTemplateReportCmd() *cobra.Command {
 				templates = []*cobbler.Template{t}
 			}
 			for _, t := range templates {
-				printStructured(cmd, t)
+				// Print a shallow copy with content replaced by a short indicator
+				// (see templateReportContentIndicator) rather than the real
+				// struct, so the full -- potentially huge -- content is never
+				// dumped inline by report.
+				display := *t
+				display.Content = templateReportContentIndicator(t)
+				printStructured(cmd, &display)
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
 			}
 			return nil

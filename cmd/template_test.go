@@ -589,6 +589,62 @@ func Test_TemplateReportCmd_All(t *testing.T) {
 	}
 }
 
+// TestTemplateReportContentIndicator_Empty confirms empty content is left
+// alone by templateReportContentIndicator, matching every other field's
+// existing "print the empty value" convention (see printField in root.go)
+// rather than specially hiding the field.
+func TestTemplateReportContentIndicator_Empty(t *testing.T) {
+	tpl := &cobbler.Template{}
+	if got := templateReportContentIndicator(tpl); got != "" {
+		t.Fatalf("expected empty content to remain empty, got %q", got)
+	}
+}
+
+// TestTemplateReportContentIndicator_NonEmpty is the regression test for
+// cobbler-cli ledger entry 2.6: when content is non-empty, `template report`
+// must show a short indicator -- not silence (the pre-fix behavior: report
+// printed an empty-looking "content:" line with no hint that the dedicated
+// `template content` subcommand exists to view it) and not the full text
+// (content can be an arbitrarily large autoinstall template body, which
+// would make report's output unusable for exactly the templates where
+// content's presence matters most).
+//
+// This is deliberately a unit test of templateReportContentIndicator
+// directly, rather than a live-server round trip through `template report`.
+// While investigating this fix, direct checks against the dev stack (see
+// `template export --name <x> --format json`) showed that Cobbler's
+// get_template RPC never actually returns a populated "content" value at
+// all, regardless of the resolved/flatten flags -- BaseItem.to_dict() (in
+// the cobbler repo) iterates self.__dict__ and unconditionally excludes any
+// name containing "__", which drops Template's name-mangled
+// "_Template__content" attribute. That is a separate, server-side bug
+// outside this repo's scope (`template content`'s dedicated
+// get_template_content RPC reads the attribute directly and is unaffected,
+// which is why it keeps working). Testing templateReportContentIndicator
+// directly exercises the actual fix -- report's own formatting decision --
+// without depending on that unrelated upstream bug being fixed first.
+func TestTemplateReportContentIndicator_NonEmpty(t *testing.T) {
+	tpl := &cobbler.Template{}
+	tpl.Name = "my-template"
+	tpl.Content = "some real template body text that must not be echoed back in full"
+
+	got := templateReportContentIndicator(tpl)
+
+	if got == "" {
+		t.Fatal("expected a non-empty indicator for non-empty content, got silence")
+	}
+	if got == tpl.Content || strings.Contains(got, tpl.Content) {
+		t.Fatalf("indicator must not contain the full content, got %q", got)
+	}
+	if !strings.Contains(got, "template content --name my-template") {
+		t.Fatalf("expected indicator to point at 'template content --name my-template', got %q", got)
+	}
+	wantByteCount := fmt.Sprintf("%d bytes", len(tpl.Content))
+	if !strings.Contains(got, wantByteCount) {
+		t.Fatalf("expected indicator to include byte count %q, got %q", wantByteCount, got)
+	}
+}
+
 func Test_TemplateExportCmd(t *testing.T) {
 	name := "test-template-export"
 	setupClient(t)

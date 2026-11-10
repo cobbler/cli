@@ -3,9 +3,11 @@ services:
     image: ghcr.io/cobbler/cobblerd:${COBBLER_IMAGE_TAG:-latest}
     container_name: cobbler-dev
     environment:
-      - COBBLER_XMLRPC_BIND_ADDRESS=0.0.0.0
+      - COBBLER_XMLRPC_BIND_ADDRESS_V4=0.0.0.0
     volumes:
       - ../extracted_iso_image:/extracted_iso_image:ro,z
     ports:
       - 25151:25151
-    command: cobblerd -F
+    # The published cobblerd image is missing `wget`, which the server's `check` action shells
+    # out to probe; without it, `cobbler check` faults instead of reporting it as a suggestion.
+    command: sh -c "zypper --non-interactive install wget && cobblerd -F"

@@ -53,7 +53,12 @@ func newProfileGroupAddCmd() *cobra.Command {
 			if itemsSet {
 				g.Members = items
 			}
-			created, err := Client.CreateProfileGroup(g)
+			var created *cobbler.ProfileGroup
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateProfileGroup(g)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -99,7 +104,9 @@ func newProfileGroupEditCmd() *cobra.Command {
 			if itemsSet {
 				g.Members = items
 			}
-			return Client.UpdateProfileGroup(g)
+			return withTransaction(func() error {
+				return Client.UpdateProfileGroup(g)
+			})
 		},
 	}
 	addGroupFlagSet(cmd)
@@ -131,7 +138,9 @@ func newProfileGroupCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.CopyProfileGroup(handle, newName)
+			return withTransaction(func() error {
+				return Client.CopyProfileGroup(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -164,7 +173,9 @@ func newProfileGroupRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameProfileGroup(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameProfileGroup(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -181,7 +192,9 @@ func newProfileGroupRemoveCmd() *cobra.Command {
 			if err := generateCobblerClient(); err != nil {
 				return err
 			}
-			return RemoveItemRecursive(cmd, args, "profile_group")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "profile_group")
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the profile group name")

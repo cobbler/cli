@@ -24,6 +24,8 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 		// Any rename & copy operation must be handled outside of this method.
 		case "kernel-options":
 			fallthrough
+		case "kernel-options-json":
+			fallthrough
 		case "kernel-options-inherit":
 			if cmd.Flags().Lookup("kernel-options-inherit").Changed {
 				image.KernelOptions.Data = make(map[string]interface{})
@@ -37,22 +39,28 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				if err != nil {
 					return
 				}
+				newOptions := convertMapStringToMapInterface(newKernelOptions)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-json", newOptions); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"image",
 						image.Name,
 						"kernel_options",
-						convertMapStringToMapInterface(newKernelOptions),
+						newOptions,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					image.KernelOptions.IsInherited = false
-					image.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptions)
+					image.KernelOptions.Data = newOptions
 				}
 			}
 		case "kernel-options-post":
+			fallthrough
+		case "kernel-options-post-json":
 			fallthrough
 		case "kernel-options-post-inherit":
 			if cmd.Flags().Lookup("kernel-options-post-inherit").Changed {
@@ -67,43 +75,58 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 				if err != nil {
 					return
 				}
+				newOptionsPost := convertMapStringToMapInterface(newKernelOptionsPost)
+				if err = mergeJSONObjectFlag(cmd, "kernel-options-post-json", newOptionsPost); err != nil {
+					return
+				}
 				if inPlace {
 					err = Client.ModifyItemInPlace(
 						"image",
 						image.Name,
 						"kernel_options_post",
-						convertMapStringToMapInterface(newKernelOptionsPost),
+						newOptionsPost,
 					)
 					if err != nil {
 						return
 					}
 				} else {
 					image.KernelOptionsPost.IsInherited = false
-					image.KernelOptions.Data = convertMapStringToMapInterface(newKernelOptionsPost)
+					image.KernelOptionsPost.Data = newOptionsPost
 				}
 			}
 		case "autoinstall-meta":
 			fallthrough
+		case "autoinstall-meta-json":
+			fallthrough
 		case "autoinstall-meta-inherit":
-			if cmd.Flags().Lookup("boot-loaders-inherit").Changed {
+			if cmd.Flags().Lookup("autoinstall-meta-inherit").Changed {
 				image.AutoinstallMeta.Data = make(map[string]interface{})
-				image.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("boot-loaders-inherit")
+				image.AutoinstallMeta.IsInherited, err = cmd.Flags().GetBool("autoinstall-meta-inherit")
 				if err != nil {
 					return
 				}
 			} else {
-				var profileNewAutoinstallMeta map[string]string
-				profileNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
+				var imageNewAutoinstallMeta map[string]string
+				imageNewAutoinstallMeta, err = cmd.Flags().GetStringToString("autoinstall-meta")
 				if err != nil {
 					return
 				}
+				newMeta := convertMapStringToMapInterface(imageNewAutoinstallMeta)
+				if err = mergeJSONObjectFlag(cmd, "autoinstall-meta-json", newMeta); err != nil {
+					return
+				}
 				image.AutoinstallMeta.IsInherited = false
-				image.AutoinstallMeta.Data = convertMapStringToMapInterface(profileNewAutoinstallMeta)
+				image.AutoinstallMeta.Data = newMeta
 			}
 		case "template-files":
+			fallthrough
+		case "template-files-json":
 			var newTemplateFiles map[string]string
 			newTemplateFiles, err = cmd.Flags().GetStringToString("template-files")
 			if err != nil {
+				return
+			}
+			if err = mergeJSONStringMapFlag(cmd, "template-files-json", newTemplateFiles); err != nil {
 				return
 			}
 			if inPlace {
@@ -344,7 +367,12 @@ func NewImageAddCmd() *cobra.Command {
 				return err
 			}
 			// Now create the image via XML-RPC
-			system, err := Client.CreateImage(newImage)
+			var system *cobbler.Image
+			err = withTransaction(func() error {
+				var txErr error
+				system, txErr = Client.CreateImage(newImage)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -354,6 +382,7 @@ func NewImageAddCmd() *cobra.Command {
 	}
 	addCommonArgs(imageAddCmd)
 	addStringFlags(imageAddCmd, imageStringFlagMetadata)
+	addMapFlags(imageAddCmd, distroMapFlagMetadata)
 	addIntFlags(imageAddCmd, imageIntFlagMetadata)
 	addFloatFlags(imageAddCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageAddCmd, imageBoolFlagMetadata)
@@ -390,28 +419,29 @@ func NewImageCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyImage(imageHandle, imageNewName)
-			if err != nil {
-				return err
-			}
-			copiedImageHandle, err := Client.GetImageHandle(imageNewName)
-			if err != nil {
-				return err
-			}
-			copiedImage, err := Client.GetImage(copiedImageHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update image in-memory
-			err = updateImageFromFlags(cmd, copiedImage)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateImage(copiedImage)
+			return withTransaction(func() error {
+				if err := Client.CopyImage(imageHandle, imageNewName); err != nil {
+					return err
+				}
+				copiedImageHandle, err := Client.GetImageHandle(imageNewName)
+				if err != nil {
+					return err
+				}
+				copiedImage, err := Client.GetImage(copiedImageHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update image in-memory
+				if err := updateImageFromFlags(cmd, copiedImage); err != nil {
+					return err
+				}
+				return Client.UpdateImage(copiedImage)
+			})
 		},
 	}
 	addCommonArgs(imageCopyCmd)
 	addStringFlags(imageCopyCmd, imageStringFlagMetadata)
+	addMapFlags(imageCopyCmd, distroMapFlagMetadata)
 	addIntFlags(imageCopyCmd, imageIntFlagMetadata)
 	addFloatFlags(imageCopyCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageCopyCmd, imageBoolFlagMetadata)
@@ -455,11 +485,14 @@ func NewImageEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.UpdateImage(imageToEdit)
+			return withTransaction(func() error {
+				return Client.UpdateImage(imageToEdit)
+			})
 		},
 	}
 	addCommonArgs(imageEditCmd)
 	addStringFlags(imageEditCmd, imageStringFlagMetadata)
+	addMapFlags(imageEditCmd, distroMapFlagMetadata)
 	addIntFlags(imageEditCmd, imageIntFlagMetadata)
 	addFloatFlags(imageEditCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageEditCmd, imageBoolFlagMetadata)
@@ -484,6 +517,7 @@ func NewImageFindCmd() *cobra.Command {
 	}
 	addCommonArgs(imageFindCmd)
 	addStringFlags(imageFindCmd, imageStringFlagMetadata)
+	addMapFlags(imageFindCmd, distroMapFlagMetadata)
 	addIntFlags(imageFindCmd, imageIntFlagMetadata)
 	addFloatFlags(imageFindCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageFindCmd, imageBoolFlagMetadata)
@@ -528,7 +562,9 @@ func NewImageRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			return RemoveItemRecursive(cmd, args, "image")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "image")
+			})
 		},
 	}
 	imageRemoveCmd.Flags().String("name", "", "the image name")
@@ -565,28 +601,29 @@ func NewImageRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.RenameImage(imageHandle, imageNewName)
-			if err != nil {
-				return err
-			}
-			renamedImageHandle, err := Client.GetImageHandle(imageNewName)
-			if err != nil {
-				return err
-			}
-			renamedImage, err := Client.GetImage(renamedImageHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update image in-memory
-			err = updateImageFromFlags(cmd, renamedImage)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateImage(renamedImage)
+			return withTransaction(func() error {
+				if err := Client.RenameImage(imageHandle, imageNewName); err != nil {
+					return err
+				}
+				renamedImageHandle, err := Client.GetImageHandle(imageNewName)
+				if err != nil {
+					return err
+				}
+				renamedImage, err := Client.GetImage(renamedImageHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update image in-memory
+				if err := updateImageFromFlags(cmd, renamedImage); err != nil {
+					return err
+				}
+				return Client.UpdateImage(renamedImage)
+			})
 		},
 	}
 	addCommonArgs(imageRenameCmd)
 	addStringFlags(imageRenameCmd, imageStringFlagMetadata)
+	addMapFlags(imageRenameCmd, distroMapFlagMetadata)
 	addIntFlags(imageRenameCmd, imageIntFlagMetadata)
 	addFloatFlags(imageRenameCmd, imageFloatFlagMetadata)
 	addBoolFlags(imageRenameCmd, imageBoolFlagMetadata)

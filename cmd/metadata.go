@@ -43,6 +43,26 @@ var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "Kernel (absolute path on filesystem)",
 	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
+	},
 	"initrd": {
 		Name:         "initrd",
 		DefaultValue: "",
@@ -72,6 +92,11 @@ var distroStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "remote-boot-initrd",
 		DefaultValue: "",
 		Usage:        "remote boot initrd (URL the bootloader directly retrieves and boots from)",
+	},
+	"remote-boot-iso": {
+		Name:         "remote-boot-iso",
+		DefaultValue: "",
+		Usage:        "remote boot ISO (URL casper/Subiquity directly retrieves to locate the live filesystem)",
 	},
 	"redhat-management-key": {
 		Name:         "redhat-management-key",
@@ -125,6 +150,26 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall",
 		DefaultValue: "",
 		Usage:        "path to automatic installation template",
+	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
 	},
 	"distro": {
 		Name:         "distro",
@@ -200,14 +245,16 @@ var profileStringFlagMetadata = map[string]FlagMetadata[string]{
 
 var profileBoolFlagMetadata = map[string]FlagMetadata[bool]{
 	"enable-ipxe": {
-		Name:         "enable-ipxe",
-		DefaultValue: false,
-		Usage:        "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)",
+		Name:          "enable-ipxe",
+		DefaultValue:  false,
+		Usage:         "enable iPXE? (use iPXE instead of PXELINUX for advanced booting options)",
+		IsInheritable: true,
 	},
 	"enable-menu": {
-		Name:         "enable-menu",
-		DefaultValue: false,
-		Usage:        "enable PXE Menu? (show this profile in the PXE menu?)",
+		Name:          "enable-menu",
+		DefaultValue:  false,
+		Usage:         "enable PXE Menu? (show this profile in the PXE menu?)",
+		IsInheritable: true,
 	},
 	"virt-auto-boot": {
 		Name:         "virt-auto-boot",
@@ -228,17 +275,19 @@ var profileIntFlagMetadata = map[string]FlagMetadata[int]{
 		Usage:        "virt CPUs",
 	},
 	"virt-ram": {
-		Name:         "virt-ram",
-		DefaultValue: 0,
-		Usage:        "virt RAM size in MB",
+		Name:          "virt-ram",
+		DefaultValue:  0,
+		Usage:         "virt RAM size in MB",
+		IsInheritable: true,
 	},
 }
 
 var profileFloatFlagMetadata = map[string]FlagMetadata[float64]{
 	"virt-file-size": {
-		Name:         "virt-file-size",
-		DefaultValue: float64(0),
-		Usage:        "virt file size in GB",
+		Name:          "virt-file-size",
+		DefaultValue:  float64(0),
+		Usage:         "virt file size in GB",
+		IsInheritable: true,
 	},
 }
 
@@ -268,6 +317,26 @@ var systemStringFlagMetadata = map[string]FlagMetadata[string]{
 		Name:         "autoinstall",
 		DefaultValue: "",
 		Usage:        "path to automatic installation template",
+	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
 	},
 	"redhat-management-key": {
 		Name:         "redhat-management-key",
@@ -388,14 +457,16 @@ var systemBoolFlagMetadata = map[string]FlagMetadata[bool]{
 
 var systemIntFlagMetadata = map[string]FlagMetadata[int]{
 	"virt-cpus": {
-		Name:         "virt-cpus",
-		DefaultValue: 0,
-		Usage:        "virt CPUs",
+		Name:          "virt-cpus",
+		DefaultValue:  0,
+		Usage:         "virt CPUs",
+		IsInheritable: true,
 	},
 	"virt-ram": {
-		Name:         "virt-ram",
-		DefaultValue: 0,
-		Usage:        "virt RAM size in MB",
+		Name:          "virt-ram",
+		DefaultValue:  0,
+		Usage:         "virt RAM size in MB",
+		IsInheritable: true,
 	},
 	"serial-device": {
 		Name:         "serial-device",
@@ -411,9 +482,10 @@ var systemIntFlagMetadata = map[string]FlagMetadata[int]{
 
 var systemFloatFlagMetadata = map[string]FlagMetadata[float64]{
 	"virt-file-size": {
-		Name:         "virt-file-size",
-		DefaultValue: float64(0),
-		Usage:        "virt file size in GB",
+		Name:          "virt-file-size",
+		DefaultValue:  float64(0),
+		Usage:         "virt file size in GB",
+		IsInheritable: true,
 	},
 }
 
@@ -635,6 +707,26 @@ var imageStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "Architecture",
 	},
+	"autoinstall-meta-json": {
+		Name:         "autoinstall-meta-json",
+		DefaultValue: "",
+		Usage:        "automatic installation template metadata as a raw JSON object, merged on top of --autoinstall-meta; unlike --autoinstall-meta (flat key=value strings only), this can represent list/nested-object values (e.g. cloud-init's cloud_init_user_data_modules)",
+	},
+	"kernel-options-json": {
+		Name:         "kernel-options-json",
+		DefaultValue: "",
+		Usage:        "kernel options as a raw JSON object, merged on top of --kernel-options; unlike --kernel-options (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"kernel-options-post-json": {
+		Name:         "kernel-options-post-json",
+		DefaultValue: "",
+		Usage:        "post install kernel options as a raw JSON object, merged on top of --kernel-options-post; unlike --kernel-options-post (flat key=value strings only), this can represent list/nested-object values",
+	},
+	"template-files-json": {
+		Name:         "template-files-json",
+		DefaultValue: "",
+		Usage:        "template files (file mappings) as a raw JSON object, merged on top of --template-files; useful when a value's characters (e.g. a comma in a path) don't survive the flat key=value flag syntax",
+	},
 	"breed": {
 		Name:         "breed",
 		DefaultValue: "",
@@ -759,9 +851,10 @@ var repoStringFlagMetadata = map[string]FlagMetadata[string]{
 		Usage:        "Breed (valid options: none,rsync,rhn,yum,apt,wget)",
 	},
 	"createrepo-flags": {
-		Name:         "createrepo-flags",
-		DefaultValue: "",
-		Usage:        "flags to use with createrepo",
+		Name:          "createrepo-flags",
+		DefaultValue:  "",
+		Usage:         "flags to use with createrepo",
+		IsInheritable: true,
 	},
 	"mirror": {
 		Name:         "mirror",
@@ -774,9 +867,10 @@ var repoStringFlagMetadata = map[string]FlagMetadata[string]{
 		Usage:        "mirror type. Valid options: metalink,mirrorlist,baseurl",
 	},
 	"proxy": {
-		Name:         "proxy",
-		DefaultValue: "",
-		Usage:        "proxy URL (<<inherit>> to use proxy_url_ext from settings, blank or <<None>> for no proxy)",
+		Name:          "proxy",
+		DefaultValue:  "",
+		IsInheritable: true,
+		Usage:         "proxy URL (<<inherit>> to use proxy_url_ext from settings, blank or <<None>> for no proxy)",
 	},
 }
 
@@ -785,6 +879,11 @@ var repoBoolFlagMetadata = map[string]FlagMetadata[bool]{
 		Name:         "keep-updated",
 		DefaultValue: false,
 		Usage:        "update this repo on next 'cobbler reposync'?",
+	},
+	"mirror-locally": {
+		Name:         "mirror-locally",
+		DefaultValue: false,
+		Usage:        "copy files from the mirror, rather than just referencing it (required for the rsync breed)",
 	},
 }
 

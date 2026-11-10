@@ -693,16 +693,19 @@ func Test_InterfaceReportCmd_SystemName(t *testing.T) {
 
 	err = rootCmd.Execute()
 
-	// Client.FindNetworkInterface's "system_name" criterion doesn't currently
-	// match anything server-side (a pre-existing quirk of the unresolved
-	// find_network_interface RPC, outside this PR's diff), so this only
-	// asserts that the --system-name branch itself is taken without error,
-	// not that it returns the interface.
+	// Fixed as part of ledger entry 2.7: this branch now resolves --system-name to a
+	// system_uid and filters on that instead of the server's "system_name" criterion
+	// (which never matched anything, since NetworkInterface.to_dict() never includes
+	// the derived system_name property) - it now actually returns the interface.
 	cobbler.FailOnError(t, err)
 	FailOnNonEmptyStream(t, stderr)
-	_, err = io.ReadAll(stdout)
+	stdoutBytes, err := io.ReadAll(stdout)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), ": "+ifaceName) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("network interface name missing from report --system-name output")
 	}
 }
 
@@ -865,5 +868,169 @@ func Test_InterfaceExportCmd_All(t *testing.T) {
 	if !strings.Contains(string(stdoutBytes), `"name":"`+ifaceName+`"`) {
 		fmt.Println(string(stdoutBytes))
 		t.Fatal("network interface name missing from export --all output")
+	}
+}
+
+// --- Ledger entry 2.7 regression tests: interface list/report identifier UX ---
+//
+// Both issues stem from the same confirmed root cause: cobbler/items/network_interface.py's
+// system_name is a derived read-only property (computed from system_uid via a live systems()
+// lookup) with no backing private attribute, so BaseItem.to_dict() never includes it -
+// confirmed live via a raw get_network_interfaces XML-RPC call, in every flattened/resolved
+// combination. Client.GetNetworkInterfaces() therefore never populates
+// NetworkInterface.SystemName, and find_network_interface's "system_name" criterion never
+// matches anything (find_match() compares against to_dict() data). Both issues are fixed
+// client-side in cmd/interface.go by resolving/filtering on system_uid instead, which *is*
+// always present.
+
+// Test_InterfaceListCmd_GroupsByRealSystemName exercises issue 1: `interface list` must group
+// interfaces under each parent system's real name, not a blank placeholder (NewInterfaceListCommand
+// grouped by the never-populated iface.SystemName pre-fix).
+func Test_InterfaceListCmd_GroupsByRealSystemName(t *testing.T) {
+	systemName := "test-interface-list-real-name-system"
+	ifaceName := "eth-list-real-name"
+	setupClient(t)
+	system, err := createSystem(Client, systemName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", systemName, err)
+		}
+	})
+	iface := cobbler.NewNetworkInterface()
+	iface.Name = ifaceName
+	iface.SystemUid = system.Uid
+	_, err = Client.CreateNetworkInterface(system.Uid, iface)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "list"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdoutString := string(stdoutBytes)
+	expectedHeader := systemName + ":"
+	if !strings.Contains(stdoutString, expectedHeader) {
+		fmt.Println(stdoutString)
+		t.Fatalf("network interface list output missing real system name header %q (pre-fix: blank/placeholder header)", expectedHeader)
+	}
+}
+
+// Test_InterfaceReportCmd_AmbiguousNameAcrossSystems exercises issue 2: `interface report
+// --name <x>` must give an actionable error explaining that interface names are only unique
+// per-system when multiple systems share an interface name, not a bare/generic error.
+func Test_InterfaceReportCmd_AmbiguousNameAcrossSystems(t *testing.T) {
+	sys1Name := "test-interface-report-ambig-system1"
+	sys2Name := "test-interface-report-ambig-system2"
+	ifaceName := "eth-ambig"
+	setupClient(t)
+	system1, err := createSystem(Client, sys1Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system1.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys1Name, err)
+		}
+	})
+	system2, err := createSystem(Client, sys2Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system2.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys2Name, err)
+		}
+	})
+
+	for _, sys := range []*cobbler.System{system1, system2} {
+		iface := cobbler.NewNetworkInterface()
+		iface.Name = ifaceName
+		iface.SystemUid = sys.Uid
+		_, err = Client.CreateNetworkInterface(sys.Uid, iface)
+		cobbler.FailOnError(t, err)
+	}
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "report", "--name", ifaceName})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	if err == nil {
+		t.Fatal("expected an error for an interface name that is ambiguous across systems, got none")
+	}
+	if !strings.Contains(err.Error(), "--system-name") {
+		t.Fatalf("expected the ambiguity error to explain --system-name disambiguation, got: %v", err)
+	}
+}
+
+// Test_InterfaceReportCmd_NameAndSystemNameDisambiguates exercises issue 2's actual fix:
+// passing --system-name alongside an ambiguous --name must disambiguate and return the
+// correct interface (pre-fix: --system-name was silently ignored whenever --name was also
+// set, so this failed identically to the no-system-name case above).
+func Test_InterfaceReportCmd_NameAndSystemNameDisambiguates(t *testing.T) {
+	sys1Name := "test-interface-report-disambig-system1"
+	sys2Name := "test-interface-report-disambig-system2"
+	ifaceName := "eth-disambig"
+	setupClient(t)
+	system1, err := createSystem(Client, sys1Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system1.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys1Name, err)
+		}
+	})
+	system2, err := createSystem(Client, sys2Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system2.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys2Name, err)
+		}
+	})
+
+	iface1 := cobbler.NewNetworkInterface()
+	iface1.Name = ifaceName
+	iface1.SystemUid = system1.Uid
+	created1, err := Client.CreateNetworkInterface(system1.Uid, iface1)
+	cobbler.FailOnError(t, err)
+
+	iface2 := cobbler.NewNetworkInterface()
+	iface2.Name = ifaceName
+	iface2.SystemUid = system2.Uid
+	_, err = Client.CreateNetworkInterface(system2.Uid, iface2)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "report", "--name", ifaceName, "--system-name", sys1Name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdoutString := string(stdoutBytes)
+	if !strings.Contains(stdoutString, created1.Uid) {
+		fmt.Println(stdoutString)
+		t.Fatalf("expected --system-name to disambiguate to system1's interface (uid %s)", created1.Uid)
 	}
 }

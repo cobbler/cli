@@ -114,6 +114,13 @@ func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
 				return
 			}
 			repo.Mirror = repoNewMirror
+		case "mirror-locally":
+			var repoNewMirrorLocally bool
+			repoNewMirrorLocally, err = cmd.Flags().GetBool("mirror-locally")
+			if err != nil {
+				return
+			}
+			repo.MirrorLocally = repoNewMirrorLocally
 		case "mirror-type":
 			var repoNewMirrorType string
 			repoNewMirrorType, err = cmd.Flags().GetString("mirror-type")
@@ -220,7 +227,12 @@ func NewRepoAddCmd() *cobra.Command {
 				return err
 			}
 			// Now create via XML-RPC
-			repo, err := Client.CreateRepo(newRepo)
+			var repo *cobbler.Repo
+			err = withTransaction(func() error {
+				var txErr error
+				repo, txErr = Client.CreateRepo(newRepo)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -283,23 +295,23 @@ func NewRepoCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = Client.CopyRepo(repoHandle, repoNewName)
-			if err != nil {
-				return err
-			}
-			copiedRepoHandle, err := Client.GetRepoHandle(repoNewName)
-			if err != nil {
-				return err
-			}
-			copiedRepo, err := Client.GetRepo(copiedRepoHandle, false, false)
-			if err != nil {
-				return err
-			}
-			err = updateRepoFromFlags(cmd, copiedRepo)
-			if err != nil {
-				return err
-			}
-			return Client.UpdateRepo(copiedRepo)
+			return withTransaction(func() error {
+				if err := Client.CopyRepo(repoHandle, repoNewName); err != nil {
+					return err
+				}
+				copiedRepoHandle, err := Client.GetRepoHandle(repoNewName)
+				if err != nil {
+					return err
+				}
+				copiedRepo, err := Client.GetRepo(copiedRepoHandle, false, false)
+				if err != nil {
+					return err
+				}
+				if err := updateRepoFromFlags(cmd, copiedRepo); err != nil {
+					return err
+				}
+				return Client.UpdateRepo(copiedRepo)
+			})
 		},
 	}
 	addCommonArgs(repoCopyCmd)
@@ -349,7 +361,9 @@ func NewRepoEditCmd() *cobra.Command {
 				return err
 			}
 			// Update repo via XML-RPC
-			return Client.UpdateRepo(updateRepo)
+			return withTransaction(func() error {
+				return Client.UpdateRepo(updateRepo)
+			})
 		},
 	}
 	addCommonArgs(repoEditCmd)
@@ -424,7 +438,9 @@ func NewRepoRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			return RemoveItemRecursive(cmd, args, "repo")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "repo")
+			})
 		},
 	}
 	repoRemoveCmd.Flags().String("name", "", "the repo name")
@@ -462,27 +478,27 @@ func NewRepoRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// Rename the repo server side
-			err = Client.RenameRepo(repoHandle, repoNewName)
-			if err != nil {
-				return err
-			}
-			// Get the renamed repository from the API
-			newRepositoryHandle, err := Client.GetRepoHandle(repoNewName)
-			if err != nil {
-				return err
-			}
-			newRepository, err := Client.GetRepo(newRepositoryHandle, false, false)
-			if err != nil {
-				return err
-			}
-			// Update the repo in-memory
-			err = updateRepoFromFlags(cmd, newRepository)
-			if err != nil {
-				return err
-			}
-			// Update the repo via XML-RPC
-			return Client.UpdateRepo(newRepository)
+			return withTransaction(func() error {
+				// Rename the repo server side
+				if err := Client.RenameRepo(repoHandle, repoNewName); err != nil {
+					return err
+				}
+				// Get the renamed repository from the API
+				newRepositoryHandle, err := Client.GetRepoHandle(repoNewName)
+				if err != nil {
+					return err
+				}
+				newRepository, err := Client.GetRepo(newRepositoryHandle, false, false)
+				if err != nil {
+					return err
+				}
+				// Update the repo in-memory
+				if err := updateRepoFromFlags(cmd, newRepository); err != nil {
+					return err
+				}
+				// Update the repo via XML-RPC
+				return Client.UpdateRepo(newRepository)
+			})
 		},
 	}
 	addCommonArgs(repoRenameCmd)

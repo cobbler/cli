@@ -42,6 +42,7 @@ func NewRootCmd() *cobra.Command {
 	// Add sub commands
 	rootCmd.AddCommand(NewAclSetupCmd())
 	rootCmd.AddCommand(NewBuildisoCmd())
+	rootCmd.AddCommand(NewCheckCmd())
 	distroCmd, err := NewDistroCmd()
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(distroCmd)
@@ -159,6 +160,28 @@ func generateCobblerClient() error {
 	return err
 }
 
+// withTransaction wraps fn, which must perform the mutating new_*/modify_*/
+// save_* XML-RPC calls a single `add`/`edit`/`copy`/`rename`/`remove` CLI
+// invocation makes, in a Cobbler server-side transaction. On success the
+// transaction is committed; on any error returned by fn it is aborted
+// first, before the original error is returned to the caller. This avoids
+// going through cobblerd's older, leak-prone no-transaction code path,
+// where a failed add/edit permanently leaks a dangling name claim
+// server-side (see cobbler-cli ledger entry 2.8 / cobbler ledger entry 1.4
+// for the underlying bug this guards against).
+func withTransaction(fn func() error) error {
+	if err := Client.TransactionBegin(); err != nil {
+		return err
+	}
+	if err := fn(); err != nil {
+		if abortErr := Client.TransactionAbort(); abortErr != nil {
+			return fmt.Errorf("%w (transaction abort also failed: %v)", err, abortErr)
+		}
+		return err
+	}
+	return Client.TransactionCommit()
+}
+
 func printStructured(cmd *cobra.Command, dataStruct interface{}) {
 	s := reflect.ValueOf(dataStruct).Elem()
 	typeOfT := s.Type()
@@ -260,7 +283,7 @@ func printField(cmd *cobra.Command, valueType reflect.Kind, name string, value i
 		if value == nil {
 			value = ""
 		}
-		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %s\n", name, value)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-40s: %v\n", name, value)
 		// fmt.Fprintf(cmd.OutOrStdout(),"%d: %s %s = %v\n", i, typeOfT.Field(i).Name, f.Type(), f.Interface())
 	}
 }

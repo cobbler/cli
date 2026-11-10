@@ -261,6 +261,97 @@ func Test_ProfileEditCmd_VirtUEFI(t *testing.T) {
 	}
 }
 
+// Test_UpdateProfileFromFlags_EnableIPXE is a regression test for a panic in
+// updateProfileFromFlags: profileBoolFlagMetadata's "enable-ipxe" entry used
+// to be missing IsInheritable, so addBoolFlags never registered its
+// "enable-ipxe-inherit" companion flag, and the shared switch-case's
+// cmd.Flags().Lookup("enable-ipxe-inherit").Changed dereferenced a nil
+// *pflag.Flag. This exercises the real flag registration and switch-case
+// code directly and does not need a live cobbler server.
+func Test_UpdateProfileFromFlags_EnableIPXE(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("enable-ipxe", "true")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.EnableIPXE.IsInherited {
+		t.Fatal("profile.EnableIPXE should not be marked inherited after --enable-ipxe=true")
+	}
+	if !profile.EnableIPXE.Data {
+		t.Fatal("profile.EnableIPXE.Data should be true after --enable-ipxe=true")
+	}
+}
+
+// Test_UpdateProfileFromFlags_EnableMenu is the --enable-menu counterpart of
+// Test_UpdateProfileFromFlags_EnableIPXE; see that test's comment for the
+// panic mechanism being guarded against.
+func Test_UpdateProfileFromFlags_EnableMenu(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("enable-menu", "true")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.EnableMenu.IsInherited {
+		t.Fatal("profile.EnableMenu should not be marked inherited after --enable-menu=true")
+	}
+	if !profile.EnableMenu.Data {
+		t.Fatal("profile.EnableMenu.Data should be true after --enable-menu=true")
+	}
+}
+
+// Test_UpdateProfileFromFlags_VirtRam is a regression test for a panic in
+// updateProfileFromFlags: the "virt-ram"/"virt-ram-inherit" case's
+// cmd.Flags().Lookup(...).Changed check was copy-pasted from the
+// "virt-auto-boot-inherit" case and never updated to look up its own
+// "virt-ram-inherit" flag, so setting --virt-ram alone (without
+// --virt-auto-boot-inherit also being a registered/resolvable flag at that
+// point) dereferenced a nil *pflag.Flag. This exercises the real flag
+// registration and switch-case code directly and does not need a live
+// cobbler server.
+func Test_UpdateProfileFromFlags_VirtRam(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("virt-ram", "2048")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.Virt.Ram.IsInherited {
+		t.Fatal("profile.Virt.Ram should not be marked inherited after --virt-ram=2048")
+	}
+	if profile.Virt.Ram.Data != 2048 {
+		t.Fatalf("profile.Virt.Ram.Data should be 2048 after --virt-ram=2048, got %d", profile.Virt.Ram.Data)
+	}
+}
+
+// Test_UpdateProfileFromFlags_VirtFileSize is the --virt-file-size
+// counterpart of Test_UpdateProfileFromFlags_VirtRam; see that test's
+// comment for the panic mechanism being guarded against (the same
+// copy-pasted "virt-auto-boot-inherit" lookup).
+func Test_UpdateProfileFromFlags_VirtFileSize(t *testing.T) {
+	cmd := NewProfileEditCmd()
+	err := cmd.Flags().Set("virt-file-size", "10")
+	cobbler.FailOnError(t, err)
+
+	profile := cobbler.NewProfile()
+	err = updateProfileFromFlags(cmd, &profile)
+	cobbler.FailOnError(t, err)
+
+	if profile.Virt.FileSize.IsInherited {
+		t.Fatal("profile.Virt.FileSize should not be marked inherited after --virt-file-size=10")
+	}
+	if profile.Virt.FileSize.Data != 10 {
+		t.Fatalf("profile.Virt.FileSize.Data should be 10 after --virt-file-size=10, got %f", profile.Virt.FileSize.Data)
+	}
+}
+
 // Test_ProfileCopyCmd_UID exercises the --uid sibling flag on copy.
 func Test_ProfileCopyCmd_UID(t *testing.T) {
 	name := "test-profile-copy-uid"
@@ -982,4 +1073,64 @@ func Test_ProfileExportCmd_All(t *testing.T) {
 		fmt.Println(string(stdoutBytes))
 		t.Fatal("profile name missing from yaml export --all output")
 	}
+}
+
+// Test_UpdateProfileFromFlags_JSONFlags is the profile counterpart of
+// Test_UpdateDistroFromFlags_JSONFlags; see that test's comment for intent and precedence rules.
+func Test_UpdateProfileFromFlags_JSONFlags(t *testing.T) {
+	t.Run("kernel-options-json", func(t *testing.T) {
+		cmd := NewProfileEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		profile := cobbler.NewProfile()
+		cobbler.FailOnError(t, updateProfileFromFlags(cmd, &profile))
+
+		if profile.KernelOptions.IsInherited {
+			t.Fatal("profile.KernelOptions should not be marked inherited")
+		}
+		if got := profile.KernelOptions.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := profile.KernelOptions.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", profile.KernelOptions.Data["nested"])
+		}
+	})
+
+	t.Run("kernel-options-post-json", func(t *testing.T) {
+		cmd := NewProfileEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post", "foo=bar"))
+		cobbler.FailOnError(t, cmd.Flags().Set("kernel-options-post-json", `{"foo": "overridden", "nested": [1, 2]}`))
+
+		profile := cobbler.NewProfile()
+		cobbler.FailOnError(t, updateProfileFromFlags(cmd, &profile))
+
+		if profile.KernelOptionsPost.IsInherited {
+			t.Fatal("profile.KernelOptionsPost should not be marked inherited")
+		}
+		if got := profile.KernelOptionsPost.Data["foo"]; got != "overridden" {
+			t.Errorf("expected --kernel-options-post-json to override the flat \"foo\" value, got %v", got)
+		}
+		nested, ok := profile.KernelOptionsPost.Data["nested"].([]interface{})
+		if !ok || len(nested) != 2 {
+			t.Errorf("expected \"nested\" to carry a decoded 2-element list, got %v", profile.KernelOptionsPost.Data["nested"])
+		}
+	})
+
+	t.Run("template-files-json", func(t *testing.T) {
+		cmd := NewProfileEditCmd()
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files", "motd=snippets/motd"))
+		cobbler.FailOnError(t, cmd.Flags().Set("template-files-json", `{"motd": "snippets/motd-v2", "banner": "snippets/banner"}`))
+
+		profile := cobbler.NewProfile()
+		cobbler.FailOnError(t, updateProfileFromFlags(cmd, &profile))
+
+		if got := profile.TemplateFiles["motd"]; got != "snippets/motd-v2" {
+			t.Errorf("expected --template-files-json to override the flat \"motd\" value, got %q", got)
+		}
+		if got := profile.TemplateFiles["banner"]; got != "snippets/banner" {
+			t.Errorf("expected --template-files-json to add \"banner\", got %q", got)
+		}
+	})
 }

@@ -189,6 +189,75 @@ func Test_RepoEditCmd(t *testing.T) {
 	}
 }
 
+// Test_UpdateRepoFromFlags_MirrorLocally is a regression test for the
+// rsync-breed repo sync bug: cobbler/modules/serializers-adjacent
+// rsync_sync() hard-requires mirror_locally=True for the rsync breed, but
+// `repo add`/`repo edit` had no --mirror-locally flag at all, so no
+// rsync-breed repo could ever be synced via the documented CLI. This
+// exercises the real flag registration (repoBoolFlagMetadata/addBoolFlags)
+// and updateRepoFromFlags's switch-case directly and does not need a live
+// cobbler server. mirror_locally is a plain (non-inheritable) bool on both
+// the Python item (@LazyProperty, not @InheritableProperty) and the Go
+// client's Repo struct, so this follows the "keep-updated" convention, not
+// the Value[T]/"-inherit" one.
+func Test_UpdateRepoFromFlags_MirrorLocally(t *testing.T) {
+	cmd := NewRepoEditCmd()
+	err := cmd.Flags().Set("mirror-locally", "true")
+	cobbler.FailOnError(t, err)
+
+	repo := cobbler.NewRepo()
+	err = updateRepoFromFlags(cmd, &repo)
+	cobbler.FailOnError(t, err)
+
+	if !repo.MirrorLocally {
+		t.Fatal("repo.MirrorLocally should be true after --mirror-locally=true")
+	}
+}
+
+// Test_UpdateRepoFromFlags_CreaterepoFlags is a regression test for a panic
+// in updateRepoFromFlags: addStringFlags never registered an "-inherit"
+// companion flag for any string-typed metadata, regardless of
+// IsInheritable, so the "createrepo-flags"/"createrepo-flags-inherit"
+// switch-case's cmd.Flags().Lookup("createrepo-flags-inherit").Changed
+// dereferenced a nil *pflag.Flag. This exercises the real flag registration
+// and switch-case code directly and does not need a live cobbler server.
+func Test_UpdateRepoFromFlags_CreaterepoFlags(t *testing.T) {
+	cmd := NewRepoEditCmd()
+	err := cmd.Flags().Set("createrepo-flags", "--verbose")
+	cobbler.FailOnError(t, err)
+
+	repo := cobbler.NewRepo()
+	err = updateRepoFromFlags(cmd, &repo)
+	cobbler.FailOnError(t, err)
+
+	if repo.CreateRepoFlags.IsInherited {
+		t.Fatal("repo.CreateRepoFlags should not be marked inherited after --createrepo-flags=--verbose")
+	}
+	if repo.CreateRepoFlags.Data != "--verbose" {
+		t.Fatalf("repo.CreateRepoFlags.Data should be \"--verbose\" after --createrepo-flags=--verbose, got %q", repo.CreateRepoFlags.Data)
+	}
+}
+
+// Test_UpdateRepoFromFlags_Proxy is the --proxy counterpart of
+// Test_UpdateRepoFromFlags_CreaterepoFlags; see that test's comment for the
+// panic mechanism being guarded against.
+func Test_UpdateRepoFromFlags_Proxy(t *testing.T) {
+	cmd := NewRepoEditCmd()
+	err := cmd.Flags().Set("proxy", "http://proxy.example.com:3128")
+	cobbler.FailOnError(t, err)
+
+	repo := cobbler.NewRepo()
+	err = updateRepoFromFlags(cmd, &repo)
+	cobbler.FailOnError(t, err)
+
+	if repo.Proxy.IsInherited {
+		t.Fatal("repo.Proxy should not be marked inherited after --proxy=http://proxy.example.com:3128")
+	}
+	if repo.Proxy.Data != "http://proxy.example.com:3128" {
+		t.Fatalf("repo.Proxy.Data should be \"http://proxy.example.com:3128\" after --proxy=http://proxy.example.com:3128, got %q", repo.Proxy.Data)
+	}
+}
+
 // Test_RepoCopyCmd_UID exercises the --uid sibling flag on copy.
 func Test_RepoCopyCmd_UID(t *testing.T) {
 	name := "test-repo-copy-uid"

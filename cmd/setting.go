@@ -170,6 +170,18 @@ func NewSettingReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			if name != "" {
+				field := settingsFieldByMapstructureTag(settings, name)
+				if !field.IsValid() {
+					return fmt.Errorf("unknown setting %q; run `cobbler setting report` to list valid names", name)
+				}
+				printField(cmd, field.Kind(), name, field.Interface())
+				return nil
+			}
 			printStructured(cmd, settings)
 			return nil
 		},

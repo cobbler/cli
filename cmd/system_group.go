@@ -53,7 +53,12 @@ func newSystemGroupAddCmd() *cobra.Command {
 			if itemsSet {
 				g.Members = items
 			}
-			created, err := Client.CreateSystemGroup(g)
+			var created *cobbler.SystemGroup
+			err = withTransaction(func() error {
+				var txErr error
+				created, txErr = Client.CreateSystemGroup(g)
+				return txErr
+			})
 			if err != nil {
 				return err
 			}
@@ -99,7 +104,9 @@ func newSystemGroupEditCmd() *cobra.Command {
 			if itemsSet {
 				g.Members = items
 			}
-			return Client.UpdateSystemGroup(g)
+			return withTransaction(func() error {
+				return Client.UpdateSystemGroup(g)
+			})
 		},
 	}
 	addGroupFlagSet(cmd)
@@ -131,7 +138,9 @@ func newSystemGroupCopyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.CopySystemGroup(handle, newName)
+			return withTransaction(func() error {
+				return Client.CopySystemGroup(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -164,7 +173,9 @@ func newSystemGroupRenameCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return Client.RenameSystemGroup(handle, newName)
+			return withTransaction(func() error {
+				return Client.RenameSystemGroup(handle, newName)
+			})
 		},
 	}
 	addStringFlags(cmd, commonStringFlagMetadata)
@@ -181,7 +192,9 @@ func newSystemGroupRemoveCmd() *cobra.Command {
 			if err := generateCobblerClient(); err != nil {
 				return err
 			}
-			return RemoveItemRecursive(cmd, args, "system_group")
+			return withTransaction(func() error {
+				return RemoveItemRecursive(cmd, args, "system_group")
+			})
 		},
 	}
 	cmd.Flags().String("name", "", "the system group name")
