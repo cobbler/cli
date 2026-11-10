@@ -91,7 +91,7 @@ func updateNetworkInterfaceFromFlags(cmd *cobra.Command, iface *cobbler.NetworkI
 		case "ipv4-netmask":
 			iface.IPv4.Netmask, err = cmd.Flags().GetString("ipv4-netmask")
 		case "ipv4-gateway":
-			iface.IfGateway, err = cmd.Flags().GetString("ipv4-gateway")
+			iface.IPv4.DefaultGateway, err = cmd.Flags().GetString("ipv4-gateway")
 		case "ipv4-static-routes":
 			iface.IPv4.StaticRoutes, err = cmd.Flags().GetStringSlice("ipv4-static-routes")
 		// IPv6
@@ -106,7 +106,7 @@ func updateNetworkInterfaceFromFlags(cmd *cobra.Command, iface *cobbler.NetworkI
 		case "ipv6-static-routes":
 			iface.IPv6.StaticRoutes, err = cmd.Flags().GetStringSlice("ipv6-static-routes")
 		case "ipv6-default-gateway":
-			iface.Ipv6DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
+			iface.IPv6.DefaultGateway, err = cmd.Flags().GetString("ipv6-default-gateway")
 		// DNS
 		case "dns-name":
 			iface.DNS.Name, err = cmd.Flags().GetString("dns-name")
