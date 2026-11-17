@@ -263,9 +263,9 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 		case "virt-file-size":
 			fallthrough
 		case "virt-file-size-inherit":
-			if cmd.Flags().Lookup("owners-inherit").Changed {
+			if cmd.Flags().Lookup("virt-file-size-inherit").Changed {
 				image.Virt.FileSize.Data = 0
-				image.Virt.FileSize.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				image.Virt.FileSize.IsInherited, err = cmd.Flags().GetBool("virt-file-size-inherit")
 				if err != nil {
 					return
 				}
@@ -288,9 +288,9 @@ func updateImageFromFlags(cmd *cobra.Command, image *cobbler.Image) error {
 		case "virt-ram":
 			fallthrough
 		case "virt-ram-inherit":
-			if cmd.Flags().Lookup("owners-inherit").Changed {
+			if cmd.Flags().Lookup("virt-ram-inherit").Changed {
 				image.Virt.Ram.Data = 0
-				image.Virt.Ram.IsInherited, err = cmd.Flags().GetBool("owners-inherit")
+				image.Virt.Ram.IsInherited, err = cmd.Flags().GetBool("virt-ram-inherit")
 				if err != nil {
 					return
 				}

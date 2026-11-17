@@ -886,3 +886,71 @@ func Test_UpdateImageFromFlags_JSONFlags(t *testing.T) {
 		}
 	})
 }
+
+// Test_UpdateImageFromFlags_VirtRam is the image counterpart of
+// Test_UpdateProfileFromFlags_VirtRam / Test_UpdateSystemFromFlags_VirtRam:
+// it exercises the plain (non-inherit) "virt-ram" path directly against
+// updateImageFromFlags, with no live cobbler server required.
+func Test_UpdateImageFromFlags_VirtRam(t *testing.T) {
+	cmd := NewImageEditCmd()
+	cobbler.FailOnError(t, cmd.Flags().Set("virt-ram", "2048"))
+
+	image := cobbler.NewImage()
+	cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+	if image.Virt.Ram.IsInherited {
+		t.Fatal("image.Virt.Ram should not be marked inherited after --virt-ram=2048")
+	}
+	if image.Virt.Ram.Data != 2048 {
+		t.Fatalf("image.Virt.Ram.Data should be 2048 after --virt-ram=2048, got %d", image.Virt.Ram.Data)
+	}
+}
+
+// Test_UpdateImageFromFlags_VirtFileSize is the --virt-file-size counterpart
+// of Test_UpdateImageFromFlags_VirtRam.
+func Test_UpdateImageFromFlags_VirtFileSize(t *testing.T) {
+	cmd := NewImageEditCmd()
+	cobbler.FailOnError(t, cmd.Flags().Set("virt-file-size", "10"))
+
+	image := cobbler.NewImage()
+	cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+	if image.Virt.FileSize.IsInherited {
+		t.Fatal("image.Virt.FileSize should not be marked inherited after --virt-file-size=10")
+	}
+	if image.Virt.FileSize.Data != 10 {
+		t.Fatalf("image.Virt.FileSize.Data should be 10 after --virt-file-size=10, got %f", image.Virt.FileSize.Data)
+	}
+}
+
+// Test_UpdateImageFromFlags_VirtRamInherit is a regression test for G-07:
+// "virt-ram-inherit" was never registered as a flag on "image edit" (missing
+// IsInheritable: true in imageIntFlagMetadata), and the switch-case handling
+// it was copy-pasted from "owners-inherit" and never updated to look up its
+// own flag name. Both defects must be fixed for --virt-ram-inherit to work.
+func Test_UpdateImageFromFlags_VirtRamInherit(t *testing.T) {
+	cmd := NewImageEditCmd()
+	cobbler.FailOnError(t, cmd.Flags().Set("virt-ram-inherit", "true"))
+
+	image := cobbler.NewImage()
+	cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+	if !image.Virt.Ram.IsInherited {
+		t.Fatal("image.Virt.Ram should be marked inherited after --virt-ram-inherit")
+	}
+}
+
+// Test_UpdateImageFromFlags_VirtFileSizeInherit is the --virt-file-size-inherit
+// counterpart of Test_UpdateImageFromFlags_VirtRamInherit; see that test's
+// comment for the G-07 bug shape being guarded against.
+func Test_UpdateImageFromFlags_VirtFileSizeInherit(t *testing.T) {
+	cmd := NewImageEditCmd()
+	cobbler.FailOnError(t, cmd.Flags().Set("virt-file-size-inherit", "true"))
+
+	image := cobbler.NewImage()
+	cobbler.FailOnError(t, updateImageFromFlags(cmd, &image))
+
+	if !image.Virt.FileSize.IsInherited {
+		t.Fatal("image.Virt.FileSize should be marked inherited after --virt-file-size-inherit")
+	}
+}

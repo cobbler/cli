@@ -791,17 +791,19 @@ var imageIntFlagMetadata = map[string]FlagMetadata[int]{
 		Usage:        "virt CPUs",
 	},
 	"virt-ram": {
-		Name:         "virt-ram",
-		DefaultValue: 0,
-		Usage:        "virt RAM size in MB",
+		Name:          "virt-ram",
+		DefaultValue:  0,
+		Usage:         "virt RAM size in MB",
+		IsInheritable: true,
 	},
 }
 
 var imageFloatFlagMetadata = map[string]FlagMetadata[float64]{
 	"virt-file-size": {
-		Name:         "virt-file-size",
-		DefaultValue: float64(0),
-		Usage:        "virt file size in GB",
+		Name:          "virt-file-size",
+		DefaultValue:  float64(0),
+		Usage:         "virt file size in GB",
+		IsInheritable: true,
 	},
 }
 
