@@ -189,6 +189,55 @@ func Test_MenuEditCmd(t *testing.T) {
 	}
 }
 
+// Test_MenuEditCmd_Parent verifies that --parent on `menu edit` is actually persisted
+// server-side; cobblerclient previously dropped the Parent field for every item type but
+// Profile.
+func Test_MenuEditCmd_Parent(t *testing.T) {
+	parentName := "test-menu-parent-parent"
+	childName := "test-menu-parent-child"
+	setupClient(t)
+	_, err := createMenu(Client, parentName)
+	cobbler.FailOnError(t, err)
+	// t.Cleanup is LIFO, and the server refuses to delete a menu that would orphan a child,
+	// so register the parent's cleanup first (it runs last, after the child is gone).
+	t.Cleanup(func() {
+		if err := removeMenu(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove menu %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeMenu(Client, childName); err != nil {
+			t.Errorf("cleanup: remove menu %s: %v", childName, err)
+		}
+	})
+	parentUID, err := Client.GetMenuHandle(parentName)
+	cobbler.FailOnError(t, err)
+	_, err = createMenu(Client, childName)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "menu", "edit",
+		"--name", childName, "--parent", parentUID})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	childUID, err := Client.GetMenuHandle(childName)
+	cobbler.FailOnError(t, err)
+	updatedChild, err := Client.GetMenu(childUID, false, false)
+	cobbler.FailOnError(t, err)
+	if updatedChild.Parent != parentUID {
+		t.Fatalf("menu parent update wasn't successful: got %q, want %q", updatedChild.Parent, parentUID)
+	}
+}
+
 func Test_MenuFindCmd(t *testing.T) {
 	type args struct {
 		command []string
