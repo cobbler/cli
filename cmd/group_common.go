@@ -25,12 +25,13 @@ var groupStringSliceFlagMetadata = map[string]FlagMetadata[[]string]{
 // addGroupFlagSet registers the common flag set used by every group subcommand.
 func addGroupFlagSet(cmd *cobra.Command) {
 	addCommonArgs(cmd)
+	addStringFlags(cmd, groupStringFlagMetadata)
 	addStringSliceFlags(cmd, groupStringSliceFlagMetadata)
 }
 
-// extractGroupFlags reads the --items / --comment flags off cmd and returns
-// the values. The bools indicate whether the user explicitly set that flag.
-func extractGroupFlags(cmd *cobra.Command) (comment string, commentSet bool, items []string, itemsSet bool, err error) {
+// extractGroupFlags reads the --items / --comment / --parent flags off cmd and
+// returns the values. The bools indicate whether the user explicitly set that flag.
+func extractGroupFlags(cmd *cobra.Command) (comment string, commentSet bool, items []string, itemsSet bool, parent string, parentSet bool, err error) {
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		if err != nil {
 			return
@@ -42,6 +43,9 @@ func extractGroupFlags(cmd *cobra.Command) (comment string, commentSet bool, ite
 		case "items":
 			items, err = cmd.Flags().GetStringSlice("items")
 			itemsSet = true
+		case "parent":
+			parent, err = cmd.Flags().GetString("parent")
+			parentSet = true
 		}
 	})
 	return

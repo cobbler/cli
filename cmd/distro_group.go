@@ -43,7 +43,7 @@ func newDistroGroupAddCmd() *cobra.Command {
 				return err
 			}
 			g.Name = name
-			comment, commentSet, items, itemsSet, err := extractGroupFlags(cmd)
+			comment, commentSet, items, itemsSet, parent, parentSet, err := extractGroupFlags(cmd)
 			if err != nil {
 				return err
 			}
@@ -52,6 +52,9 @@ func newDistroGroupAddCmd() *cobra.Command {
 			}
 			if itemsSet {
 				g.Members = items
+			}
+			if parentSet {
+				g.Parent = parent
 			}
 			var created *cobbler.DistroGroup
 			err = withTransaction(func() error {
@@ -94,7 +97,7 @@ func newDistroGroupEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			comment, commentSet, items, itemsSet, err := extractGroupFlags(cmd)
+			comment, commentSet, items, itemsSet, parent, parentSet, err := extractGroupFlags(cmd)
 			if err != nil {
 				return err
 			}
@@ -103,6 +106,9 @@ func newDistroGroupEditCmd() *cobra.Command {
 			}
 			if itemsSet {
 				g.Members = items
+			}
+			if parentSet {
+				g.Parent = parent
 			}
 			return withTransaction(func() error {
 				return Client.UpdateDistroGroup(g)

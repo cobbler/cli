@@ -43,7 +43,7 @@ func newSystemGroupAddCmd() *cobra.Command {
 				return err
 			}
 			g.Name = name
-			comment, commentSet, items, itemsSet, err := extractGroupFlags(cmd)
+			comment, commentSet, items, itemsSet, parent, parentSet, err := extractGroupFlags(cmd)
 			if err != nil {
 				return err
 			}
@@ -52,6 +52,9 @@ func newSystemGroupAddCmd() *cobra.Command {
 			}
 			if itemsSet {
 				g.Members = items
+			}
+			if parentSet {
+				g.Parent = parent
 			}
 			var created *cobbler.SystemGroup
 			err = withTransaction(func() error {
@@ -94,7 +97,7 @@ func newSystemGroupEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			comment, commentSet, items, itemsSet, err := extractGroupFlags(cmd)
+			comment, commentSet, items, itemsSet, parent, parentSet, err := extractGroupFlags(cmd)
 			if err != nil {
 				return err
 			}
@@ -103,6 +106,9 @@ func newSystemGroupEditCmd() *cobra.Command {
 			}
 			if itemsSet {
 				g.Members = items
+			}
+			if parentSet {
+				g.Parent = parent
 			}
 			return withTransaction(func() error {
 				return Client.UpdateSystemGroup(g)

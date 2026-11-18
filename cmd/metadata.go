@@ -863,6 +863,11 @@ var repoStringFlagMetadata = map[string]FlagMetadata[string]{
 		DefaultValue: "",
 		Usage:        "address of yum or rsync repo to mirror",
 	},
+	"parent": {
+		Name:         "parent",
+		DefaultValue: "",
+		Usage:        "the UID of the parent repo (see 'repo report')",
+	},
 	"mirror-type": {
 		Name:         "mirror-type",
 		DefaultValue: "",
@@ -930,6 +935,17 @@ var repoMapFlagMetadata = map[string]FlagMetadata[map[string]string]{
 		Name:         "rpm-list",
 		DefaultValue: map[string]string{},
 		Usage:        "mirror just these RPMs (yum only)",
+	},
+}
+
+// groupStringFlagMetadata holds the shared --parent flag for the three 4.0.0 group item
+// types. A group's parent is another group of the same type, not one of the underlying
+// distro/profile/system items referenced by --items.
+var groupStringFlagMetadata = map[string]FlagMetadata[string]{
+	"parent": {
+		Name:         "parent",
+		DefaultValue: "",
+		Usage:        "the UID of the parent group (a group of the same type)",
 	},
 }
 

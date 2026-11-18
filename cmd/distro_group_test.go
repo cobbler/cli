@@ -95,6 +95,44 @@ func Test_DistroGroupAddCmd_Items(t *testing.T) {
 	}
 }
 
+// Test_DistroGroupAddCmd_Parent exercises distro_group.go's own parentSet handling on add.
+func Test_DistroGroupAddCmd_Parent(t *testing.T) {
+	parentName := "test-distro-group-add-parent-parent"
+	childName := "test-distro-group-add-parent-child"
+	setupClient(t)
+	parent, err := createDistroGroup(Client, parentName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistroGroup(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove distro group %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeDistroGroup(Client, childName); err != nil {
+			t.Errorf("cleanup: remove distro group %s: %v", childName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro-group", "add", "--name", childName, "--parent", parent.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	handle, err := Client.GetDistroGroupHandle(childName)
+	cobbler.FailOnError(t, err)
+	created, err := Client.GetDistroGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if created.Parent != parent.Uid {
+		t.Fatalf("distro group parent wasn't set from --parent, got: %q", created.Parent)
+	}
+}
+
 func Test_DistroGroupEditCmd(t *testing.T) {
 	name := "test-distro-group-edit"
 	setupClient(t)
@@ -124,6 +162,47 @@ func Test_DistroGroupEditCmd(t *testing.T) {
 	cobbler.FailOnError(t, err)
 	if updated.Comment != "testcomment" {
 		t.Fatal("distro group update wasn't successful")
+	}
+}
+
+// Test_DistroGroupEditCmd_Parent exercises distro_group.go's own parentSet handling on edit.
+func Test_DistroGroupEditCmd_Parent(t *testing.T) {
+	parentName := "test-distro-group-edit-parent-parent"
+	childName := "test-distro-group-edit-parent-child"
+	setupClient(t)
+	parent, err := createDistroGroup(Client, parentName)
+	cobbler.FailOnError(t, err)
+	_, err = createDistroGroup(Client, childName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistroGroup(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove distro group %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeDistroGroup(Client, childName); err != nil {
+			t.Errorf("cleanup: remove distro group %s: %v", childName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro-group", "edit", "--name", childName, "--parent", parent.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	handle, err := Client.GetDistroGroupHandle(childName)
+	cobbler.FailOnError(t, err)
+	updated, err := Client.GetDistroGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if updated.Parent != parent.Uid {
+		t.Fatalf("distro group parent update wasn't successful, got: %q", updated.Parent)
 	}
 }
 

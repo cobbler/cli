@@ -95,6 +95,44 @@ func Test_SystemGroupAddCmd_Items(t *testing.T) {
 	}
 }
 
+// Test_SystemGroupAddCmd_Parent exercises system_group.go's own parentSet handling on add.
+func Test_SystemGroupAddCmd_Parent(t *testing.T) {
+	parentName := "test-system-group-add-parent-parent"
+	childName := "test-system-group-add-parent-child"
+	setupClient(t)
+	parent, err := createSystemGroup(Client, parentName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystemGroup(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove system group %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeSystemGroup(Client, childName); err != nil {
+			t.Errorf("cleanup: remove system group %s: %v", childName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system-group", "add", "--name", childName, "--parent", parent.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	handle, err := Client.GetSystemGroupHandle(childName)
+	cobbler.FailOnError(t, err)
+	created, err := Client.GetSystemGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if created.Parent != parent.Uid {
+		t.Fatalf("system group parent wasn't set from --parent, got: %q", created.Parent)
+	}
+}
+
 func Test_SystemGroupEditCmd(t *testing.T) {
 	name := "test-system-group-edit"
 	setupClient(t)
@@ -128,6 +166,47 @@ func Test_SystemGroupEditCmd(t *testing.T) {
 }
 
 // Test_SystemGroupEditCmd_UID exercises the --uid sibling flag on edit.
+// Test_SystemGroupEditCmd_Parent exercises system_group.go's own parentSet handling on edit.
+func Test_SystemGroupEditCmd_Parent(t *testing.T) {
+	parentName := "test-system-group-edit-parent-parent"
+	childName := "test-system-group-edit-parent-child"
+	setupClient(t)
+	parent, err := createSystemGroup(Client, parentName)
+	cobbler.FailOnError(t, err)
+	_, err = createSystemGroup(Client, childName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeSystemGroup(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove system group %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeSystemGroup(Client, childName); err != nil {
+			t.Errorf("cleanup: remove system group %s: %v", childName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "system-group", "edit", "--name", childName, "--parent", parent.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	handle, err := Client.GetSystemGroupHandle(childName)
+	cobbler.FailOnError(t, err)
+	updated, err := Client.GetSystemGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if updated.Parent != parent.Uid {
+		t.Fatalf("system group parent update wasn't successful, got: %q", updated.Parent)
+	}
+}
+
 func Test_SystemGroupEditCmd_UID(t *testing.T) {
 	name := "test-system-group-edit-uid"
 	setupClient(t)
