@@ -195,9 +195,10 @@ func printStructured(cmd *cobra.Command, dataStruct interface{}) {
 			printValueStructured(cmd, mapstructureTag, f)
 			continue
 		}
-		if fieldName == "Item" {
-			baseItem := f.Interface().(cobbler.Item)
-			printStructured(cmd, &baseItem)
+		// Recurse into whichever of these embedded structs this type has, since different
+		// item types embed different ones (mirroring cobbler's Python abstract item hierarchy).
+		if fieldName == "BaseItemFields" || fieldName == "InheritableItemFields" || fieldName == "BootableItemFields" || fieldName == "Group" {
+			printStructured(cmd, f.Addr().Interface())
 			continue
 		}
 		if fieldName == "Interfaces" {

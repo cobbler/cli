@@ -43,7 +43,7 @@ func newProfileGroupAddCmd() *cobra.Command {
 				return err
 			}
 			g.Name = name
-			comment, commentSet, items, itemsSet, err := extractGroupFlags(cmd)
+			comment, commentSet, items, itemsSet, parent, parentSet, err := extractGroupFlags(cmd)
 			if err != nil {
 				return err
 			}
@@ -52,6 +52,9 @@ func newProfileGroupAddCmd() *cobra.Command {
 			}
 			if itemsSet {
 				g.Members = items
+			}
+			if parentSet {
+				g.Parent = parent
 			}
 			var created *cobbler.ProfileGroup
 			err = withTransaction(func() error {
@@ -94,7 +97,7 @@ func newProfileGroupEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			comment, commentSet, items, itemsSet, err := extractGroupFlags(cmd)
+			comment, commentSet, items, itemsSet, parent, parentSet, err := extractGroupFlags(cmd)
 			if err != nil {
 				return err
 			}
@@ -103,6 +106,9 @@ func newProfileGroupEditCmd() *cobra.Command {
 			}
 			if itemsSet {
 				g.Members = items
+			}
+			if parentSet {
+				g.Parent = parent
 			}
 			return withTransaction(func() error {
 				return Client.UpdateProfileGroup(g)

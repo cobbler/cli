@@ -29,6 +29,13 @@ func updateRepoFromFlags(cmd *cobra.Command, repo *cobbler.Repo) error {
 				return
 			}
 			repo.Comment = repoNewComment
+		case "parent":
+			var repoNewParent string
+			repoNewParent, err = cmd.Flags().GetString("parent")
+			if err != nil {
+				return
+			}
+			repo.Parent = repoNewParent
 		case "arch":
 			var repoNewArch string
 			repoNewArch, err = cmd.Flags().GetString("arch")
@@ -216,7 +223,7 @@ func NewRepoAddCmd() *cobra.Command {
 
 			newRepo := cobbler.NewRepo()
 
-			// internal fields (ctime, mtime, depth, uid, parent, tree-build-time) cannot be modified
+			// internal fields (ctime, mtime, depth, uid, tree-build-time) cannot be modified
 			newRepo.Name, err = cmd.Flags().GetString("name")
 			if err != nil {
 				return err
@@ -400,7 +407,6 @@ func NewRepoFindCmd() *cobra.Command {
 	addStringFlags(repoFindCmd, findStringFlagMetadata)
 	addIntFlags(repoFindCmd, findIntFlagMetadata)
 	addFloatFlags(repoFindCmd, findFloatFlagMetadata)
-	repoFindCmd.Flags().String("parent", "", "")
 	addPaginationFlags(repoFindCmd)
 	return repoFindCmd
 }

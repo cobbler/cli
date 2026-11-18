@@ -258,6 +258,22 @@ func Test_UpdateRepoFromFlags_Proxy(t *testing.T) {
 	}
 }
 
+// Test_UpdateRepoFromFlags_Parent exercises updateRepoFromFlags' --parent branch
+// directly and does not need a live cobbler server.
+func Test_UpdateRepoFromFlags_Parent(t *testing.T) {
+	cmd := NewRepoEditCmd()
+	err := cmd.Flags().Set("parent", "some-uid")
+	cobbler.FailOnError(t, err)
+
+	repo := cobbler.NewRepo()
+	err = updateRepoFromFlags(cmd, &repo)
+	cobbler.FailOnError(t, err)
+
+	if repo.Parent != "some-uid" {
+		t.Fatalf("repo.Parent should be \"some-uid\" after --parent=some-uid, got %q", repo.Parent)
+	}
+}
+
 // Test_RepoCopyCmd_UID exercises the --uid sibling flag on copy.
 func Test_RepoCopyCmd_UID(t *testing.T) {
 	name := "test-repo-copy-uid"

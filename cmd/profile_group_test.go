@@ -95,6 +95,44 @@ func Test_ProfileGroupAddCmd_Items(t *testing.T) {
 	}
 }
 
+// Test_ProfileGroupAddCmd_Parent exercises profile_group.go's own parentSet handling on add.
+func Test_ProfileGroupAddCmd_Parent(t *testing.T) {
+	parentName := "test-profile-group-add-parent-parent"
+	childName := "test-profile-group-add-parent-child"
+	setupClient(t)
+	parent, err := createProfileGroup(Client, parentName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfileGroup(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove profile group %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeProfileGroup(Client, childName); err != nil {
+			t.Errorf("cleanup: remove profile group %s: %v", childName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile-group", "add", "--name", childName, "--parent", parent.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	handle, err := Client.GetProfileGroupHandle(childName)
+	cobbler.FailOnError(t, err)
+	created, err := Client.GetProfileGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if created.Parent != parent.Uid {
+		t.Fatalf("profile group parent wasn't set from --parent, got: %q", created.Parent)
+	}
+}
+
 func Test_ProfileGroupEditCmd(t *testing.T) {
 	name := "test-profile-group-edit"
 	setupClient(t)
@@ -128,6 +166,47 @@ func Test_ProfileGroupEditCmd(t *testing.T) {
 }
 
 // Test_ProfileGroupEditCmd_UID exercises the --uid sibling flag on edit.
+// Test_ProfileGroupEditCmd_Parent exercises profile_group.go's own parentSet handling on edit.
+func Test_ProfileGroupEditCmd_Parent(t *testing.T) {
+	parentName := "test-profile-group-edit-parent-parent"
+	childName := "test-profile-group-edit-parent-child"
+	setupClient(t)
+	parent, err := createProfileGroup(Client, parentName)
+	cobbler.FailOnError(t, err)
+	_, err = createProfileGroup(Client, childName)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeProfileGroup(Client, parentName); err != nil {
+			t.Errorf("cleanup: remove profile group %s: %v", parentName, err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := removeProfileGroup(Client, childName); err != nil {
+			t.Errorf("cleanup: remove profile group %s: %v", childName, err)
+		}
+	})
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "profile-group", "edit", "--name", childName, "--parent", parent.Uid})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+	handle, err := Client.GetProfileGroupHandle(childName)
+	cobbler.FailOnError(t, err)
+	updated, err := Client.GetProfileGroup(handle, false, false)
+	cobbler.FailOnError(t, err)
+	if updated.Parent != parent.Uid {
+		t.Fatalf("profile group parent update wasn't successful, got: %q", updated.Parent)
+	}
+}
+
 func Test_ProfileGroupEditCmd_UID(t *testing.T) {
 	name := "test-profile-group-edit-uid"
 	setupClient(t)
