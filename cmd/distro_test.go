@@ -777,6 +777,51 @@ func Test_DistroReportCmd_UID(t *testing.T) {
 	}
 }
 
+// Test_DistroReportCmd_SourceRepos is a regression test: a distro with at least one
+// split-tree repo recorded in source_repos used to crash `distro report`/`report` entirely,
+// since cobblerclient decoded the field's nested array-of-2-element-arrays wire shape into a
+// flat []string. source_repos is cobbler:"noupdate" (read-only), so CreateDistro/UpdateDistro
+// never push it - a raw modify_distro RPC call is the only way to populate it for this test.
+func Test_DistroReportCmd_SourceRepos(t *testing.T) {
+	name := "test-distro-report-source-repos"
+	setupClient(t)
+	_, err := createDistro(Client, name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := removeDistro(Client, name); err != nil {
+			t.Errorf("cleanup: remove distro %s: %v", name, err)
+		}
+	})
+	handle, err := Client.GetDistroHandle(name)
+	cobbler.FailOnError(t, err)
+	_, err = Client.Call("modify_distro", handle, []string{"source_repos"},
+		[][]string{{"http://example.com/repo1.repo", "http://example.com/repo1"}}, Client.Token)
+	cobbler.FailOnError(t, err)
+	err = Client.SaveDistro(handle, true, true, "bypass")
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "distro", "report", "--name", name})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	stdoutBytes, err := io.ReadAll(stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(stdoutBytes), name) {
+		fmt.Println(string(stdoutBytes))
+		t.Fatal("distro name missing from report output for a distro with non-empty source_repos")
+	}
+}
+
 // Test_DistroReportCmd_All exercises the report branch taken when neither
 // --name nor --uid is supplied (report every distro).
 func Test_DistroReportCmd_All(t *testing.T) {
