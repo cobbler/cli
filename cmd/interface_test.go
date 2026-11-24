@@ -191,6 +191,68 @@ func Test_InterfaceEditCmd_UID(t *testing.T) {
 	}
 }
 
+// Test_InterfaceEditCmd_UIDDisambiguatesAmbiguousName covers two systems sharing an
+// interface name (e.g. both "eth0"): even with --uid correctly disambiguating the
+// target, UpdateNetworkInterface used to re-resolve its handle by name alone and fail
+// with "ambiguous match for given collection and name".
+func Test_InterfaceEditCmd_UIDDisambiguatesAmbiguousName(t *testing.T) {
+	sys1Name := "test-interface-edit-ambig-system1"
+	sys2Name := "test-interface-edit-ambig-system2"
+	ifaceName := "eth-edit-ambig"
+	setupClient(t)
+	system1, err := createSystem(Client, sys1Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system1.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys1Name, err)
+		}
+	})
+	system2, err := createSystem(Client, sys2Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system2.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys2Name, err)
+		}
+	})
+
+	iface1 := cobbler.NewNetworkInterface()
+	iface1.Name = ifaceName
+	iface1.SystemUid = system1.Uid
+	created1, err := Client.CreateNetworkInterface(system1.Uid, iface1)
+	cobbler.FailOnError(t, err)
+
+	iface2 := cobbler.NewNetworkInterface()
+	iface2.Name = ifaceName
+	iface2.SystemUid = system2.Uid
+	created2, err := Client.CreateNetworkInterface(system2.Uid, iface2)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "edit", "--uid", created2.Uid, "--dhcp-tag", "updated-via-uid"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+
+	updated2, err := Client.GetNetworkInterface(created2.Uid, false, false)
+	cobbler.FailOnError(t, err)
+	if updated2.DHCPTag != "updated-via-uid" {
+		t.Fatalf("expected system2's interface dhcp-tag to be updated, got %q", updated2.DHCPTag)
+	}
+	untouched1, err := Client.GetNetworkInterface(created1.Uid, false, false)
+	cobbler.FailOnError(t, err)
+	if untouched1.DHCPTag != "" {
+		t.Fatalf("expected system1's same-named interface to be untouched, got dhcp-tag %q", untouched1.DHCPTag)
+	}
+}
+
 // Test_InterfaceEditCmd_AllFlags exercises updateNetworkInterfaceFromFlags'
 // full switch statement (link-layer, bonding/bridging, IPv4, IPv6 and DNS
 // flags) plus parseNetworkInterfaceType's success path, none of which were
@@ -383,6 +445,79 @@ func Test_InterfaceCopyCmd(t *testing.T) {
 	// its new name and can be re-fetched is what exercises those lines.
 	_, err = Client.GetNetworkInterface(copiedHandle, false, false)
 	cobbler.FailOnError(t, err)
+}
+
+// Test_InterfaceCopyCmd_NewNameCollidesAcrossSystems locks in a subtle correctness
+// property: GetNetworkInterfaceHandle(newName) looks ambiguity-prone since names are
+// only unique per-system, but it's safe because interface copy always runs inside
+// withTransaction - get_item_handle checks the transaction's own pending items by name
+// first, with no ambiguity check, before the collection-wide lookup that would otherwise
+// fail. If copy ever stopped sharing one transaction across both calls, this would need
+// scoping by system_uid instead, since find_* calls can't see uncommitted transaction
+// items.
+func Test_InterfaceCopyCmd_NewNameCollidesAcrossSystems(t *testing.T) {
+	sys1Name := "test-interface-copy-ambig-system1"
+	sys2Name := "test-interface-copy-ambig-system2"
+	srcName := "eth-copy-ambig-src"
+	newName := "eth-copy-ambig-newname"
+	setupClient(t)
+	system1, err := createSystem(Client, sys1Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system1.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys1Name, err)
+		}
+	})
+	system2, err := createSystem(Client, sys2Name)
+	cobbler.FailOnError(t, err)
+	t.Cleanup(func() {
+		if err := Client.DeleteSystemRecursive(system2.Uid, true); err != nil {
+			t.Errorf("cleanup: delete system %s: %v", sys2Name, err)
+		}
+	})
+
+	src := cobbler.NewNetworkInterface()
+	src.Name = srcName
+	src.SystemUid = system1.Uid
+	_, err = Client.CreateNetworkInterface(system1.Uid, src)
+	cobbler.FailOnError(t, err)
+
+	// Pre-existing interface on a different system, already using the name the copy
+	// below is about to collide with.
+	preExisting := cobbler.NewNetworkInterface()
+	preExisting.Name = newName
+	preExisting.SystemUid = system2.Uid
+	preExistingCreated, err := Client.CreateNetworkInterface(system2.Uid, preExisting)
+	cobbler.FailOnError(t, err)
+
+	cobra.OnInitialize(initConfig, setupLogger)
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"--config", "../testing/.cobbler.yaml", "interface", "copy", "--name", srcName, "--newname", newName, "--dhcp-tag", "copied-across-collision"})
+	stdout := bytes.NewBufferString("")
+	stderr := bytes.NewBufferString("")
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	err = rootCmd.Execute()
+
+	cobbler.FailOnError(t, err)
+	FailOnNonEmptyStream(t, stderr)
+	FailOnNonEmptyStream(t, stdout)
+
+	matches, err := Client.FindNetworkInterface(map[string]interface{}{"name": newName, "system_uid": system1.Uid}, false)
+	cobbler.FailOnError(t, err)
+	if len(matches) != 1 {
+		t.Fatalf("expected exactly one %q interface on system1 after copy, found %d", newName, len(matches))
+	}
+	if matches[0].DHCPTag != "copied-across-collision" {
+		t.Fatalf("expected the copy on system1 to carry the --dhcp-tag flag, got %q", matches[0].DHCPTag)
+	}
+
+	untouched, err := Client.GetNetworkInterface(preExistingCreated.Uid, false, false)
+	cobbler.FailOnError(t, err)
+	if untouched.DHCPTag != "" {
+		t.Fatalf("expected the pre-existing same-named interface on system2 to be untouched, got dhcp-tag %q", untouched.DHCPTag)
+	}
 }
 
 func Test_InterfaceRenameCmd(t *testing.T) {
