@@ -281,6 +281,10 @@ func NewInterfaceCopyCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				// Safe despite NetworkInterface names only being unique per-system:
+				// within this transaction, get_item_handle checks pending items by
+				// name first with no ambiguity check, before the collection-wide
+				// lookup that would otherwise fail if newName collides elsewhere.
 				fresh, err := Client.GetNetworkInterface(newHandle, false, false)
 				if err != nil {
 					return err
