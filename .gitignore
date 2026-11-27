@@ -41,4 +41,6 @@ coverage.out
 # Packaging
 /vendor/
 /rpms/
+/debs/
+/packages/
 /cobbler-cli-native-*/

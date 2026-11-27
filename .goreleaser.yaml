@@ -38,11 +38,27 @@ archives:
     files:
       - 'LICENSE*'
       - 'README*'
-      - '**/*.rpm'
-      - '**/*.deb'
+
+# The rpm and deb packages are built by separate CI jobs and collected in packages/release.
+checksum:
+  extra_files:
+    - glob: packages/release/*
+
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "-u"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
 
 release:
   prerelease: auto
+  extra_files:
+    - glob: packages/release/*
 
 changelog:
   sort: asc

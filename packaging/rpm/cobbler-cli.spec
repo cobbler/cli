@@ -17,7 +17,8 @@
 
 
 Name:           cobbler-cli
-Version:        0.0.1
+# Placeholder, overridden at build time (see `make build-rpm`, VERSION variable).
+Version:        0.0.0
 Release:        0
 Summary:        A standalone CLI for the Cobbler Daemon
 License:        GPL-2.0-or-later
