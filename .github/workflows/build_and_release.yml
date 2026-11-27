@@ -38,29 +38,70 @@ jobs:
         with:
           name: cobbler-cli-binary-${{ matrix.go }}-${{ matrix.os }}
           path: ./cobbler
-  rpm:
+  rpm-tumbleweed:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         # https://github.com/actions/checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Determine package version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            # Package versions must not contain "-"; "~" sorts prereleases before the final release.
+            version="$(printf '%s' "${GITHUB_REF_NAME#v}" | tr '-' '~')"
+          else
+            version="0.0.0~git${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
       - name: Build RPM
-        run: make build-rpm-docker
+        run: make build-rpm-docker-tumbleweed
       - name: Upload RPM Artifact
         # https://github.com/actions/upload-artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: cobbler-cli-native-rpm
-          path: ./rpms/**/*.rpm
-  deb:
-    # This will fail until Debian 13 will arrive with a newer golang version
+          name: cobbler-cli-native-rpm-tumbleweed
+          path: ./rpms/openSUSE_Tumbleweed/**/*.rpm
+          if-no-files-found: error
+  rpm-leap16:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         # https://github.com/actions/checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Determine package version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            # Package versions must not contain "-"; "~" sorts prereleases before the final release.
+            version="$(printf '%s' "${GITHUB_REF_NAME#v}" | tr '-' '~')"
+          else
+            version="0.0.0~git${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+      - name: Build RPM
+        run: make build-rpm-docker-leap16
+      - name: Upload RPM Artifact
+        # https://github.com/actions/upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cobbler-cli-native-rpm-leap16
+          path: ./rpms/openSUSE_Leap16/**/*.rpm
+          if-no-files-found: error
+  deb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        # https://github.com/actions/checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Determine package version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            # Package versions must not contain "-"; "~" sorts prereleases before the final release.
+            version="$(printf '%s' "${GITHUB_REF_NAME#v}" | tr '-' '~')"
+          else
+            version="0.0.0~git${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
       - name: Build DEB
-        continue-on-error: true
         run: make build-deb-docker
       - name: Upload DEB Artifact
         # https://github.com/actions/upload-artifact
@@ -68,6 +109,7 @@ jobs:
         with:
           name: cobbler-cli-native-deb
           path: ./debs/**/*.deb
+          if-no-files-found: error
   docker:
     runs-on: ubuntu-latest
     env:
@@ -120,7 +162,8 @@ jobs:
       - native
       - docker
       - deb
-      - rpm
+      - rpm-tumbleweed
+      - rpm-leap16
     steps:
       - name: Checkout
         # https://github.com/actions/checkout
@@ -130,12 +173,34 @@ jobs:
       - name: Set up Go
         # https://github.com/actions/setup-go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
       - name: Download all artifacts
         # https://github.com/actions/download-artifact
         id: download-artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: "cobbler-cli-native-*"
+          # Never extract into the repository root, GoReleaser refuses to run on a dirty git tree.
+          # The directory is git-ignored.
+          path: packages
+      - name: Collect packages for the release
+        run: |
+          mkdir -p packages/release
+          for dir in packages/cobbler-cli-native-*; do
+            label="${dir##*cobbler-cli-native-}"
+            find "${dir}" -type f \( -name '*.rpm' -o -name '*.deb' \) | while read -r file; do
+              name="$(basename "${file}" | tr '~' '-')"
+              case "${label}" in
+                rpm-*)
+                  # Tumbleweed and Leap build identically named RPMs, add the distribution to the name.
+                  name="${name%.rpm}.${label#rpm-}.rpm"
+                  ;;
+              esac
+              cp "${file}" "packages/release/${name}"
+            done
+          done
+          ls -l packages/release
       - name: Import GPG key
         # https://github.com/crazy-max/ghaction-import-gpg
         id: import_gpg
@@ -148,7 +213,7 @@ jobs:
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          version: latest
+          version: "~> v2"
           args: release --clean
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
@@ -158,8 +223,8 @@ jobs:
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         if: "!startsWith(github.ref, 'refs/tags/')"
         with:
-          version: latest
-          args: release --snapshot --clean
+          version: "~> v2"
+          args: release --snapshot --clean --skip=sign
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
